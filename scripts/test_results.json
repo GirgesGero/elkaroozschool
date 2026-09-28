@@ -1,0 +1,184 @@
+[
+  {
+    "name": "Login: Admin (@admin_user)",
+    "category": "Authentication",
+    "expected": "HTTP 200 with JWT access_token",
+    "actual": "HTTP 200 (Success: True)",
+    "passed": true
+  },
+  {
+    "name": "Login: Super User (@super_user)",
+    "category": "Authentication",
+    "expected": "HTTP 200 with JWT access_token",
+    "actual": "HTTP 200 (Success: True)",
+    "passed": true
+  },
+  {
+    "name": "Login: Servant G1 (@servant_g1)",
+    "category": "Authentication",
+    "expected": "HTTP 200 with JWT access_token",
+    "actual": "HTTP 200 (Success: True)",
+    "passed": true
+  },
+  {
+    "name": "Login: Servant G2 (@servant_g2)",
+    "category": "Authentication",
+    "expected": "HTTP 200 with JWT access_token",
+    "actual": "HTTP 200 (Success: True)",
+    "passed": true
+  },
+  {
+    "name": "Login: Secretariat G1 (@sec_g1)",
+    "category": "Authentication",
+    "expected": "HTTP 200 with JWT access_token",
+    "actual": "HTTP 200 (Success: True)",
+    "passed": true
+  },
+  {
+    "name": "Login: Secretariat G2 (@sec_g2)",
+    "category": "Authentication",
+    "expected": "HTTP 200 with JWT access_token",
+    "actual": "HTTP 200 (Success: True)",
+    "passed": true
+  },
+  {
+    "name": "Login: Trainee G1 (@trainee_g1)",
+    "category": "Authentication",
+    "expected": "HTTP 200 with JWT access_token",
+    "actual": "HTTP 200 (Success: True)",
+    "passed": true
+  },
+  {
+    "name": "Login: Trainee G2 (@trainee_g2)",
+    "category": "Authentication",
+    "expected": "HTTP 200 with JWT access_token",
+    "actual": "HTTP 200 (Success: True)",
+    "passed": true
+  },
+  {
+    "name": "Auth: Invalid Password Rejected",
+    "category": "Authentication",
+    "expected": "HTTP 400 Bad Request",
+    "actual": "HTTP 400",
+    "passed": true
+  },
+  {
+    "name": "Auth: Non-existent Username Rejected",
+    "category": "Authentication",
+    "expected": "HTTP 400 Bad Request",
+    "actual": "HTTP 400",
+    "passed": true
+  },
+  {
+    "name": "Account Status: Suspended Account Detected (is_active=False)",
+    "category": "Account Status",
+    "expected": "is_active == False -> 'الحساب موقوف'",
+    "actual": "is_active=False",
+    "passed": true
+  },
+  {
+    "name": "Feed RLS: Trainee Post Creation Forbidden",
+    "category": "Feed Permissions",
+    "expected": "RLS Error 42501 / 403 / 400",
+    "actual": "HTTP 403 ({\"code\":\"42501\",\"details\":null,\"hint\":null,\"messag)",
+    "passed": true
+  },
+  {
+    "name": "Feed RLS: Servant Post Creation Allowed",
+    "category": "Feed Permissions",
+    "expected": "HTTP 201 Created",
+    "actual": "HTTP 201",
+    "passed": true
+  },
+  {
+    "name": "Feed RLS: Trainee Comment Allowed",
+    "category": "Feed Permissions",
+    "expected": "HTTP 201 Created",
+    "actual": "HTTP 201",
+    "passed": true
+  },
+  {
+    "name": "Feed RLS: Trainee Reaction (Amen) Allowed",
+    "category": "Feed Permissions",
+    "expected": "HTTP 201/204",
+    "actual": "HTTP 201",
+    "passed": true
+  },
+  {
+    "name": "Feed Constraints: Duplicate Reaction Blocked (1 Reaction per User)",
+    "category": "Feed Constraints",
+    "expected": "Unique Violation / HTTP 409 / 400",
+    "actual": "HTTP 409",
+    "passed": true
+  },
+  {
+    "name": "Group Scope: Trainee G1 reading Group 1 Lecture",
+    "category": "Group Isolation",
+    "expected": "1 item returned (Allowed)",
+    "actual": "Items: 1",
+    "passed": true
+  },
+  {
+    "name": "Group Scope: Trainee G1 reading Group 2 Lecture (Cross-Group Access Blocked)",
+    "category": "Group Isolation",
+    "expected": "0 items returned (Isolated)",
+    "actual": "Items: 0",
+    "passed": true
+  },
+  {
+    "name": "Group Scope: Trainee G2 reading Group 2 Lecture",
+    "category": "Group Isolation",
+    "expected": "1 item returned (Allowed)",
+    "actual": "Items: 1",
+    "passed": true
+  },
+  {
+    "name": "Secretariat Scope: Sec G1 creating Attendance Session for Group 1",
+    "category": "Attendance Permissions",
+    "expected": "HTTP 200/201/409 Allowed (Group 1 Scope)",
+    "actual": "HTTP 409",
+    "passed": true
+  },
+  {
+    "name": "Secretariat Scope: Sec G1 creating Attendance in Group 2 (Cross-Group Blocked)",
+    "category": "Attendance & Secretariat",
+    "expected": "RLS Error / Blocked",
+    "actual": "HTTP 403",
+    "passed": true
+  },
+  {
+    "name": "Public Endpoints: Bible Testaments Accessible without Login",
+    "category": "Public Access",
+    "expected": "HTTP 200 with 2 testaments (OT & NT)",
+    "actual": "HTTP 200 (2 items)",
+    "passed": true
+  },
+  {
+    "name": "Public Endpoints: Bible Sources (St. Takla) Accessible without Login",
+    "category": "Public Access",
+    "expected": "HTTP 200 OK",
+    "actual": "HTTP 200",
+    "passed": true
+  },
+  {
+    "name": "Role Equality: Admin Access to Audit Logs",
+    "category": "Admin Equality",
+    "expected": "HTTP 200 OK",
+    "actual": "HTTP 200",
+    "passed": true
+  },
+  {
+    "name": "Role Equality: Super User Access to Audit Logs",
+    "category": "Admin Equality",
+    "expected": "HTTP 200 OK",
+    "actual": "HTTP 200",
+    "passed": true
+  },
+  {
+    "name": "Security: Trainee Reading Audit Logs Forbidden",
+    "category": "Security & Isolation",
+    "expected": "Empty [] or Forbidden",
+    "actual": "HTTP 200",
+    "passed": true
+  }
+]

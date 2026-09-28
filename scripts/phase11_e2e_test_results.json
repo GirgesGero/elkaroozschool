@@ -1,0 +1,100 @@
+[
+  {
+    "name": "Journey A: Trainee Views Global Social Feed",
+    "category": "Journey A (Trainee)",
+    "expected": "HTTP 200 with feed posts",
+    "actual": "HTTP 200 (Feed Items: 5)",
+    "passed": true
+  },
+  {
+    "name": "Journey A: Trainee Post Creation Blocked by RLS",
+    "category": "Journey A (Trainee)",
+    "expected": "HTTP 401 / 403 Forbidden",
+    "actual": "HTTP 403",
+    "passed": true
+  },
+  {
+    "name": "Journey A: Trainee Accesses Global Books Library",
+    "category": "Journey A (Trainee)",
+    "expected": "HTTP 200 with books list",
+    "actual": "HTTP 200 (Books: 4)",
+    "passed": true
+  },
+  {
+    "name": "Journey A: Trainee Group 1 Gallery Isolation (G1 Allowed, G2 Blocked)",
+    "category": "Journey A (Trainee)",
+    "expected": "G1 returns items, G2 returns 0 items via RLS",
+    "actual": "G1 Items: 4, G2 Items: 0",
+    "passed": true
+  },
+  {
+    "name": "Journey A: Trainee Reads Bible Engine & Books",
+    "category": "Journey A (Trainee)",
+    "expected": "HTTP 200",
+    "actual": "HTTP 200",
+    "passed": true
+  },
+  {
+    "name": "Journey B: Secretariat Views Group 1 Trainees",
+    "category": "Journey B (Secretariat)",
+    "expected": "HTTP 200 with trainees list",
+    "actual": "HTTP 200 (Count: 12)",
+    "passed": true
+  },
+  {
+    "name": "Journey B: Secretariat Blocked from Editing Exam Grades",
+    "category": "Journey B (Secretariat)",
+    "expected": "HTTP 401 / 403 Forbidden",
+    "actual": "HTTP 400",
+    "passed": true
+  },
+  {
+    "name": "Journey B: Secretariat Blocked from Backup Management",
+    "category": "Journey B (Secretariat)",
+    "expected": "HTTP 401 / 403 Forbidden",
+    "actual": "HTTP 403",
+    "passed": true
+  },
+  {
+    "name": "Journey C: Servant Creates Social Feed Post",
+    "category": "Journey C (Servant)",
+    "expected": "HTTP 201 Created",
+    "actual": "HTTP 201",
+    "passed": true
+  },
+  {
+    "name": "Journey C: Servant Attendance Group Isolation (G1 Allowed, G2 Isolated)",
+    "category": "Journey C (Servant)",
+    "expected": "G1 sessions accessible, G2 sessions return 0 rows",
+    "actual": "G1 Count: 3, G2 Count: 0",
+    "passed": true
+  },
+  {
+    "name": "Journey D: Admin and Super User Full Operational Parity",
+    "category": "Journey D (Admin & Super User)",
+    "expected": "Both HTTP 200 on administrative endpoints",
+    "actual": "Admin: HTTP 200, Super User: HTTP 200",
+    "passed": true
+  },
+  {
+    "name": "Journey D: Immutable Audit Trail Records Operational Events",
+    "category": "Journey D (Admin & Super User)",
+    "expected": "HTTP 200 with immutable audit entries",
+    "actual": "HTTP 200 (Audit Log Entries: 5)",
+    "passed": true
+  },
+  {
+    "name": "Integration: Absence Event -> Automatic Notification with Name Placeholder",
+    "category": "Cross-Module Integration",
+    "expected": "success == True and notifications created",
+    "actual": "HTTP 200 (Success: True)",
+    "passed": true
+  },
+  {
+    "name": "Integration: Marathon Engine 100-Point Structure Loaded",
+    "category": "Cross-Module Integration",
+    "expected": "HTTP 200 with marathon entity",
+    "actual": "HTTP 200 (Count: 1)",
+    "passed": true
+  }
+]

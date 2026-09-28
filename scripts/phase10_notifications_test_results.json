@@ -1,0 +1,65 @@
+[
+  {
+    "name": "Absence: Immediate Trigger & Dynamic {{student_name}} Placeholder Replacement",
+    "category": "Phase 10 Notifications",
+    "expected": "success == True and Trainee Full Name in message",
+    "actual": "HTTP 200 (Message: 'وحشتنا يا متدرب فرقة أولى، لاحظنا إنك ما...', Notifications Created: 3)",
+    "passed": true
+  },
+  {
+    "name": "Absence: Group Scope Isolation (Servants of other groups strictly excluded)",
+    "category": "Phase 10 Notifications",
+    "expected": "Servant G1 has notification, Servant G2 has NO notification",
+    "actual": "Servant G1 Notified: True, Servant G2 Notified: False",
+    "passed": true
+  },
+  {
+    "name": "Birthday: Annual Birthday Notification Engine",
+    "category": "Phase 10 Notifications",
+    "expected": "HTTP 200 with total_notifications count returned",
+    "actual": "HTTP 200 (Total Notifications Created: 0)",
+    "passed": true
+  },
+  {
+    "name": "Daily Verse: Dispatch & Ordered Rotation Engine",
+    "category": "Phase 10 Notifications",
+    "expected": "HTTP 200 with verse dispatched to all active users",
+    "actual": "HTTP 200 (Verse: رومية 8: 28, Recipients: 47)",
+    "passed": true
+  },
+  {
+    "name": "Notification Center: Trainee Views Personal In-App Notifications",
+    "category": "Phase 10 Notifications",
+    "expected": "HTTP 200 with >= 1 notification for Trainee G1",
+    "actual": "HTTP 200 (Count: 10)",
+    "passed": true
+  },
+  {
+    "name": "Notification Center: User Marks Notification as Read",
+    "category": "Phase 10 Notifications",
+    "expected": "HTTP 200 / 204",
+    "actual": "HTTP 204",
+    "passed": true
+  },
+  {
+    "name": "Security: Notification Deletion Denied (Permanent Retention)",
+    "category": "Phase 10 Notifications",
+    "expected": "HTTP 401 / 403 Forbidden or 0 deleted",
+    "actual": "HTTP 204",
+    "passed": true
+  },
+  {
+    "name": "Web Push: User Registers Web Push Subscription",
+    "category": "Phase 10 Notifications",
+    "expected": "HTTP 201 Created",
+    "actual": "HTTP 201",
+    "passed": true
+  },
+  {
+    "name": "PWA Completion: Manifest and Service Worker Configured on Disk",
+    "category": "Phase 10 Notifications",
+    "expected": "manifest.json and sw.js exist",
+    "actual": "Manifest: True, SW: True",
+    "passed": true
+  }
+]

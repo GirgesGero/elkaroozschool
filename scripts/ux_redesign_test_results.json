@@ -1,0 +1,56 @@
+[
+  {
+    "id": "REQ-UX-01",
+    "name": "Group 1 Operational Summary RPC",
+    "passed": true,
+    "details": "Trainees: 11, Servants: 1, Rate: 40.0%"
+  },
+  {
+    "id": "REQ-UX-02",
+    "name": "Group 2 Operational Summary RPC",
+    "passed": true,
+    "details": "Trainees: 13, Servants: 2, Rate: 82.1%"
+  },
+  {
+    "id": "REQ-UX-03",
+    "name": "Group 3 Operational Summary RPC",
+    "passed": true,
+    "details": "Trainees: 12, Servants: 2, Rate: 86.1%"
+  },
+  {
+    "id": "REQ-UX-04",
+    "name": "Top Absent Trainees Actionable Drilldown List",
+    "passed": true,
+    "details": "Found 5 top absent records with drilldown metadata"
+  },
+  {
+    "id": "REQ-UX-05",
+    "name": "Group 1 Detailed Servants & Permissions Matrix",
+    "passed": true,
+    "details": "Found 1 servants with delegated permissions"
+  },
+  {
+    "id": "REQ-UX-06",
+    "name": "Group 2 Detailed Secretariat Roster",
+    "passed": true,
+    "details": "Found 2 secretariat members appointed"
+  },
+  {
+    "id": "REQ-UX-07",
+    "name": "Full Trainee Profile Interactive Drilldown",
+    "passed": true,
+    "details": "Trainee: مينا سامي إبراهيم, Attendance sessions: 3, Rate: 66.7%"
+  },
+  {
+    "id": "REQ-UX-08",
+    "name": "Attendance Friday Sessions Chronological Timeline",
+    "passed": true,
+    "details": "Found 3 Friday cycles"
+  },
+  {
+    "id": "REQ-UX-09",
+    "name": "5 Independent Delegated Permissions",
+    "passed": true,
+    "details": "Total independent permissions: 5"
+  }
+]

@@ -1,0 +1,21 @@
+# backend-api/storage/.htaccess
+# EL KAROOZ School - Storage Security Hardening
+
+# 1. Deny execution of any server-side script
+<FilesMatch "\.(php|phtml|php3|php4|php5|php7|php8|phps|cgi|pl|py|sh|exe|bat|cmd|vbs|jar|jsp|asp|aspx)$">
+    Order Deny,Allow
+    Deny from all
+</FilesMatch>
+
+# 2. Disable script engine and CGI execution
+RemoveHandler .php .phtml .php3 .php4 .php5 .php7 .php8 .cgi .pl .py .sh
+RemoveType .php .phtml .php3 .php4 .php5 .php7 .php8 .cgi .pl .py .sh
+php_flag engine off
+
+# 3. Disable directory listing and symlink following
+Options -Indexes -ExecCGI -FollowSymLinks
+
+# 4. Enforce proper MIME types and prevent sniffing
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+</IfModule>

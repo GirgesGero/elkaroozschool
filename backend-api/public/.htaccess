@@ -1,0 +1,36 @@
+# backend-api/public/.htaccess
+# EL KAROOZ School - Enterprise Production Hardening
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
+    
+    # Block HTTP methods that are not allowed
+    RewriteCond %{REQUEST_METHOD} ^(TRACE|TRACK|CONNECT|DEBUG) [NC]
+    RewriteRule ^.*$ - [F]
+
+    # Block sensitive files and extensions
+    RewriteRule ^(\.env|\.git|\.htaccess|\.sql|\.bak|\.log|\.ini|\.sh)$ - [F,L]
+    RewriteRule ^(composer\.(json|lock)|package\.json|package-lock\.json)$ - [F,L]
+
+    # Send all legitimate requests to front controller
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^(.*)$ index.php [QSA,L]
+</IfModule>
+
+# Security Headers
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-XSS-Protection "1; mode=block"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+    Header unset X-Powered-By
+    Header always unset X-Powered-By
+</IfModule>
+
+# Security: Disable Directory Browsing and Script Execution in public assets
+Options -Indexes -ExecCGI
+
+# Prevent MIME Sniffing & enforce UTF-8
+AddDefaultCharset UTF-8

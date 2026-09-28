@@ -1,0 +1,79 @@
+[
+  {
+    "name": "Marathon: Admin creates Marathon for Group 1",
+    "category": "Marathon Engine",
+    "expected": "HTTP 201 Created",
+    "actual": "HTTP 201 (ID: a8dd85a1-6818-4c64-9001-a6adad4d10f5)",
+    "passed": true
+  },
+  {
+    "name": "Marathon: Sections Creation (Ordered Titles)",
+    "category": "Marathon Engine",
+    "expected": "HTTP 201 for Sections",
+    "actual": "Sections Created: True",
+    "passed": true
+  },
+  {
+    "name": "Marathon Scoring Law: 100 points distributed equally (20 pts per question)",
+    "category": "Marathon Engine",
+    "expected": "SUM(score_weight) == 100.00 and each == 20.00",
+    "actual": "Total Sum: 100.00 (Weights: [20.0, 20.0, 20.0, 20.0, 20.0])",
+    "passed": true
+  },
+  {
+    "name": "Sequential Answering: Skipping questions blocked by RPC",
+    "category": "Marathon Engine",
+    "expected": "Error: لا يمكنك تخطي الأسئلة",
+    "actual": "HTTP 400 ({\"code\":\"P0001\",\"details\":null,\"hint\":null,\"message\":\"لا يمك)",
+    "passed": true
+  },
+  {
+    "name": "Progressive Answering: Trainee answers Question 1",
+    "category": "Marathon Engine",
+    "expected": "HTTP 200 with progress_percentage = 20%",
+    "actual": "HTTP 200 (Progress: 20.0%)",
+    "passed": true
+  },
+  {
+    "name": "Answer Immutability: Re-submitting fixed answer blocked by RPC",
+    "category": "Marathon Engine",
+    "expected": "Error: لا يمكن تعديل الإجابة بعد إرسالها",
+    "actual": "HTTP 400 ({\"code\":\"P0001\",\"details\":null,\"hint\":null,\"message\":\"لا يمك)",
+    "passed": true
+  },
+  {
+    "name": "Score Masking: Numeric score is strictly hidden from Trainee",
+    "category": "Marathon Engine",
+    "expected": "score == None and is_completed == True",
+    "actual": "Trainee State: (score=None, completed=True)",
+    "passed": true
+  },
+  {
+    "name": "Staff Visibility: Servant can view Trainee 100-pt score and grade",
+    "category": "Marathon Engine",
+    "expected": "score == 100.0 and appreciation == 'ممتاز'",
+    "actual": "Staff State: (score=100.0, grade='ممتاز')",
+    "passed": true
+  },
+  {
+    "name": "Selective Reopen: Servant reopens specific question (Q2)",
+    "category": "Marathon Engine",
+    "expected": "HTTP 200 with success = True",
+    "actual": "HTTP 200 ({'message': 'تم إعادة فتح السؤال للمتدرب بنجاح', 'success': True})",
+    "passed": true
+  },
+  {
+    "name": "Selective Reopen: Trainee successfully resubmits reopened question",
+    "category": "Marathon Engine",
+    "expected": "HTTP 200 with is_completed = True",
+    "actual": "HTTP 200",
+    "passed": true
+  },
+  {
+    "name": "Group Isolation: Trainee G2 accessing G1 Marathon isolated",
+    "category": "Marathon Engine",
+    "expected": "Submission registered under Trainee G2 group",
+    "actual": "HTTP 200",
+    "passed": true
+  }
+]
