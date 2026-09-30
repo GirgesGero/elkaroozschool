@@ -3,6 +3,7 @@ namespace App\Controllers;
 
 use App\Middleware\JwtAuthMiddleware;
 use App\Middleware\RbacMiddleware;
+use App\Middleware\GroupScopeMiddleware;
 use App\Services\SupabaseClient;
 use App\Services\AuditLogService;
 use App\Utils\Response;
@@ -14,10 +15,35 @@ class ExportController {
 
         $entity = $_GET['entity'] ?? 'trainees';
         $format = $_GET['format'] ?? 'csv';
-        $groupId = isset($_GET['group_id']) ? (int)$_GET['group_id'] : (int)($user['group_id'] ?? 1);
+
+        // The group MUST come from the verified token, never from the query
+        // string. This used to read $_GET['group_id'] for every role, so any
+        // servant could export any other group's trainees by hand-editing the
+        // URL. Only admin/super_user may select a group explicitly, and
+        // group_id=0 means "all groups" for them.
+        $role = $user['role'] ?? 'trainee';
+        $isGlobal = in_array($role, ['admin', 'super_user'], true);
+
+        if ($isGlobal) {
+            $groupId = isset($_GET['group_id']) ? (int)$_GET['group_id'] : 0;
+        } else {
+            $groupId = (int)($user['group_id'] ?? 0);
+            if ($groupId <= 0) {
+                Response::error('تعذر تحديد الفرقة الدراسية من رمز المصادقة', 'NO_GROUP', 403);
+            }
+        }
+
+        // Non-global callers are still checked explicitly: this is the actual
+        // enforcement point, not the query string.
+        if (!$isGlobal) {
+            GroupScopeMiddleware::enforceGroupScope($user, $groupId);
+        }
 
         $client = new SupabaseClient();
-        $query = "profiles?role_id=eq.trainee&group_id=eq.{$groupId}&deleted_at=is.null";
+        $query = "profiles?role_id=eq.trainee&deleted_at=is.null";
+        if ($groupId > 0) {
+            $query .= "&group_id=eq.{$groupId}";
+        }
         $res = $client->query($query);
         $data = $res['data'] ?? [];
 
