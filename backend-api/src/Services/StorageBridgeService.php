@@ -16,16 +16,50 @@ class StorageBridgeService {
     }
 
     public function saveUploadedFile(array $file, string $targetSubDir): array {
-        $targetDirectory = $this->rootDir . '/' . trim($targetSubDir, '/');
+        // Containment on the WRITE path, mirroring deleteFile() below.
+        // $targetSubDir reaches here built from user input (POST folder_type /
+        // user_role), and the old code only did mkdir(..., true) then wrote --
+        // so "gallery/group_1/../../../ESCAPED" landed OUTSIDE the storage
+        // root. It then threw later in the controller, which reads like a
+        // failure while the file is already on disk.
+        $targetSubDir = str_replace('\\', '/', $targetSubDir);
+        if (
+        $targetSubDir === ''
+        || str_contains($targetSubDir, "\0")
+        || str_starts_with($targetSubDir, '/')
+        || preg_match('#(^|/)\.\.(/|$)#', $targetSubDir)
+        ) {
+        throw new \Exception('مسار التخزين خارج النطاق المسموح');
+        }
+
+        $root = realpath($this->rootDir);
+        if ($root === false) {
+        throw new \Exception('تعذر الوصول إلى مساحة التخزين');
+        }
+
+        $targetDirectory = $root . '/' . trim($targetSubDir, '/');
         if (!is_dir($targetDirectory)) {
-            mkdir($targetDirectory, 0755, true);
+        mkdir($targetDirectory, 0755, true);
+        }
+
+        // mkdir() can be defeated by a symlink or a race, so re-resolve the
+        // directory AFTER creating it and confirm it still lives under root.
+        $realTarget = realpath($targetDirectory);
+        if (
+        $realTarget === false
+        || ($realTarget !== $root && !str_starts_with($realTarget, $root . DIRECTORY_SEPARATOR))
+        ) {
+        throw new \Exception('مسار التخزين خارج النطاق المسموح');
         }
 
         $sanitizedFileName = Security::sanitizeFilename($file['name']);
-        $destinationPath = $targetDirectory . '/' . $sanitizedFileName;
+        if ($sanitizedFileName === '' || str_contains($sanitizedFileName, '/')) {
+        throw new \Exception('اسم الملف غير صالح');
+        }
+        $destinationPath = $realTarget . '/' . $sanitizedFileName;
 
         if (!move_uploaded_file($file['tmp_name'], $destinationPath)) {
-            throw new \Exception('فشل في حفظ الملف على مساحة التخزين');
+        throw new \Exception('فشل في حفظ الملف على مساحة التخزين');
         }
 
         $relativePath = '/' . trim($targetSubDir, '/') . '/' . $sanitizedFileName;

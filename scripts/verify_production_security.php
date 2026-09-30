@@ -155,11 +155,42 @@ check('in-root delete still works', str_contains((string) $res2, 'DELETED'), 'go
 
 // --------------------------------- 5. group scope applies to every folder type
 $ctrl = file_get_contents($root . '/backend-api/src/Controllers/StorageController.php');
-$uploadBlock = substr($ctrl, strpos($ctrl, 'function upload'), 1600);
+// Bound the block by the whole function body, not a fixed char count: the
+// span used to be 1600 bytes, and adding the folder_type allowlist pushed the
+// real code past that window so these checks silently read an empty slice.
+$uploadStart = strpos($ctrl, 'function upload');
+$uploadEnd   = strpos($ctrl, 'function delete');
+$uploadBlock = ($uploadStart === false || $uploadEnd === false)
+    ? ''
+    : substr($ctrl, $uploadStart, $uploadEnd - $uploadStart);
 check('gallery path is group-scoped', str_contains($uploadBlock, '"gallery/group_{$groupId}/{$folderType}"'));
 check('feed path is group-scoped', str_contains($uploadBlock, '"feed/group_{$groupId}/{$yearMonth}"'));
 $calls = substr_count(substr($uploadBlock, 0, strpos($uploadBlock, 'FileSecurityMiddleware')), 'enforceGroupScope');
 check('enforceGroupScope called unconditionally (1x, outside the academic if)', $calls === 1, "calls=$calls");
+
+// ------------------------------- 5b. folder_type / user_role are allowlisted
+// Traversal reached the filesystem through these two POST fields before.
+$allowFolders = strpos($uploadBlock, 'ALLOWED_FOLDERS') !== false
+    && preg_match('/in_array\(\$folderType,\s*\$ALLOWED_FOLDERS,\s*true\)/', $uploadBlock) === 1;
+check('folder_type is allowlisted', $allowFolders);
+$allowRoles = strpos($uploadBlock, 'ALLOWED_USER_ROLES') !== false
+    && preg_match('/in_array\(\$userRole,\s*\$ALLOWED_USER_ROLES,\s*true\)/', $uploadBlock) === 1;
+check('user_role is allowlisted', $allowRoles);
+
+// ------------------------------------ 5c. write path is contained, not just delete
+$svc = file_get_contents($root . '/backend-api/src/Services/StorageBridgeService.php');
+$saveStart = strpos($svc, 'function saveUploadedFile');
+$saveEnd   = strpos($svc, 'function deleteFile');
+$saveBlock = ($saveStart === false || $saveEnd === false)
+    ? ''
+    : substr($svc, $saveStart, $saveEnd - $saveStart);
+check('saveUploadedFile rejects ".." in the target path',
+    preg_match('/preg_match\(\s*.#\(\^\/\)\\\\\.\.\\\/\(\\\$\|\#\)/', $saveBlock) === 1
+    || str_contains($saveBlock, '\.\.(/|$)'));
+check('saveUploadedFile re-resolves the directory with realpath',
+    str_contains($saveBlock, 'realpath($targetDirectory)'));
+check('saveUploadedFile verifies containment after mkdir',
+    str_contains($saveBlock, 'str_starts_with($realTarget, $root . DIRECTORY_SEPARATOR)'));
 
 // --------------------------------------------------- 6. CORS is prod-scoped
 $appSrc = file_get_contents($root . '/backend-api/config/app.php');

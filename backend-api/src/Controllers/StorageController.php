@@ -18,7 +18,15 @@ class StorageController {
             Response::error('يرجى اختيار ملف لرفعه', 'NO_FILE_PROVIDED', 400);
         }
 
+        // Allowlist, not a denylist. Anything not listed falls through to the
+        // gallery branch below, where an attacker-chosen folder_type is
+        // interpolated into the destination path.
+        $ALLOWED_FOLDERS = ['curriculum', 'lectures', 'books', 'research', 'mp3',
+                            'users', 'feed', 'general', 'gallery'];
         $folderType = $_POST['folder_type'] ?? 'general';
+        if (!in_array($folderType, $ALLOWED_FOLDERS, true)) {
+            Response::error('نوع المجلد غير صالح', 'INVALID_FOLDER_TYPE', 400);
+        }
         $groupId = isset($_POST['group_id']) ? (int)$_POST['group_id'] : (int)($user['group_id'] ?? 1);
 
         // Every folder type lives inside a group, so group scope is enforced
@@ -27,10 +35,15 @@ class StorageController {
         // group — a real cross-group write, not just a hidden UI element.
         GroupScopeMiddleware::enforceGroupScope($user, $groupId);
 
-        if (in_array($folderType, ['curriculum', 'lectures', 'books', 'research', 'mp3'])) {
+        if (in_array($folderType, ['curriculum', 'lectures', 'books', 'research', 'mp3'], true)) {
             $targetSubDir = "academic/group_{$groupId}/{$folderType}";
         } elseif ($folderType === 'users') {
+            // Same reason: user_role is interpolated into the path.
+            $ALLOWED_USER_ROLES = ['trainees', 'servants', 'secretariat', 'admins'];
             $userRole = $_POST['user_role'] ?? 'trainees';
+            if (!in_array($userRole, $ALLOWED_USER_ROLES, true)) {
+                Response::error('نوع المستخدم غير صالح', 'INVALID_USER_ROLE', 400);
+            }
             $targetSubDir = "users/{$userRole}/group_{$groupId}";
         } elseif ($folderType === 'feed') {
             $yearMonth = date('Y/m');
