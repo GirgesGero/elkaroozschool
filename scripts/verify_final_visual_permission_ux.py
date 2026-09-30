@@ -9,6 +9,24 @@ import uuid
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from verify_auth_roles_security import SUPABASE_URL, ANON_KEY, http_request, login_user
 
+def ek_pw(env_name: str) -> str:
+    """Fetch a test-account password from the environment.
+
+    These credentials were previously hardcoded in this repository. They are
+    real accounts on the production Supabase project, so they now live in the
+    environment only and there is deliberately no fallback default: a test
+    run that cannot find them must fail loudly rather than authenticate with
+    a committed password.
+    """
+    value = os.environ.get(env_name)
+    if not value:
+        raise SystemExit(
+            f"missing required env var {env_name}; refusing to run with a "
+            f"hardcoded password (see docs/REMEDIATION_PLAN.md phase 5)"
+        )
+    return value
+
+
 def run_comprehensive_audit():
     print("=" * 70)
     print("EL KAROOZ SCHOOL - SCENARIO ACCEPTANCE & PERMISSION AUDIT")
@@ -24,14 +42,14 @@ def run_comprehensive_audit():
     # Step 1: Authenticate all test roles
     tokens = {}
     users_to_test = [
-        ("Admin", "admin_user", "AdminPass123!"),
-        ("Super User", "super_user", "SuperPass123!"),
-        ("Servant G1", "servant_g1", "ServantPass123!"),
-        ("Servant G2", "servant_g2", "ServantPass123!"),
-        ("Secretariat G1", "sec_g1", "SecPass123!"),
-        ("Secretariat G2", "sec_g2", "SecPass123!"),
-        ("Trainee G1", "trainee_g1", "TraineePass123!"),
-        ("Trainee G2", "trainee_g2", "TraineePass123!"),
+        ("Admin", "admin_user", ek_pw("EK_PW_ADMIN")),
+        ("Super User", "super_user", ek_pw("EK_PW_SUPER_USER")),
+        ("Servant G1", "servant_g1", ek_pw("EK_PW_SERVANT")),
+        ("Servant G2", "servant_g2", ek_pw("EK_PW_SERVANT")),
+        ("Secretariat G1", "sec_g1", ek_pw("EK_PW_SECRETARIAT")),
+        ("Secretariat G2", "sec_g2", ek_pw("EK_PW_SECRETARIAT")),
+        ("Trainee G1", "trainee_g1", ek_pw("EK_PW_TRAINEE")),
+        ("Trainee G2", "trainee_g2", ek_pw("EK_PW_TRAINEE")),
     ]
 
     for role_label, uname, pwd in users_to_test:

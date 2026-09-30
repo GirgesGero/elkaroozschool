@@ -5,6 +5,24 @@ import time
 import os
 import sys
 
+def ek_pw(env_name: str) -> str:
+    """Fetch a test-account password from the environment.
+
+    These credentials were previously hardcoded in this repository. They are
+    real accounts on the production Supabase project, so they now live in the
+    environment only and there is deliberately no fallback default: a test
+    run that cannot find them must fail loudly rather than authenticate with
+    a committed password.
+    """
+    value = os.environ.get(env_name)
+    if not value:
+        raise SystemExit(
+            f"missing required env var {env_name}; refusing to run with a "
+            f"hardcoded password (see docs/REMEDIATION_PLAN.md phase 5)"
+        )
+    return value
+
+
 SUPABASE_URL = "https://kgqgnqjkrghvktymbimz.supabase.co"
 ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtncWducWprcmdodmt0eW1iaW16Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAzNjk2NzgsImV4cCI6MjEwNTk0NTY3OH0.QHZCfNWf97-3fCONdMeXnWqeZMYyZ8NHIFfTwnHnj-w"
 
@@ -65,9 +83,9 @@ print("==================================================")
 print("STARTING PHASE 9 BACKUP, RESTORE & AUDIT TEST SUITE")
 print("==================================================")
 
-admin_token = login("admin_user@elkarooz-school.com", "AdminPass123!")
-trainee_token = login("trainee_g1@elkarooz-school.com", "TraineePass123!")
-servant_token = login("servant_g1@elkarooz-school.com", "ServantPass123!")
+admin_token = login("admin_user@elkarooz-school.com", ek_pw("EK_PW_ADMIN"))
+trainee_token = login("trainee_g1@elkarooz-school.com", ek_pw("EK_PW_TRAINEE"))
+servant_token = login("servant_g1@elkarooz-school.com", ek_pw("EK_PW_SERVANT"))
 
 admin_headers = {"apikey": ANON_KEY, "Authorization": f"Bearer {admin_token}"}
 trainee_headers = {"apikey": ANON_KEY, "Authorization": f"Bearer {trainee_token}"}
@@ -127,8 +145,8 @@ ts = int(time.time())
 test_u1 = f"mark_{ts}"
 test_u2 = f"fady_{ts}"
 test_import_batch = [
-    {"username": test_u1, "full_name": "مارك نبيل عزيز", "phone": "01234567891", "group_name": "الفرقة الأولى", "password": "TraineePass123!"},
-    {"username": test_u2, "full_name": "فادي عماد شنودة", "phone": "01098765432", "group_name": "الفرقة الأولى", "password": "TraineePass123!"}
+    {"username": test_u1, "full_name": "مارك نبيل عزيز", "phone": "01234567891", "group_name": "الفرقة الأولى", "password": ek_pw("EK_PW_TRAINEE")},
+    {"username": test_u2, "full_name": "فادي عماد شنودة", "phone": "01098765432", "group_name": "الفرقة الأولى", "password": ek_pw("EK_PW_TRAINEE")}
 ]
 s_imp_dry, imp_dry_res, _ = http_request(
     f"{SUPABASE_URL}/rest/v1/rpc/import_trainees_bulk_atomic",

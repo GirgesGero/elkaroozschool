@@ -16,44 +16,13 @@ import {
   EyeOff,
   Sun,
   Moon,
-  Crown,
-  Users
+  Crown
 } from 'lucide-react';
-
-const QUICK_ACCOUNTS = [
-  {
-    role: 'مسؤول النظام',
-    name: 'م. جرجس',
-    username: 'admin_user',
-    avatar: 'جـ',
-    color: 'bg-[#7B0017] text-white',
-    badge: 'admin',
-    desc: 'كامل الصلاحيات'
-  },
-  {
-    role: 'خادم الفرقة',
-    name: 'خادم الفرقة',
-    username: 'servant_g1',
-    avatar: 'خـ',
-    color: 'bg-[#0B1B3D] text-[#C5A059]',
-    badge: 'الفرقة الأولى',
-    desc: 'إدارة المحاضرات'
-  },
-  {
-    role: 'دارس بالكاروز',
-    name: 'متدرب الفرقة',
-    username: 'trainee_g1',
-    avatar: 'طـ',
-    color: 'bg-slate-700 text-white',
-    badge: 'الفرقة الأولى',
-    desc: 'الامتحانات والماراثون'
-  }
-];
 
 export default function LoginPage() {
   const router = useRouter();
   const { theme, setTheme } = useAppTheme();
-  const [username, setUsername] = useState('admin_user');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -94,19 +63,6 @@ export default function LoginPage() {
     } catch (err: any) {
       setError(err.message || 'حدث خطأ غير متوقع أثناء تسجيل الدخول');
       setLoading(false);
-    }
-  };
-
-  const handleQuickLogin = (uname: string) => {
-    setUsername(uname);
-    const passMap: Record<string, string> = {
-      admin_user: 'AdminPass123!',
-      servant_g1: 'ServantPass123!',
-      trainee_g1: 'TraineePass123!'
-    };
-    setPassword(passMap[uname] || '');
-    if (passMap[uname]) {
-      handleLogin(undefined, uname, passMap[uname]);
     }
   };
 
@@ -209,41 +165,6 @@ export default function LoginPage() {
               <p className="text-base sm:text-lg opacity-80 leading-relaxed max-w-xl">
                 المنظومة الرقمية الشاملة لدراسة أسفار وتفاسير الكتاب المقدس ومتابعة الأنشطة الأكاديمية والخدمية.
               </p>
-            </div>
-
-            {/* One-Click Saved Accounts List */}
-            <div className="space-y-3 pt-2">
-              <div className="flex items-center gap-2">
-                <Users className="w-4 h-4 text-[#C5A059]" />
-                <h3 className="text-sm font-bold opacity-90">
-                  الحسابات المحفوظة (انقر للدخول السريع):
-                </h3>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-                {QUICK_ACCOUNTS.map((acc) => (
-                  <button
-                    key={acc.username}
-                    type="button"
-                    onClick={() => handleQuickLogin(acc.username)}
-                    disabled={loading}
-                    className="app-card p-4 flex flex-col items-center text-center gap-2.5 transition-all hover:-translate-y-1 hover:shadow-md active:scale-95 group text-right w-full"
-                  >
-                    <div className={`w-14 h-14 rounded-full flex items-center justify-center font-bold text-xl shadow-inner ${acc.color}`}>
-                      {acc.avatar}
-                    </div>
-                    <div className="flex flex-col items-center">
-                      <span className="font-bold text-sm leading-tight group-hover:text-[#7B0017] dark:group-hover:text-[#FA383E] transition-colors">
-                        {acc.name}
-                      </span>
-                      <span className="text-xs opacity-70 mt-0.5">{acc.role}</span>
-                    </div>
-                    <div className="w-full mt-1 py-1 px-2.5 rounded-full bg-[var(--bg-input)] border border-[var(--border-subtle)] text-[11px] font-bold text-center text-[#7B0017] dark:text-[#FA383E]">
-                      دخول سريع ✓
-                    </div>
-                  </button>
-                ))}
-              </div>
             </div>
           </div>
 

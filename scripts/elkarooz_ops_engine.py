@@ -7,6 +7,24 @@ import os
 import sys
 from datetime import datetime
 
+def ek_pw(env_name: str) -> str:
+    """Fetch a test-account password from the environment.
+
+    These credentials were previously hardcoded in this repository. They are
+    real accounts on the production Supabase project, so they now live in the
+    environment only and there is deliberately no fallback default: a test
+    run that cannot find them must fail loudly rather than authenticate with
+    a committed password.
+    """
+    value = os.environ.get(env_name)
+    if not value:
+        raise SystemExit(
+            f"missing required env var {env_name}; refusing to run with a "
+            f"hardcoded password (see docs/REMEDIATION_PLAN.md phase 5)"
+        )
+    return value
+
+
 SUPABASE_URL = "https://kgqgnqjkrghvktymbimz.supabase.co"
 ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtncWducWprcmdodmt0eW1iaW16Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAzNjk2NzgsImV4cCI6MjEwNTk0NTY3OH0.QHZCfNWf97-3fCONdMeXnWqeZMYyZ8NHIFfTwnHnj-w"
 
@@ -44,7 +62,7 @@ def login_admin():
         f"{SUPABASE_URL}/auth/v1/token?grant_type=password",
         method="POST",
         headers={"apikey": ANON_KEY},
-        data={"email": "admin_user@elkarooz-school.com", "password": "AdminPass123!"}
+        data={"email": "admin_user@elkarooz-school.com", "password": ek_pw("EK_PW_ADMIN")}
     )
     if status == 200 and isinstance(data, dict):
         return data["access_token"]

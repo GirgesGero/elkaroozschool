@@ -7,6 +7,24 @@ import re
 import urllib.request
 import urllib.error
 
+def ek_pw(env_name: str) -> str:
+    """Fetch a test-account password from the environment.
+
+    These credentials were previously hardcoded in this repository. They are
+    real accounts on the production Supabase project, so they now live in the
+    environment only and there is deliberately no fallback default: a test
+    run that cannot find them must fail loudly rather than authenticate with
+    a committed password.
+    """
+    value = os.environ.get(env_name)
+    if not value:
+        raise SystemExit(
+            f"missing required env var {env_name}; refusing to run with a "
+            f"hardcoded password (see docs/REMEDIATION_PLAN.md phase 5)"
+        )
+    return value
+
+
 with open("E:/drive progect/ELKAROOZ SCHOOL/scripts/verify_phase11_e2e.py", "r", encoding="utf-8") as f:
     e2e_code = f.read()
 
@@ -81,7 +99,7 @@ def run_tests():
     results = []
 
     # Login as Admin
-    status, auth_data = login_user("admin_user", "AdminPass123!")
+    status, auth_data = login_user("admin_user", ek_pw("EK_PW_ADMIN"))
     admin_token = auth_data.get("access_token") if status == 200 else None
     print(f"[*] Admin Authentication Status: {status} {'(SUCCESS)' if admin_token else '(FAILED)'}")
 

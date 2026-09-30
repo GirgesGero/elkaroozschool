@@ -5,6 +5,24 @@ import time
 import os
 import sys
 
+def ek_pw(env_name: str) -> str:
+    """Fetch a test-account password from the environment.
+
+    These credentials were previously hardcoded in this repository. They are
+    real accounts on the production Supabase project, so they now live in the
+    environment only and there is deliberately no fallback default: a test
+    run that cannot find them must fail loudly rather than authenticate with
+    a committed password.
+    """
+    value = os.environ.get(env_name)
+    if not value:
+        raise SystemExit(
+            f"missing required env var {env_name}; refusing to run with a "
+            f"hardcoded password (see docs/REMEDIATION_PLAN.md phase 5)"
+        )
+    return value
+
+
 SUPABASE_URL = "https://kgqgnqjkrghvktymbimz.supabase.co"
 ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtncWducWprcmdodmt0eW1iaW16Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAzNjk2NzgsImV4cCI6MjEwNTk0NTY3OH0.QHZCfNWf97-3fCONdMeXnWqeZMYyZ8NHIFfTwnHnj-w"
 
@@ -66,13 +84,13 @@ print("STARTING PHASE 11 FULL SYSTEM E2E QA TEST SUITE")
 print("==================================================")
 
 # 1. Authenticate Actors
-admin_token = login("admin_user@elkarooz-school.com", "AdminPass123!")
-super_token = login("super_user@elkarooz-school.com", "SuperPass123!")
-servant_g1_token = login("servant_g1@elkarooz-school.com", "ServantPass123!")
-servant_g2_token = login("servant_g2@elkarooz-school.com", "ServantPass123!")
-sec_g1_token = login("sec_g1@elkarooz-school.com", "SecPass123!")
-trainee_g1_token = login("trainee_g1@elkarooz-school.com", "TraineePass123!")
-trainee_g2_token = login("trainee_g2@elkarooz-school.com", "TraineePass123!")
+admin_token = login("admin_user@elkarooz-school.com", ek_pw("EK_PW_ADMIN"))
+super_token = login("super_user@elkarooz-school.com", ek_pw("EK_PW_SUPER_USER"))
+servant_g1_token = login("servant_g1@elkarooz-school.com", ek_pw("EK_PW_SERVANT"))
+servant_g2_token = login("servant_g2@elkarooz-school.com", ek_pw("EK_PW_SERVANT"))
+sec_g1_token = login("sec_g1@elkarooz-school.com", ek_pw("EK_PW_SECRETARIAT"))
+trainee_g1_token = login("trainee_g1@elkarooz-school.com", ek_pw("EK_PW_TRAINEE"))
+trainee_g2_token = login("trainee_g2@elkarooz-school.com", ek_pw("EK_PW_TRAINEE"))
 
 admin_h = {"apikey": ANON_KEY, "Authorization": f"Bearer {admin_token}"}
 super_h = {"apikey": ANON_KEY, "Authorization": f"Bearer {super_token}"}
