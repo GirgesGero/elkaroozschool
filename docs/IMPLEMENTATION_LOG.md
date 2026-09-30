@@ -370,7 +370,7 @@
 | المرحلة | ماذا | الدليل |
 |---|---|---|
 | ٢ | `(array)$decoded` cast سطحي ← `stdClass` fatal في 5 من 8 routes | deep cast · لا fatal |
-| ٣ | تصعيد أفقي في export | servant g1 يطلب g2 → `group_id=eq.1` فعليًا |
+| ٣ | تصعيد أفقي في export + **التصدير admin/super_user فقط** | `servant`/`secretariat`/`trainee` → `403` بصفر استعلام |
 | ٤ | traversal حيّ على الرفع | `9/9` · لا ملف بره `storage/` |
 | ٥ | 6 كلمات مرور حقيقية + quick-login | صفر في المصدر والـ build output · `bd09a9f` |
 
@@ -398,3 +398,34 @@ frontend: tsc 0 errors · lint 0 errors · build 22/22
 
 **الحالة: `NOT READY`** — متبقي: دوران كلمات المرور، رفع PHP للإنتاج،
 ضبط `NEXT_PUBLIC_SUPABASE_*` على Vercel، وتسجيل دخول حقيقي.
+
+---
+
+## 2026-09-30 — قرار «الادمن فقط»: التصدير لـ admin + super_user
+
+**الطلب:** التصدير للأدمن فقط. **التوضيح:** `super_user` يفضل داخل النطاق لأنه عام في
+باقي النظام.
+
+### التنفيذ — `0c41043`
+- `ExportController`: `requireRoles` بقت `['admin','super_user']` فقط، وفرع «غير الأدمن»
+  بالكامل اتشال (ومنه `GroupScopeMiddleware` import بقى مستعمل).
+- `group_id` بقى `(int)` من الـ query string للأدمن، و**السالب اتحول لـ 0** (= كل المجموعات)
+  بدل ما يمرر رقم غريب.
+- **الواجهة:** `/admin/imports` كانت أصلًا `['admin','super_user']` — **من غير تعديل**.
+
+### التحقق
+```
+phase3b role matrix      → 10/10   (3 أدوار مرفوضة × 2 فحص + 2 دور عام × 2 فحص)
+verify_production_security → 32/32   (كانت 26/26، +6 فحوص جديدة)
+verify_api_http           → 16 PASS · 0 FAIL
+الحزمة المفكوكة           → 15/15   (35 ملف PHP · 0 syntax errors)
+```
+
+**الفحص الذي يستحق الانتباه:** لكل دور مرفوض اتأكدت إن **صفر استعلام** وصل لـ PostgREST —
+مش بس إن الرد `403`. لأن `Response::error` بيكتب الـ JSON ويخرج، فلو الرفض كان بيحصل
+**بعد** بناء الـ query، كان الرد هيفضل `403` والبيانات تكون اتقرت.
+
+### 💡 درس: الفحوص الساكنة (static) هنا هي الخاصية الصحيحة
+حذفت الشجرة السلوكية «غير الأدمن»، والاختبار السلوكي **مش هيكتشف** لو حد رجّع `'servant'`
+لـ allowlist بعدين — لأن السلوك هيفضل محصور في مجموعته (سلوك مقبول!). الـ security property
+هنا هو **نفس الـ allowlist**، لا السلوك، فاعتمدت فحوص `preg_match` على النص.
