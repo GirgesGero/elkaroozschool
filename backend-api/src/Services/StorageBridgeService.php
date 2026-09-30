@@ -1,6 +1,8 @@
 <?php
 namespace App\Services;
 
+use App\Utils\AppRoot;
+
 use App\Utils\Security;
 
 class StorageBridgeService {
@@ -8,7 +10,7 @@ class StorageBridgeService {
     private string $publicUrl;
 
     public function __construct() {
-        $config = require dirname(__DIR__, 2) . '/config/storage.php';
+        $config = require AppRoot::path('config/storage.php');
         $this->rootDir = rtrim($config['root_path'], '/');
         $this->publicUrl = rtrim($config['public_url'], '/');
     }
@@ -43,10 +45,30 @@ class StorageBridgeService {
     }
 
     public function deleteFile(string $relativePath): bool {
-        $fullPath = $this->rootDir . '/' . ltrim($relativePath, '/');
-        if (file_exists($fullPath) && is_file($fullPath)) {
-            return unlink($fullPath);
+        // Reject traversal / absolute paths before touching the filesystem.
+        // Without this, a crafted path like "../../config/supabase.php" escapes
+        // the storage root and deletes (or probes) files outside it.
+        if ($relativePath === '' || str_contains($relativePath, "\0")) {
+            return false;
         }
-        return false;
+        $relativePath = str_replace('\\', '/', $relativePath);
+        if (str_starts_with($relativePath, '/') || preg_match('#(^|/)\.\.(/|$)#', $relativePath)) {
+            return false;
+        }
+
+        $root = realpath($this->rootDir);
+        if ($root === false) {
+            return false;
+        }
+        $fullPath = realpath($this->rootDir . '/' . ltrim($relativePath, '/'));
+        // Must resolve to a path that really lives inside the storage root.
+        if ($fullPath === false || !is_file($fullPath)) {
+            return false;
+        }
+        if ($fullPath !== $root && !str_starts_with($fullPath, $root . DIRECTORY_SEPARATOR)) {
+            return false;
+        }
+
+        return unlink($fullPath);
     }
 }

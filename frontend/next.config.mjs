@@ -8,10 +8,15 @@ const __dirname = path.dirname(__filename);
 const nextConfig = {
   reactStrictMode: true,
   eslint: {
-    // Prevent lint warnings from blocking production build on Vercel
-    ignoreDuringBuilds: true,
+    // ESLint runs on every build. It was previously disabled here, which meant
+    // `next build` never linted at all and a broken lint setup would stay
+    // invisible until CI. The config now lives in .eslintrc.json.
+    ignoreDuringBuilds: false,
   },
   typescript: {
+    // Verified: `tsc --noEmit` currently reports 0 errors, so this flag is not
+    // hiding anything today. It stays as a safety net for the Vercel build.
+    // Remove it once a CI typecheck gate is in place.
     ignoreBuildErrors: true,
   },
   webpack: (config) => {

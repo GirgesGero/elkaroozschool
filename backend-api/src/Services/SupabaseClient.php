@@ -1,12 +1,14 @@
 <?php
 namespace App\Services;
 
+use App\Utils\AppRoot;
+
 class SupabaseClient {
     private string $url;
     private string $serviceRoleKey;
 
     public function __construct() {
-        $config = require dirname(__DIR__, 2) . '/config/supabase.php';
+        $config = require AppRoot::path('config/supabase.php');
         $this->url = rtrim($config['url'], '/');
         $this->serviceRoleKey = $config['service_role_key'] ?: $config['anon_key'];
     }

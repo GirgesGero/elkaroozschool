@@ -30,3 +30,6 @@ yarn-error.log*
 .turbo/
 .DS_Store
 Thumbs.db
+
+# Next.js incremental typecheck cache
+*.tsbuildinfo

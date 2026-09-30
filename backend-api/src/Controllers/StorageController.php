@@ -21,18 +21,22 @@ class StorageController {
         $folderType = $_POST['folder_type'] ?? 'general';
         $groupId = isset($_POST['group_id']) ? (int)$_POST['group_id'] : (int)($user['group_id'] ?? 1);
 
-        // Enforce Group Scope if academic
+        // Every folder type lives inside a group, so group scope is enforced
+        // unconditionally. Previously only the "academic" list was checked,
+        // which let a group-1 servant write into gallery/ and users/ for any
+        // group — a real cross-group write, not just a hidden UI element.
+        GroupScopeMiddleware::enforceGroupScope($user, $groupId);
+
         if (in_array($folderType, ['curriculum', 'lectures', 'books', 'research', 'mp3'])) {
-            GroupScopeMiddleware::enforceGroupScope($user, $groupId);
             $targetSubDir = "academic/group_{$groupId}/{$folderType}";
         } elseif ($folderType === 'users') {
             $userRole = $_POST['user_role'] ?? 'trainees';
             $targetSubDir = "users/{$userRole}/group_{$groupId}";
         } elseif ($folderType === 'feed') {
             $yearMonth = date('Y/m');
-            $targetSubDir = "feed/{$yearMonth}";
+            $targetSubDir = "feed/group_{$groupId}/{$yearMonth}";
         } else {
-            $targetSubDir = "gallery/{$folderType}";
+            $targetSubDir = "gallery/group_{$groupId}/{$folderType}";
         }
 
         FileSecurityMiddleware::validateUpload($_FILES['file'], $folderType);

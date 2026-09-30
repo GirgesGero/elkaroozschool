@@ -1,6 +1,8 @@
 <?php
 namespace App\Middleware;
 
+use App\Utils\AppRoot;
+
 use App\Utils\Response;
 
 class RateLimitMiddleware {
@@ -13,7 +15,7 @@ class RateLimitMiddleware {
      */
     public static function check(string $endpointKey = 'general', int $maxRequests = 60, int $windowSeconds = 60): void {
         $clientIp = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
-        $cacheDir = dirname(__DIR__, 2) . '/storage/cache/ratelimit';
+        $cacheDir = AppRoot::path('storage/cache/ratelimit');
 
         if (!is_dir($cacheDir)) {
             @mkdir($cacheDir, 0750, true);

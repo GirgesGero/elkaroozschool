@@ -1,6 +1,8 @@
 <?php
 namespace App\Controllers;
 
+use App\Utils\AppRoot;
+
 use App\Middleware\JwtAuthMiddleware;
 use App\Middleware\RbacMiddleware;
 use App\Services\ZipEncryptionService;
@@ -26,7 +28,7 @@ class BackupController {
         $timestamp = date('Y-m-d_H-i-s');
         $filename = "elkarooz_backup_{$timestamp}.zip";
 
-        $storageConfig = require dirname(__DIR__, 2) . '/config/storage.php';
+        $storageConfig = require AppRoot::path('config/storage.php');
         $fullBackupDir = $storageConfig['root_path'] . '/backups/full';
         if (!is_dir($fullBackupDir)) {
             mkdir($fullBackupDir, 0755, true);

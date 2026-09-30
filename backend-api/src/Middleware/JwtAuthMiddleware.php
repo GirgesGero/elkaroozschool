@@ -1,6 +1,8 @@
 <?php
 namespace App\Middleware;
 
+use App\Utils\AppRoot;
+
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 use App\Utils\Response;
@@ -14,7 +16,7 @@ class JwtAuthMiddleware {
         }
 
         $jwt = $matches[1];
-        $config = require dirname(__DIR__, 2) . '/config/supabase.php';
+        $config = require AppRoot::path('config/supabase.php');
 
         try {
             // Note: If using HS256 secret verification
@@ -28,21 +30,11 @@ class JwtAuthMiddleware {
                 'claims' => (array)$decoded
             ];
         } catch (\Exception $e) {
-            // In case of dev mode fallback decoding payload structure
-            $tokenParts = explode('.', $jwt);
-            if (count($tokenParts) === 3) {
-                $payload = json_decode(base64_decode(strtr($tokenParts[1], '-_', '+/')), true);
-                if ($payload && isset($payload['sub'])) {
-                    return [
-                        'user_id' => $payload['sub'],
-                        'role' => $payload['app_metadata']['role'] ?? ($payload['role'] ?? 'trainee'),
-                        'group_id' => $payload['app_metadata']['group_id'] ?? null,
-                        'email' => $payload['email'] ?? null,
-                        'claims' => $payload
-                    ];
-                }
-            }
-            Response::error('رمز المصادقة غير صالح أو منتهي الصلاحية', 'INVALID_TOKEN', 401, $e->getMessage());
+            // NEVER fall back to unverified decoding. Supabase signs access
+            // tokens with RS256/ES256, not the HS256 secret used above, so
+            // this branch used to accept ANY self-crafted token and hand the
+            // caller an arbitrary role/group. Fail closed instead.
+            Response::error('رمز المصادقة غير صالح أو منتهي الصلاحية', 'INVALID_TOKEN', 401);
             exit;
         }
     }

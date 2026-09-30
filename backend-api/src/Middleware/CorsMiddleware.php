@@ -1,9 +1,11 @@
 <?php
 namespace App\Middleware;
 
+use App\Utils\AppRoot;
+
 class CorsMiddleware {
     public static function handle(): void {
-        $config = require dirname(__DIR__, 2) . '/config/app.php';
+        $config = require AppRoot::path('config/app.php');
         $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
         $allowedOrigins = $config['cors']['allowed_origins'] ?? ['http://localhost:3000'];
 

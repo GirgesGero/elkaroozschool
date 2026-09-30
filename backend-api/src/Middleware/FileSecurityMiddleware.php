@@ -1,12 +1,14 @@
 <?php
 namespace App\Middleware;
 
+use App\Utils\AppRoot;
+
 use App\Utils\Response;
 use App\Utils\Security;
 
 class FileSecurityMiddleware {
     public static function validateUpload(array $file, string $category): void {
-        $storageConfig = require dirname(__DIR__, 2) . '/config/storage.php';
+        $storageConfig = require AppRoot::path('config/storage.php');
 
         if ($file['error'] !== UPLOAD_ERR_OK) {
             Response::error('فشل رفع الملف: خطأ في نقل البيانات من العميل', 'UPLOAD_ERROR', 400);

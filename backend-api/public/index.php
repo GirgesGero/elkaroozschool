@@ -2,24 +2,62 @@
 // backend-api/public/index.php
 // Front Controller & Router for Hostinger PHP Backend
 
-require_once dirname(__DIR__) . '/src/Utils/Response.php';
-require_once dirname(__DIR__) . '/src/Utils/Security.php';
-require_once dirname(__DIR__) . '/src/Middleware/CorsMiddleware.php';
-require_once dirname(__DIR__) . '/src/Middleware/JwtAuthMiddleware.php';
-require_once dirname(__DIR__) . '/src/Middleware/RbacMiddleware.php';
-require_once dirname(__DIR__) . '/src/Middleware/GroupScopeMiddleware.php';
-require_once dirname(__DIR__) . '/src/Middleware/FileSecurityMiddleware.php';
-require_once dirname(__DIR__) . '/src/Services/SupabaseClient.php';
-require_once dirname(__DIR__) . '/src/Services/AuditLogService.php';
-require_once dirname(__DIR__) . '/src/Services/StorageBridgeService.php';
-require_once dirname(__DIR__) . '/src/Services/ZipEncryptionService.php';
-require_once dirname(__DIR__) . '/src/Services/ExcelParserService.php';
-require_once dirname(__DIR__) . '/src/Controllers/AuthController.php';
-require_once dirname(__DIR__) . '/src/Controllers/StorageController.php';
-require_once dirname(__DIR__) . '/src/Controllers/BackupController.php';
-require_once dirname(__DIR__) . '/src/Controllers/RestoreController.php';
-require_once dirname(__DIR__) . '/src/Controllers/ImportController.php';
-require_once dirname(__DIR__) . '/src/Controllers/ExportController.php';
+// Resolve the application root.
+//
+// This file is uploaded FLATTENED into public_html/ on shared hosting, so
+// __DIR__ IS public_html and dirname(__DIR__) would point at the account root
+// *above* the app. The previous code therefore looked for vendor/ and src/ one
+// level too high and every request died with VENDOR_MISSING / a fatal require
+// failure. Probe the flattened layout first, then the repo layout used in dev
+// (backend-api/public/index.php), so both work.
+$appRoot = __DIR__;
+if (!is_file($appRoot . '/vendor/autoload.php') && is_file(dirname(__DIR__) . '/vendor/autoload.php')) {
+    $appRoot = dirname(__DIR__);
+}
+
+// Composer autoloader MUST come first: JwtAuthMiddleware needs Firebase\JWT\*.
+// The manual require_once list below only covers first-party App\ classes, so
+// without this line every authenticated route fatal-errors with
+// "Class Firebase\JWT\JWT not found".
+$autoload = $appRoot . '/vendor/autoload.php';
+if (!file_exists($autoload)) {
+    http_response_code(500);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode([
+        'success' => false,
+        'error' => [
+            'code' => 'VENDOR_MISSING',
+            'message' => 'مكتبات Composer غير مثبتة على السيرفر. شغّل: composer install --no-dev',
+        ],
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+require_once $autoload;
+
+define('ELKAROOZ_APP_ROOT', $appRoot);
+
+// AppRoot resolves config/ and storage/ correctly under BOTH the repo layout
+// (backend-api/public/index.php) and the flattened public_html layout, so every
+// class must use it instead of dirname(__DIR__, 2).
+require_once $appRoot . '/src/Utils/AppRoot.php';
+require_once $appRoot . '/src/Utils/Response.php';
+require_once $appRoot . '/src/Utils/Security.php';
+require_once $appRoot . '/src/Middleware/CorsMiddleware.php';
+require_once $appRoot . '/src/Middleware/JwtAuthMiddleware.php';
+require_once $appRoot . '/src/Middleware/RbacMiddleware.php';
+require_once $appRoot . '/src/Middleware/GroupScopeMiddleware.php';
+require_once $appRoot . '/src/Middleware/FileSecurityMiddleware.php';
+require_once $appRoot . '/src/Services/SupabaseClient.php';
+require_once $appRoot . '/src/Services/AuditLogService.php';
+require_once $appRoot . '/src/Services/StorageBridgeService.php';
+require_once $appRoot . '/src/Services/ZipEncryptionService.php';
+require_once $appRoot . '/src/Services/ExcelParserService.php';
+require_once $appRoot . '/src/Controllers/AuthController.php';
+require_once $appRoot . '/src/Controllers/StorageController.php';
+require_once $appRoot . '/src/Controllers/BackupController.php';
+require_once $appRoot . '/src/Controllers/RestoreController.php';
+require_once $appRoot . '/src/Controllers/ImportController.php';
+require_once $appRoot . '/src/Controllers/ExportController.php';
 
 use App\Middleware\CorsMiddleware;
 use App\Utils\Response;
