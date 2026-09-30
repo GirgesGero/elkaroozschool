@@ -43,6 +43,10 @@ export default function AdminNotificationsPage() {
 
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  // SRS 8.1: the pastoral (absence) template is admin-only. SRS 8.2 keeps
+  // birthday at admin + super_user. The DB enforces this per row; this flag
+  // exists so the UI does not offer a control the server will refuse.
+  const [canEditPastoral, setCanEditPastoral] = useState(false);
   const [activeTab, setActiveTab] = useState<'TEMPLATES' | 'DAILY_VERSES' | 'DISPATCH'>('TEMPLATES');
 
   // Templates
@@ -87,6 +91,7 @@ export default function AdminNotificationsPage() {
       }
 
       setIsAdmin(true);
+      setCanEditPastoral(profile.role_id === 'admin');
 
       // 1. Fetch Templates
       const { data: tmpls } = await supabase.from('notification_templates').select('*');
@@ -113,6 +118,12 @@ export default function AdminNotificationsPage() {
   };
 
   const handleSavePastoralTemplate = async () => {
+    // Defence in depth: the RLS policy already blocks non-admins, but fail
+    // closed in the client too so the UI never claims a save the server drops.
+    if (!canEditPastoral) {
+      setStatusMsg({ type: 'error', text: 'تعديل قالب رسالة الافتقاد متاح للمسؤول فقط' });
+      return;
+    }
     setSavingTemplate(true);
     setStatusMsg(null);
     try {
@@ -351,40 +362,51 @@ export default function AdminNotificationsPage() {
         {/* Tab 1: Templates */}
         {activeTab === 'TEMPLATES' && (
           <div className="space-y-6">
-            {/* Pastoral / Absence Template */}
+            {/* Pastoral / Absence Template — admin only (SRS 8.1) */}
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <HeartHandshake className="w-5 h-5 text-rose-400" />
                   <h3 className="text-lg font-bold text-white">قالب رسالة الافتقاد الفوري (عند تسجيل الغياب)</h3>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setPastoralMsg((prev) => prev + ' {{student_name}} ')}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 rounded-lg text-xs font-semibold transition"
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-rose-400" />
-                  إدراج اسم المتدرب {'{{student_name}}'}
-                </button>
+                {canEditPastoral ? (
+                  <button
+                    type="button"
+                    onClick={() => setPastoralMsg((prev) => prev + ' {{student_name}} ')}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 rounded-lg text-xs font-semibold transition"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-rose-400" />
+                    إدراج اسم المتدرب {'{{student_name}}'}
+                  </button>
+                ) : null}
               </div>
 
               <textarea
                 rows={3}
                 value={pastoralMsg}
                 onChange={(e) => setPastoralMsg(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl p-4 text-white text-sm focus:outline-none focus:border-rose-500"
+                readOnly={!canEditPastoral}
+                className={`w-full bg-slate-950 border rounded-xl p-4 text-white text-sm focus:outline-none ${
+                  canEditPastoral ? 'border-slate-700 focus:border-rose-500' : 'border-slate-800 opacity-70'
+                }`}
               />
 
               <div className="flex justify-end">
                 <button
                   onClick={handleSavePastoralTemplate}
-                  disabled={savingTemplate}
+                  disabled={savingTemplate || !canEditPastoral}
                   className="flex items-center gap-2 px-6 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-sm font-bold transition shadow-lg shadow-rose-900/30 disabled:opacity-50"
                 >
                   <Save className="w-4 h-4" />
                   حفظ قالب الافتقاد
                 </button>
               </div>
+
+              {!canEditPastoral && (
+                <p className="text-xs text-slate-400 text-left">
+                  تعديل قالب رسالة الافتقاد متاح للمسؤول فقط.
+                </p>
+              )}
             </div>
 
             {/* Birthday Template */}

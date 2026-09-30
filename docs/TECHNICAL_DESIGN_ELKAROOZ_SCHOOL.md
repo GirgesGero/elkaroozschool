@@ -1159,7 +1159,8 @@ class JwtAuthMiddleware {
     ```
 
 ### 9.6 وحدة التصدير (Export Module)
-- **Endpoint:** `POST /api/export/data`
+- **Endpoint:** `POST /api/export/data`  
+- **الصيغة:** CSV فقط في النسخة الحالية (رُصد أن Excel/PDF غير منفَّذين في مراجعة 2026-09-30).
   - **Auth:** Bearer JWT (حسب صلاحيات الدور ونطاق الفرقة).
   - **Request:** `{"entity": "attendance"|"grades"|"trainees", "group_id": 1, "format": "xlsx"|"csv"|"pdf", "filters": {}}`.
   - **Response 200:** Binary Stream مع `Content-Disposition: attachment`.
@@ -1399,8 +1400,11 @@ public function processImport(string $filePath, string $adminId): array {
 
 - **الاستقلالية:** محرك التصدير منفصل تماماً عن النسخ الاحتياطي ومصمم لتوليد تقارير تشغيلية للمستخدمين.
 - **التوافق مع الصلاحيات ونطاق الفرقة:**
-  - الخادم والسكرتارية: يتم تطبيق شرط `WHERE group_id = user_group_id` إجبارياً في استعلام التصدير.
-  - الإدارة: إمكانية تصدير بيانات فرقة محددة أو كافة الفرق مجمعة.
+  - **المسؤول (Admin) و Super User فقط:** الطلبات من بقية الأدوار تُرفض بـ `403` قبل إصدار أي استعلام لقاعدة البيانات.
+  - `admin`: إمكانية تصدير بيانات فرقة محددة أو كافة الفرق مجمعة.
+  - `super_user`: وصول عالمي، ويصدّر كل المجموعات بلا تضييق.
+  - `secretariat` / `servant` / `trainee`: **مرفوضة صراحةً** — لا تضييق صامت لبيانات الفرق.
+  > **قرار تجاري — 2026-09-30:** يحل تعارضًا مع نصّ TD السابق الذي كان يفرض `WHERE group_id = user_group_id` للخدام والسكرتارية.
 - **المكتبات المستخدمة:**
   - `PhpSpreadsheet` لتوليد ملفات Excel (.xlsx) و CSV بجداول منسقة وتجميد الصف الأول وعناوين عربية.
   - `mPDF / Dompdf` لتوليد تقارير PDF متوافقة تماماً مع النصوص العربية واتجاه RTL.
