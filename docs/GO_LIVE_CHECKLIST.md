@@ -183,3 +183,44 @@ Treat those numbers as void.
    group 2 and 3 are not selectable.
 5. Confirm Admin **can** edit Absence Message and Super User **cannot**.
 6. Only then announce go-live.
+
+---
+
+## 🔴 اكتشاف جديد — 2026-09-30: خادم PHP على الإنتاج لا يستجيب
+
+**هذا فحص حيّ لم يسبق تدوينه، وهو blocker مستقل عن كل اللي فوق.**
+
+```
+$ curl -v https://elkaroozschool.is-best.net/health
+rc=56  ·  schannel: renegotiating SSL/TLS connection (يتكرر)
+$ curl http://elkaroozschool.is-best.net/health
+rc=52  ·  (لا رد)
+DNS: elkaroozschool.is-best.net → 185.27.134.59   (الاسم شغّال)
+```
+
+**التفسير الأرجح:** الـ DNS بيشاور صح، بس الـ web server جوه مش بيرد —
+على الأرجح الـ hosting **في maintenance** أو الـ PHP-FPM/Apache **متوقف** أو
+`.htaccess` بيرجّع SSL renegotiation loop.
+
+**⚠️ لا يمكنني إصلاح ده من هنا** — محتاج Dashboard/FTP لـ Hostinger. ومفيش
+بيانات دخول محفوظة على الجهاز (بحثت: صفر references لـ `ftp` / `hostinger` /
+`is-best.net` في إعدادات أو سكربتات).
+
+### ما معنى ده للخطة
+بند 7 في معايير القبول (`/health` على الإنتاج) مش بس "لسه ما اترفعتش" —
+**الحزمة الحالية على السيرفر مفترضة إنها مش شغالة أصلًا**. لازم:
+
+1. التأكد إن الـ hosting شغّال ومفيش maintenance.
+2. رفع الحزمة: `%LOCALAPPDATA%\ElKarooz-API-public_html.zip` (36 ملف · مُتحقَّق).
+3. ضبط `SUPABASE_*` + `SUPABASE_JWT_SECRET` + `APP_*` في `.env` على السيرفر.
+4. `/health` → `200 ONLINE` **على السيرفر المنشور**، مش نسخة محلية.
+
+### حالة الإنتاج الآن (2026-09-30)
+| المكوّن | الحالة |
+|---|---|
+| `elkaroozschool-seven.vercel.app/login` | `200` ✅ — بس **بدون** `NEXT_PUBLIC_SUPABASE_*` فـ login معطّل فعليًا |
+| `elkaroozschool.is-best.net` | ❌ **لا يستجيب** (rc 52/56) |
+
+> **نتيجة صريحة:** حتى لو ضبطنا Vercel env النهاردة، الـ PHP API **لسه مش
+> متاح** — فأي feature بيعتمد عليه (backup/import/export/upload) هيحصل failure.
+> ده سبب إضافي لازم يتصلح **قبل** إعلان أي production.
