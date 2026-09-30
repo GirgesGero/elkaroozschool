@@ -103,6 +103,28 @@ check('forged unsigned JWT is REJECTED (401 INVALID_TOKEN)',
     && !str_contains((string) $outcome, 'ACCEPTED'),
     'got: ' . substr(trim((string) $outcome), 0, 90));
 
+// --------------------------------------- 3b. export is ADMIN-ONLY
+// Product decision 2026-09-30: bulk PII export belongs to admin + super_user
+// only. Assert on the literal allowlist, because the failure mode of this
+// control is someone re-adding 'servant' to make a workflow pass -- and that
+// would still be contained to their own group, so no behavioural test would
+// ever flag it. The allowlist itself is the security property here.
+$export = file_get_contents($root . '/backend-api/src/Controllers/ExportController.php');
+$exportAllowlist = '/requireRoles\(\$user,\s*\[\s*' . "'admin'" . '\s*,\s*' . "'super_user'" . '\s*\]\s*\)/';
+check('export: role allowlist is exactly [admin, super_user]',
+    (bool) preg_match($exportAllowlist, $export),
+    'no exact admin+super_user allowlist found');
+foreach (['servant', 'secretariat', 'trainee'] as $banned) {
+    check("export: '$banned' is NOT in the export allowlist",
+        !preg_match("/requireRoles\([^)]*'" . $banned . "'/", $export));
+}
+// Non-admin callers must not derive the group from the token any more, and
+// must not call the group-scope guard with a client-supplied id.
+check('export: no non-admin group fallback branch remains',
+    !str_contains($export, '$user[' . "'group_id'" . ']'));
+check('export: group_id is int-cast from the query string',
+    str_contains($export, '(int)$_GET[' . "'group_id'" . ']'));
+
 // --------------------------------------- 4. path traversal in delete is fixed
 $svc = file_get_contents($root . '/backend-api/src/Services/StorageBridgeService.php');
 check('storage: realpath containment check present', str_contains($svc, 'realpath'));

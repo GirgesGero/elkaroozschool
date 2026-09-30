@@ -3,7 +3,6 @@ namespace App\Controllers;
 
 use App\Middleware\JwtAuthMiddleware;
 use App\Middleware\RbacMiddleware;
-use App\Middleware\GroupScopeMiddleware;
 use App\Services\SupabaseClient;
 use App\Services\AuditLogService;
 use App\Utils\Response;
@@ -11,32 +10,27 @@ use App\Utils\Response;
 class ExportController {
     public function exportData(): void {
         $user = JwtAuthMiddleware::authenticate();
-        RbacMiddleware::requireRoles($user, ['admin', 'super_user', 'servant', 'secretariat']);
+
+        // Export is an admin-only capability by product decision: bulk
+        // exfiltration of trainee PII (name, phone, birth date) must not be
+        // reachable by any group-scoped role. Only admin and super_user keep
+        // it; super_user stays global because that is its role everywhere else.
+        //
+        // This tightens the previous rule, which allowed servant and
+        // secretariat to export their own group. That was already contained
+        // to the caller's own group, but "contained" is not the requirement —
+        // the requirement is admin-only.
+        RbacMiddleware::requireRoles($user, ['admin', 'super_user']);
 
         $entity = $_GET['entity'] ?? 'trainees';
         $format = $_GET['format'] ?? 'csv';
 
-        // The group MUST come from the verified token, never from the query
-        // string. This used to read $_GET['group_id'] for every role, so any
-        // servant could export any other group's trainees by hand-editing the
-        // URL. Only admin/super_user may select a group explicitly, and
-        // group_id=0 means "all groups" for them.
-        $role = $user['role'] ?? 'trainee';
-        $isGlobal = in_array($role, ['admin', 'super_user'], true);
-
-        if ($isGlobal) {
-            $groupId = isset($_GET['group_id']) ? (int)$_GET['group_id'] : 0;
-        } else {
-            $groupId = (int)($user['group_id'] ?? 0);
-            if ($groupId <= 0) {
-                Response::error('تعذر تحديد الفرقة الدراسية من رمز المصادقة', 'NO_GROUP', 403);
-            }
-        }
-
-        // Non-global callers are still checked explicitly: this is the actual
-        // enforcement point, not the query string.
-        if (!$isGlobal) {
-            GroupScopeMiddleware::enforceGroupScope($user, $groupId);
+        // Global roles select the group explicitly. group_id=0 means all
+        // groups. The value is cast to int, so it cannot be used to inject
+        // anything into the PostgREST query string.
+        $groupId = isset($_GET['group_id']) ? (int)$_GET['group_id'] : 0;
+        if ($groupId < 0) {
+            $groupId = 0;
         }
 
         $client = new SupabaseClient();
