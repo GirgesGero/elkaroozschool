@@ -33,10 +33,54 @@
 
 ---
 
-## 🔴 المرحلة 1 — تسريب 5 RPCs بين المجموعات [شغّال على production]
+## 🔴 المرحلة 1 — تسريب 5 RPCs بين المجموعات ✅ **[تم الإصلاح — 2026-09-30]**
 
 **الخطورة:** `CRITICAL` · **الأثر:** تسريب بيانات شخصية **لحظي**
 **مجمّع:** DB + Frontend
+
+> ### ✅ نتيجة التنفيذ
+> migration: `20260930150000_rpc_group_scope_guards.sql` — applied to production, commit `1eb9fee`.
+>
+> **اختبار 10/10 على production مباشرة** (مش dry-run):
+> ```
+>  1 trainee_g1 -> group2 servants        PASS_deny_cross_group
+>  2 trainee_g1 -> group2 secretariat     PASS_deny_cross_group
+>  3 trainee_g1 -> group2 summary         PASS_deny_cross_group
+>  4 trainee_g1 -> g2 trainee profile     PASS_deny_idor
+>  5 trainee_g1 -> g2 attendance          PASS_deny_idor
+>  6 trainee_g1 -> مجموعته (لازم يشتغل)    PASS_allow_own_group
+>  7 trainee_g1 -> حضوره (لازم يشتغل)     PASS_allow_self
+>  8 servant_g1 -> متدرّب g1 (الميزة)     PASS_servant_same_group
+>  9 servant_g1 -> group2 servants        PASS_deny_servant_cross
+> 10 admin -> group2 (لازم يشتغل)         PASS_admin_global
+> ```
+>
+> **أثر `profiles` policy** (كان 50/39/50 لكل متدرّب):
+> ```
+> trainee_g1  total=18  other_group=0
+> trainee_g2  total=18  other_group=0
+> admin       total=50  other_group=32   ← الوصول العالمي محفوظ
+> ```
+>
+> **فحص تراجعي:** `tables=50`, `rls_on=50`, `no_policy=0`,
+> `unsafe_callable=0`, `definer_no_searchpath=0`,
+> `profiles=50` `marathon=54` `groups=3` `roles=5` — **البيانات سليمة**.
+>
+> **فحص regressions على الـ frontend:** الـ 20 استعلام `profiles` اتراجعت.
+> صفحات الـ admin بتقرأ `id = user.id` (مسموح بفرع `id = auth.uid()`)،
+> و`trainees/page.tsx:58` بيفلتر بـ `group_id` لغير الـ admin.
+> **لا يوجد استعلام كسر.**
+
+> #### ⚠️ تصحيحان على نص الخطة الأصلي (اتصلّحوا قبل التطبيق)
+> **1. صلاحية `VIEW_TRAINEES` غير موجودة.** مفردات الصلاحيات الفعلية في production:
+> `GRADE_EXAMS`, `MANAGE_BOOKS`, `MANAGE_CURRICULUM`, `MANAGE_LECTURES`, `MANAGE_MARATHON`.
+> لو اتكتبت `VIEW_TRAINEES` كانت هترجّع `false` لكل الخدّام وهتكسر نفس-المجموعة.
+> الحل المطبَّق: فحص الدور `servant`/`secretariat` **أو** `MANAGE_LECTURES`/`GRADE_EXAMS`.
+>
+> **2. شرط حذف الـ policy كان غلط.** كان بيفحص `polroles = ARRAY[0]` (أي PUBLIC)،
+> لكن الـ policy الموجودة `TO authenticated` (oid 16485).
+> النتيجة: الحذف **ما كانش هيلاقي حاجة**، والسياسة الجديدة هتـ **OR** مع القديمة
+> (= التسريب يفضل مفتوح). اتغيّر لـ **حلقة على كل سياسات SELECT**.
 
 ### التشخيص المُتحقَّق
 5 دوال `SECURITY DEFINER` (واللي بتتخطى RLS) مفيهاش **أي** فحص صلاحية:
