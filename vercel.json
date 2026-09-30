@@ -2,5 +2,5 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
   "installCommand": "cd frontend && npm install --no-audit --no-fund",
-  "buildCommand": "cd frontend && npm run build && cp -r .next ../.next && rm -rf ../.next/cache"
+  "buildCommand": "cd frontend && npm run build && cp -r .next ../.next && rm -rf ../.next/cache && mkdir -p ../public && cp -r public/. ../public/"
 }
