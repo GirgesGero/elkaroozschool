@@ -445,3 +445,110 @@ session_repl      anon/authenticated/service_role = 42501 ✅
 - لا استعادة لكلمة المرور أو MFA
 - لا custom GUC لتجاوز الـtriggers — **`session_replication_role`** حصرًا داخل `SECURITY DEFINER`
 - إخفاء عناصر UI ليس أمانًا — الإجبار يجب أن يكون في route/RPC/RLS/API/storage
+
+---
+
+## 🔴 تصحيح مُلزم — بعد مراجعة `/admin/backups` و `/admin/imports`
+
+> **هذا التصحيح يلغي استنتاجات أعلاه ويغلب عليها.** أُضيف بعد قراءة الكود سطرًا سطرًا.
+
+### الاستنتاج الخاطئ الذي تم إبطاله
+
+كتبت في المرحلة 1:
+> «الـPHP API (13 route) منها backup / restore / export / import — كله بلا واجهة استخدام»
+
+**غير صحيح.** `/admin/backups` فيه UI كامل لـ backup + restore + AES-256 + `DATABASE_ONLY` / `FILES_ONLY`.
+
+**الاستنتاج الصحيح:** الواجهة **لا تستدعي الـPHP API إطلاقًا** (صفر `fetch` لـ HTTP) — لكن ليس لأن الق functionalities غير موجودة، بل لأن **الأزرار نفسها وهمية بالكامل**.
+
+### 🔴 الاكتشاف الأخطر: واجهة احتياطي/استعادة مُزيّفة بالكامل
+
+**الملف:** `frontend/src/app/admin/backups/page.tsx` — 583 سطر
+
+#### `handleCreateBackup` (L104-146)
+
+```js
+const dummyChecksum = Array.from({length:64}, () => Math.random()...);   // L111 checksum وهمي
+file_size_bytes: 1048576 * 2.5,                                         // L117 حجم ثابت مزروع
+status: 'COMPLETED',                                                    // L120 "مكتمل" قبل أي عمل
+```
+
+ولا `fetch`، ولا `Blob`، ولا `crypto`، ولا `JSZip`، ولا اتصال بـPHP API.
+
+**النتيجة:** زر يقول **«تم إنشاء النسخة الاحتياطية المشفرة بنجاح»** — ولم يُنشأ ملف.
+
+#### `handleRestoreBackup` (L176-216) — الأخطر من النوعين
+
+```js
+await supabase.rpc('log_operational_event', {... p_status: 'SUCCESS' ...});  // L189
+await supabase.rpc('log_operational_event', {... p_status: 'SUCCESS' ...});  // L199
+setOperationMsg({ type:'success', text:'تمت استعادة النظام بنجاح' });        // L208
+```
+
+**لا يقرأ ملفاً. لا يفكّ تشفير. لا يغيّر الـDB. لا يتحقق من كلمة المرور** (اكتفى بـ`if (!restorePassword) return` — فحص وجود لا صحة).
+
+الاستعادة الوحيدة الحقيقية في المشروع هي `DatabaseRestoreService.php` في الـPHP API — **ولا شيء في الواجهة يصل إليها.**
+
+**تقييم الخطورة:** هذا ليس ثغرة أمنية، بل **نزاهة نظام**. أسوأ من الفشل الصامت: النظام **يقول إنه نجح** ويكتب سجل نجاح في الـaudit log. الـadmin يستعيد ثقته في نسخه الاحتياطية وهي غير موجودة أصلاً.
+
+#### مُتحقَّق منه على production
+
+```sql
+-- backup_records insert كـ admin
+→ denied:42703   (لا grant أصلاً — أضيق من RLS)
+```
+
+الزر يفشل عند الـDB — لكن `catch` يعرض رسالة، فالسلوك هنا **مقبول نسبياً**؛ المشكلة الأساسية هي الوهم في المسار الناجح المزروع.
+
+### 🔴 تصحيح ثانٍ: `handleDeleteBackup` (L148-174)
+
+```js
+.from('backup_records').update({ deleted_at: ... })   // soft delete في الواجهة
+```
+
+تحقق: لا `DELETE` policy على `backup_records` (2 delete policies فقط في المشروع كله). إذاً الحذف **فاشل أيضاً** — لكن الرسالة تُظهر نجاحاً؟ لا، `throw error` يعمل. السلوك هنا سليم، فقط الميزة معطّلة.
+
+### 🔴 اكتشاف ثالث: Excel export يكذب باسم الملف
+
+**الملف:** `/admin/imports/page.tsx` L231
+
+```js
+link.setAttribute('download', `trainees_export_${Date.now()}.${format === 'csv' ? 'csv' : 'csv'}`);
+```
+
+`format === 'csv' ? 'csv' : 'csv'` — الطرفان نفس القيمة. لو اختار المستخدم **Excel** ينزّل ملف **CSV**.
+
+### ✅ ما هو سليم فعلاً (تصحيح مُكمِّل)
+
+| المكوّن | الحكم |
+|---|---|
+| `handleExecuteImport` (L143-190) | **حقيقي بالكامل** — `rpc('import_trainees_bulk_atomic')`، dry-run، All-or-Nothing، error handling صحيح |
+| `handleExportTrainees` (L195-236) | **حقيقي** — قراءة `profiles` + CSV + audit |
+| Auth guard في الواجهة | **سليم** — `['admin','super_user']` وغيرهم مرفوض |
+| `backup_records` / `import_history` قراءة | **سليم** — قراءة السجل فقط |
+
+### 📌 التحديث الإجباري للمرحلة 1
+
+المرحلة 1 تُرقَّم إلى **المرحلة 1A** (سياسات الكتابة) وتُضاف إليها:
+
+#### 🔴 المرحلة 1B — إزالة واجهة التزييف (أعلى أولوية في المشروع)
+
+| # | المهمة | المعيار |
+|---|---|---|
+| 1B.1 | **نشر تحذير فوري** في الواجهة: `/admin/backups` غير صالح للإنتاج | رسالة صريحة أعلى الصفحة |
+| 1B.2 | حذف أو تعطيل `handleCreateBackup` و `handleRestoreBackup` | لا زر يدّعي نجاحًا بدون عمل |
+| 1B.3 | استبدالها باستدعاء **حقيقي** لـ`POST /backup/create` و `POST /restore/execute` | رسالة نجاح **فقط** بعد `200` حقيقي |
+| 1B.4 | ربط `PHP_API_URL` (المعرّف حاليًا وغير المستخدم) بالواجهة | استدعاء فعلي مثبت |
+| 1B.5 | حذف `dummyChecksum` و `file_size_bytes` المزروعين | لا قيمة وهمية في الكود |
+| 1B.6 | إصلاح اسم ملف Excel → إما دعم حقيقي أو **إخفاء الزر** | لا يكذب الاسم |
+| 1B.7 | فحص **كل** زر في المشروع بحثًا عن نفس النمط | جدول `زر → هل يعمل فعلاً؟` |
+
+> **قاعدة جديدة تُضاف:** لا يُكتب `تم` ولا `نجاح` في الكود إلا بعد **استجابة حقيقية مؤكدة**. كل زر في النظام يجب أن يكون له **مصدر حقيقة واحد** — إما `fetch` حقيقي، أو `RPC` يعيد `success:true` بعد تنفيذ فعلي.
+
+### 🔴 B10 — بلocker جديد
+
+| # | البلocker | يحجب |
+|---|---|---|
+| **B10** | **واجهة backup/restore وهمية بالكامل** | كل ثقة العميل في النسخ الاحتياطي · المرحلة 9 كليًا |
+
+**حالة المشروع بعد هذا الاكتشاف:** `NOT READY` — وبأسباب **أنثق** من السابق.
