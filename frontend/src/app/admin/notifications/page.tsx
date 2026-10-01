@@ -10,7 +10,6 @@ import {
   HeartHandshake,
   Cake,
   BookOpen,
-  Plus,
   Trash2,
   Edit2,
   Save,
@@ -58,10 +57,7 @@ export default function AdminNotificationsPage() {
 
   // Daily Verses
   const [verses, setVerses] = useState<DailyVerseItem[]>([]);
-  const [newVerseText, setNewVerseText] = useState('');
-  const [newVerseRef, setNewVerseRef] = useState('');
-  const [editingVerse, setEditingVerse] = useState<DailyVerseItem | null>(null);
-
+  
   // Status message
   const [statusMsg, setStatusMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [dispatching, setDispatching] = useState(false);
@@ -154,32 +150,6 @@ export default function AdminNotificationsPage() {
     }
   };
 
-  const handleAddVerse = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newVerseText || !newVerseRef) return;
-
-    try {
-      await dbWrite(
-        supabase
-          .from('daily_verses')
-          .insert({
-            verse_text: newVerseText,
-            reference: newVerseRef,
-            display_order: verses.length + 1
-          })
-          .select()
-          .single(),
-        'لم يتم تأكيد إضافة الآية.',
-      );
-
-      setStatusMsg({ type: 'success', text: 'تمت إضافة الآية إلى بنك الآيات اليومية بنجاح' });
-      setNewVerseText('');
-      setNewVerseRef('');
-      fetchData();
-    } catch (err) {
-      setStatusMsg({ type: 'error', text: explainDbError(err) });
-    }
-  };
 
   const handleDeleteVerse = async (id: string) => {
     try {
@@ -446,49 +416,20 @@ export default function AdminNotificationsPage() {
         {/* Tab 2: Daily Verses */}
         {activeTab === 'DAILY_VERSES' && (
           <div className="space-y-6">
-            {/* Add Verse Form */}
-            <form onSubmit={handleAddVerse} className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Plus className="w-5 h-5 text-emerald-400" />
-                <h3 className="text-lg font-bold text-white">إضافة آية جديدة لبنك الآيات</h3>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="md:col-span-2">
-                  <label className="block text-xs font-medium text-slate-300 mb-1">نص الآية *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="اكتب نص الآية المشكول أو الواضح..."
-                    value={newVerseText}
-                    onChange={(e) => setNewVerseText(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-emerald-500"
-                  />
-                </div>
-
+            {/* The verse bank is read-only by design: the database grants SELECT only, so an
+                add form here could never succeed — it would just fail at the RLS layer. */}
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
+              <div className="flex items-start gap-3">
+                <ShieldAlert className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
                 <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1">الشاهد (مثال: يوحنا 3: 16) *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="الشاهد الكتابي..."
-                    value={newVerseRef}
-                    onChange={(e) => setNewVerseRef(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-emerald-500"
-                  />
+                  <h3 className="text-lg font-bold text-white">بنك الآيات اليومية — للقراءة فقط</h3>
+                  <p className="text-sm text-slate-400 mt-1.5 leading-relaxed">
+                    بنك الآيات اليومية للعرض والتوزيع فقط. إضافة أو تعديل الآيات يتم من
+                    لوحة تحكم الخادم (Server Dashboard) أو عبر migration رسمية.
+                  </p>
                 </div>
               </div>
-
-              <div className="flex justify-end">
-                <button
-                  type="submit"
-                  className="flex items-center gap-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-bold transition shadow-lg shadow-emerald-900/30"
-                >
-                  <Plus className="w-4 h-4" />
-                  إضافة الآية
-                </button>
-              </div>
-            </form>
+            </div>
 
             {/* Verses Table */}
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
