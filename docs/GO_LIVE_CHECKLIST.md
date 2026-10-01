@@ -215,12 +215,25 @@ DNS: elkaroozschool.is-best.net → 185.27.134.59   (الاسم شغّال)
 3. ضبط `SUPABASE_*` + `SUPABASE_JWT_SECRET` + `APP_*` في `.env` على السيرفر.
 4. `/health` → `200 ONLINE` **على السيرفر المنشور**، مش نسخة محلية.
 
-### حالة الإنتاج الآن (2026-09-30)
-| المكوّن | الحالة |
-|---|---|
-| `elkaroozschool-seven.vercel.app/login` | `200` ✅ — بس **بدون** `NEXT_PUBLIC_SUPABASE_*` فـ login معطّل فعليًا |
-| `elkaroozschool.is-best.net` | ❌ **لا يستجيب** (rc 52/56) |
+### حالة الإنتاج (أُعيد فحصها فعليًا — 2026-10-01)
 
-> **نتيجة صريحة:** حتى لو ضبطنا Vercel env النهاردة، الـ PHP API **لسه مش
-> متاح** — فأي feature بيعتمد عليه (backup/import/export/upload) هيحصل failure.
-> ده سبب إضافي لازم يتصلح **قبل** إعلان أي production.
+| المكوّن | النتيجة الحية | الحكم |
+|---|---|---|
+| `elkaroozschool.is-best.net` HTTPS | `rc=56` schannel: server closed abruptly | ❌ لا يستجيب |
+| `elkaroozschool.is-best.net` HTTP | `rc=52` Empty reply from server | ❌ لا يستجيب |
+| `elkaroozschool-seven.vercel.app/` | `307` redirect | ⚠️ |
+| `elkaroozschool-seven.vercel.app/login` | `200` | ✅ الصفحة تُخدَم |
+| Supabase auth (anon key) | `400 validation_failed` — **ليس** `401` | ✅ **المفتاح صالح و Auth متاح** |
+| قاعدة البيانات | `50/50` جدول بـ RLS، `rls_off = 0` | ✅ |
+| `profiles` المحذوف softly | `0` صف | لا أثر حالي — لا يوجد حساب محذوف |
+
+**نقطة جديدة (2026-10-01):** الـ Supabase Auth **متاح ويعمل** — الـ anon key local رجع
+`validation_failed` (أي المفتاح مقبول وقُدّم طلب، فقط الحقول ناقصة)، لا `401 invalid API key`.
+وكل الحسابات النشطة على الإنتاج بتطابق معادلة الدخول في الواجهة
+(`{username}@elkarooz-school.com`) و`email_confirmed_at` غير NULL — أي **العقد بين
+الواجهة و Auth سليم**. المتبقي الوحيد الذي لا يمكن اختباره من هنا: **هل كلمات المرور
+المدخلة تُقبل؟** هذا يحتاج بيانات دخول؛ أنت الوحيد اللي عنده.
+
+> **نتيجة صريحة:** الـ blocker الحقيقي الوحيد هو **استضافة PHP** (مفيش استجابة إطلاقًا)
+> + **بيئة Vercel** (غير متأكد أنها مضبوطة من السيرفر). الـ PHP API غير متاح = أي feature
+> بيعتمد عليه (backup/import/export/upload) سيفشل. لازم يتصلح **قبل** إعلان أي production.
