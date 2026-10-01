@@ -301,25 +301,40 @@ either restores every table or leaves production untouched.
 
 Required before this blocker can close:
 
-- [ ] `restore/preview` recognises a database-bearing archive and reports what a
+- [x] `restore/preview` recognises a database-bearing archive and reports what a
       database restore would touch, without touching it
-- [ ] A `SECURITY DEFINER` restore RPC, `service_role`-only, that runs the whole
+- [x] A `SECURITY DEFINER` restore RPC, `service_role`-only, that runs the whole
       restore in one transaction
-- [ ] `restore/execute` with `DATABASE_ONLY` and `FULL` modes, honouring the
+- [x] `restore/execute` with `DATABASE_ONLY` and `FULL` modes, honouring the
       all-or-nothing rule: any precondition failure leaves the database as it was
-- [ ] Identity continuity: re-created `auth.users` must keep the same UUIDs, or
+- [x] Identity continuity: re-created `auth.users` must keep the same UUIDs, or
       every foreign key in `profiles`, attendance and marks breaks
-- [ ] Password/session policy decided explicitly. `auth.users` is not in the
+- [x] Password/session policy decided explicitly. `auth.users` is not in the
       export, so accounts must survive as accounts, not be re-created from
       nothing. Rotate-on-restore must not silently re-enable a suspended account
+      → **decided and implemented**: a re-created account keeps its UUID, is
+      created locked with no password, and the archived `is_active` is re-applied
+      afterwards, so a suspended account cannot come back enabled just because it
+      was restored. A restore archive can never install a credential.
 - [ ] Proven on a real archive, not a fixture: back up production, restore it,
       and diff row counts per table plus a spot-check of PII
-- [ ] A rollback test first: restore inside a transaction that is then rolled
+      → **the data half is proven**: `export_table('profiles')` on the live
+      production database (50 real rows) was fed straight into
+      `restore_database()` and came back with metadata re-synced 50/50 and the
+      `super_user` preserved. What is NOT proven is the same round trip through
+      `POST /backup/create` → ZIP → `POST /restore/execute` on the deployed host,
+      which needs deployment access.
+- [x] A rollback test first: restore inside a transaction that is then rolled
       back, proving no partial write escapes
+      → **done at the database level**: every probe ran inside `BEGIN ... ROLLBACK`
+      and `restore_database()` is a single statement, so all-or-nothing is a
+      property of Postgres. The deployed-PHP version of this test is still open
+      (see "Still open" above) and is blocked on the same deployment.
 
-Also note `restore/preview`'s `DATABASE_ONLY` mode was previously advertised but
-unreachable. That advertisement is a documentation defect to remove or fix
-alongside the real implementation.
+The `restore/preview` defect that used to sit here is closed: `DATABASE_ONLY` was
+advertised as an available mode while every request in that mode failed. The mode
+is now real, and `preview` reports it from the archive's own manifest rather than
+from a hardcoded list, so the two cannot drift apart again.
 
 ---
 
