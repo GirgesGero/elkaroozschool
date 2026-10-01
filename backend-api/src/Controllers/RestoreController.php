@@ -62,6 +62,14 @@ class RestoreController {
                     'FULL_SYSTEM'   => (bool) ($inspection['summary']['includes_files']
                                               || $inspection['summary']['includes_database']),
                 ],
+                // Stated explicitly so the operator can see, before confirming,
+                // that MERGE only writes archived rows and TRUNCATE also deletes
+                // rows created since the backup was taken.
+                'truncate_options' => [
+                    'MERGE'    => 'كتابة صفوف النسخة فقط — لا يحذف أي صف',
+                    'TRUNCATE' => 'الجداول تصبح مطابقة للنسخة تماماً — يحذف ما أُضيف بعد النسخة',
+                ],
+                'default_truncate_mode' => 'MERGE',
             ], 'معاينة النسخة الاحتياطية جاهزة للتأكيد');
         } catch (\Exception $e) {
             Response::error($e->getMessage(), 'RESTORE_PREVIEW_FAILED', 400);
@@ -113,8 +121,16 @@ class RestoreController {
         try {
             ZipEncryptionService::extractEncryptedZip($_FILES['backup_zip']['tmp_name'], $extractDir, $password);
 
+            // merge vs truncate is a destructive difference, so it is never
+            // inferred. Default is merge (archived rows only); a true truncate
+            // restore has to be asked for explicitly.
+            $truncate = ($_POST['truncate_mode'] ?? 'MERGE') === 'TRUNCATE';
+
             $result = (new \App\Services\AtomicRestoreService())
-                ->execute($extractDir, ['restore_mode' => $mode], $user);
+                ->execute($extractDir, [
+                    'restore_mode'  => $mode,
+                    'truncate_mode' => $truncate,
+                ], $user);
 
             AuditLogService::log(
                 $user['user_id'],

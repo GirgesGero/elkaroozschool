@@ -435,6 +435,73 @@ foreach (['/backup/validate-zip', '/backup/delete', '/restore/execute', '/import
     check("route $route is registered", str_contains($router, "'" . $route . "'"));
 }
 
+// ---------------------------------------------------------------------------
+// Database restore. The backup half existed for a while with no way back, so the
+// restore is the half that had to be built under scrutiny.
+// ---------------------------------------------------------------------------
+$restoreSvcPath = $root . '/backend-api/src/Services/DatabaseRestoreService.php';
+check('DatabaseRestoreService exists', is_file($restoreSvcPath));
+$restoreSvc = is_file($restoreSvcPath) ? file_get_contents($restoreSvcPath) : '';
+
+check('restore calls the database, not a placeholder', str_contains($restoreSvc, "'restore_database'"));
+check('restore no longer demands pg_dump',
+    !str_contains($restoreSvc, 'pg_restore') && !str_contains($restoreSvc, 'dump.sql'));
+check('restore refuses a missing database.json',
+    str_contains($restoreSvc, 'database.json') && str_contains($restoreSvc, 'throw new'));
+check('restore rejects unsafe table names before the RPC',
+    str_contains($restoreSvc, '[a-z_][a-z0-9_]*'));
+check('restore refuses the bookkeeping tables',
+    str_contains($restoreSvc, "'backup_records'") && str_contains($restoreSvc, "'import_history'"));
+check('restore sends the archive in one call, not per table',
+    substr_count($restoreSvc, "->rpc('restore_database'") === 1);
+check('restore treats a zero-table report as failure',
+    str_contains($restoreSvc, 'tables_restored')
+    && str_contains($restoreSvc, "$tables < 1"));
+check('restore bounds the payload it will hold in memory',
+    str_contains($restoreSvc, 'MAX_PAYLOAD_BYTES'));
+check('restore builds its Supabase client lazily',
+    str_contains($restoreSvc, '?SupabaseClient $client = null')
+    && !str_contains($restoreSvc, '$this->client = $client ?? new SupabaseClient()'));
+
+// The RPC name has to match the migration exactly; a rename on either side would
+// otherwise only fail at restore time, on a live system.
+$migrationPath = $root . '/supabase/migrations/20261001170000_logical_restore_rpcs.sql';
+$restoreMigration = is_file($migrationPath) ? file_get_contents($migrationPath) : '';
+check('the restore migration is tracked', trim($restoreMigration) !== '');
+check('the RPC name matches the migration',
+    str_contains($restoreSvc, "'restore_database'")
+    && str_contains($restoreMigration, 'CREATE OR REPLACE FUNCTION public.restore_database'));
+check('the escalation guard survives in the migration',
+    str_contains($restoreMigration, 'would be granted super_user'));
+check('the migration suspends triggers only transaction-locally',
+    str_contains($restoreMigration, "SET LOCAL session_replication_role = 'replica'"));
+check('restore RPCs are revoked from anon and authenticated',
+    str_contains($restoreMigration, 'REVOKE ALL ON FUNCTION public.restore_database(jsonb, boolean)')
+    && str_contains($restoreMigration, 'FROM PUBLIC, anon, authenticated'));
+check('restore RPCs are granted to service_role',
+    (bool) preg_match('/GRANT EXECUTE ON FUNCTION public\.restore_database\(jsonb, boolean\)\s+TO service_role;/',
+        $restoreMigration));
+// The migration explains, in a comment, why ALTER TABLE ... DISABLE TRIGGER and a
+// GUC flag were both rejected. Checking for the literal text would fail on that
+// explanation, so only executable statements are inspected -- comments stripped.
+$restoreMigrationCode = preg_replace('/--[^\n]*/', '', $restoreMigration);
+check('no ALTER TABLE ... DISABLE TRIGGER escape hatch',
+    !str_contains($restoreMigrationCode, 'DISABLE TRIGGER')
+    && !str_contains($restoreMigrationCode, 'ENABLE ALWAYS')
+    && !str_contains($restoreMigrationCode, 'ALTER TABLE'));
+check('the rejected GUC-flag design is gone from the migration',
+    !str_contains($restoreMigration, 'allow_super_metadata'));
+
+// A restore that is more dangerous than the backup it came from would be a net
+// loss, so truncate has to be opt-in at the HTTP layer too.
+$restoreCtlPath = $root . '/backend-api/src/Controllers/RestoreController.php';
+$restoreCtl = is_file($restoreCtlPath) ? file_get_contents($restoreCtlPath) : '';
+check('truncate_mode is opt-in, defaulting to MERGE',
+    str_contains($restoreCtl, "truncate_mode'] ?? 'MERGE'"));
+check('restore still requires admin or super_user', str_contains($restoreCtl, 'requireAdminOrSuperUser'));
+check('restore still requires explicit confirmation',
+    str_contains($restoreCtl, 'confirm_restore') && str_contains($restoreCtl, "'YES'"));
+
 // ---------------------------------------------------------------- report
 $pass = count(array_filter($results, fn($r) => $r['ok']));
 $fail = count($results) - $pass;

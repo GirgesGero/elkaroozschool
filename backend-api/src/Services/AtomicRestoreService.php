@@ -1,7 +1,6 @@
 <?php
 namespace App\Services;
 
-use App\Utils\AppRoot;
 use App\Utils\FsHelper;
 
 /**
@@ -52,6 +51,9 @@ final class AtomicRestoreService {
     /** @var array<string,string> absolute original path => snapshot path */
     private array $snapshot = [];
 
+    /** @var array restore options, kept for the apply step */
+    private array $options = [];
+
     /**
      * @param string $extractDir  already-extracted, already-validated archive
      * @param array  $options     restore_mode: DATABASE_ONLY|FILES_ONLY|FULL_SYSTEM
@@ -59,7 +61,9 @@ final class AtomicRestoreService {
      */
     public function execute(string $extractDir, array $options, array $actor): array {
         $mode = (string) ($options['restore_mode'] ?? 'FULL_SYSTEM');
+        $this->options = $options;
         $safetyBackup = null;
+        $databaseReport = null;
 
         try {
             // ---- 1. Re-validate here, not only in preview. ------------------
@@ -82,7 +86,7 @@ final class AtomicRestoreService {
 
             // ---- 4. Apply. ---------------------------------------------------
             if ($mode === 'DATABASE_ONLY' || $mode === 'FULL_SYSTEM') {
-                $this->restoreDatabase($extractDir);
+                $databaseReport = $this->restoreDatabase($extractDir);
             }
             if ($mode === 'FILES_ONLY' || $mode === 'FULL_SYSTEM') {
                 $this->restoreFiles($extractDir);
@@ -92,6 +96,7 @@ final class AtomicRestoreService {
                 'restored' => true,
                 'mode' => $mode,
                 'safety_backup' => $safetyBackup,
+                'database' => $databaseReport,
                 'detail' => 'اكتملت الاستعادة الذرية بنجاح',
             ];
         } catch (\Throwable $e) {
@@ -219,34 +224,32 @@ final class AtomicRestoreService {
     }
 
     /**
-     * Apply the database section.
+     * Apply the database section, for real.
      *
-     * A full table restore is a privileged, destructive operation that the PHP
-     * layer cannot perform atomically through PostgREST (there is no multi-statement
-     * transaction over HTTP). Rather than issue a half-restored database and
-     * claim success, this refuses unless the caller supplies the SQL executor the
-     * deployment provides (see config/storage.php `restore_sql_endpoint`), and
-     * otherwise fails closed so the files-only path remains usable.
+     * This used to refuse unconditionally: it demanded a dump.sql and then
+     * reported that a database restore needed pg_restore, which shared hosting
+     * does not have. The refusal was correct -- a backup that cannot be restored
+     * should not pretend otherwise -- but it made every DATABASE_ONLY and
+     * FULL_SYSTEM request fail, and the export side had been writing a real
+     * database.json for some time with nowhere to send it back.
+     *
+     * DatabaseRestoreService now closes the loop: the archive's database.json is
+     * handed to restore_database() in the database, which runs the whole thing
+     * as one transaction. All-or-nothing therefore comes from Postgres, which is
+     * stronger than the file-level rollback this class provides -- if the RPC
+     * fails, nothing was changed, and the rollback below only has to undo the
+     * file moves it already made.
+     *
+     * merge vs truncate is taken from the request, not guessed: merge is the
+     * default because a restore that silently deletes rows created since the
+     * archive is not something to do by accident.
+     *
+     * @return array database restore report, merged into the controller response
      */
-    private function restoreDatabase(string $extractDir): void {
-        $dbFile = $extractDir . DIRECTORY_SEPARATOR . 'database' . DIRECTORY_SEPARATOR . 'dump.sql';
-        if (!is_file($dbFile)) {
-            throw new \RuntimeException('الاستعادة طلبت قاعدة البيانات لكن ملف dump.sql غير موجود في النسخة');
-        }
-
-        $config = require AppRoot::path('config/storage.php');
-        $endpoint = (string) ($config['restore_sql_endpoint'] ?? '');
-        if ($endpoint === '') {
-            throw new \RuntimeException(
-                'استعادة قاعدة البيانات غير مفعّلة على هذا السيرفر: '
-                . 'لا يوجد endpoint SQL مُهيّأ (restore_sql_endpoint). '
-                . 'تم رفض التنفيذ بدل تنفيذ استعادة جزئية.'
-            );
-        }
-
-        throw new \RuntimeException(
-            'مسار استعادة قاعدة البيانات يتطلب تشغيلاً موثوقاً (pg_restore/pg_dump) على الخادم؛ '
-            . 'استخدم restore_mode=FILES_ONLY أو نفّذ الاستعادة عبر أداة migrations المعتمدة.'
+    private function restoreDatabase(string $extractDir): array {
+        return (new DatabaseRestoreService())->restore(
+            $extractDir,
+            (bool) ($this->options['truncate_mode'] ?? false)
         );
     }
 

@@ -241,6 +241,22 @@ check('the packaged index.php requires DatabaseExportService',
       in_array('src/Services/DatabaseExportService.php', $names, true)
       && str_contains($indexBody, 'DatabaseExportService'));
 
+$restoreSvcPath = $root . '/backend-api/src/Services/AtomicRestoreService.php';
+$restoreSvcBody = is_file($restoreSvcPath) ? file_get_contents($restoreSvcPath) : '';
+
+// The restore half arrived after the export half. A package that ships the
+// backup but not the restore is exactly the archive that cannot be recovered
+// from, so both services have to travel together.
+check('DatabaseRestoreService is packaged',
+      in_array('src/Services/DatabaseRestoreService.php', $names, true));
+check('the packaged index.php requires DatabaseRestoreService',
+      in_array('src/Services/DatabaseRestoreService.php', $names, true)
+      && str_contains($indexBody, 'DatabaseRestoreService'));
+check('the packaged AtomicRestoreService calls the real restore, not a refusal',
+      in_array('src/Services/AtomicRestoreService.php', $names, true)
+      && str_contains($restoreSvcBody, 'DatabaseRestoreService')
+      && !str_contains($restoreSvcBody, 'restore_sql_endpoint'));
+
 // The guard must deny PHP, and the grant for index.php must come after it.
 $guard = (string) file_get_contents($rootTemplate);
 $denyPos  = strpos($guard, '<FilesMatch "\.php$">');

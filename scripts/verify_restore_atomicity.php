@@ -17,6 +17,8 @@ $root = dirname(__DIR__) . '/backend-api/src';
 require_once $root . '/Utils/AppRoot.php';
 require_once $root . '/Utils/FsHelper.php';
 require_once $root . '/Services/BackupArchiveInspector.php';
+require __DIR__ . '/../backend-api/src/Services/SupabaseClient.php';
+require __DIR__ . '/../backend-api/src/Services/DatabaseRestoreService.php';
 require_once $root . '/Services/AtomicRestoreService.php';
 
 use App\Utils\FsHelper;
@@ -198,14 +200,21 @@ chk('a crafted archive cannot write outside the storage root',
     && !file_exists(dirname($sandbox) . '/escape_attempt.txt')
     && !file_exists(dirname(dirname($sandbox)) . '/escape_attempt.txt'));
 
-echo "--- DATABASE_ONLY fails closed (no partial restore) ---\n";
+echo "--- DATABASE_ONLY fails closed when the archive carries no database ---\n";
+// This used to assert that every DATABASE_ONLY request fails, because the restore
+// half of the backup genuinely did not exist. It does now: restore_database() is a
+// real RPC, and verify_database_restore.php covers the PHP side of it. What still
+// has to hold -- and what this asserts -- is that a DATABASE_ONLY request against
+// an archive with no database section is refused rather than reported as a
+// successful restore. Silently succeeding here is the failure mode that matters:
+// an operator would read the green response as "the database is back".
 $dbFail = false;
 try {
     $restoreSvc->execute($archive, ['restore_mode' => 'DATABASE_ONLY'], ['user_id' => 'test-actor']);
 } catch (\App\Services\RestoreFailedException $e) {
     $dbFail = true;
-    chk('DATABASE_ONLY refuses rather than half-restoring',
-        str_contains($e->getMessage(), 'dump.sql') || str_contains($e->getMessage(), 'restore_sql_endpoint'));
+    chk('DATABASE_ONLY names the missing database section',
+        str_contains($e->getMessage(), 'database.json'), $e->getMessage());
 }
 chk('DATABASE_ONLY throws instead of silently succeeding', $dbFail);
 

@@ -49,6 +49,7 @@ require_once $appRoot . '/src/Middleware/GroupScopeMiddleware.php';
 require_once $appRoot . '/src/Middleware/FileSecurityMiddleware.php';
 require_once $appRoot . '/src/Services/SupabaseClient.php';
 require_once $appRoot . '/src/Services/DatabaseExportService.php';
+require_once $appRoot . '/src/Services/DatabaseRestoreService.php';
 require_once $appRoot . '/src/Services/AuditLogService.php';
 require_once $appRoot . '/src/Services/StorageBridgeService.php';
 require_once $appRoot . '/src/Services/ZipEncryptionService.php';

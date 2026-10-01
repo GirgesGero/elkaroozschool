@@ -11,6 +11,105 @@ Legend: ✅ verified · ⚠️ partial / needs a human · ⛔ blocking
 
 ## ⛔ Blocking — must be done before launch
 
+#### Still open — the restore has never run on the deployed server
+
+Everything above was verified against the production database directly, over the
+same authenticated path the PHP backend uses. It has **not** been verified
+through the deployed PHP API, because the deployment is not reachable and no
+deployment credentials exist locally. Treat this as an untested path until:
+
+- [ ] the package is uploaded and the live API answers a real login
+- [ ] a backup is taken through `POST /backup/create` on the deployed host, and
+      the returned manifest shows `includes_database: true` with real row counts
+- [ ] that archive is restored back through `POST /restore/execute` with
+      `restore_mode=DATABASE_ONLY`, `truncate_mode=MERGE`
+- [ ] profiles and metadata are compared before and after — this is the only
+      proof that the round trip works end to end on the deployed host
+- [ ] the Apache web-root guard is exercised on the real host (no local Apache
+      was available, so it is verified structurally only)
+
+#### Closed — logical database restore (2026-10-01)
+
+The export half had been shipping for a while with nowhere to go.
+`AtomicRestoreService::restoreDatabase()` refused every `DATABASE_ONLY` and
+`FULL_SYSTEM` request with *"requires pg_restore on this server"*, which was the
+honest fail-closed answer but meant a backup archive was a one-way trip.
+
+Three RPCs now close the loop. All `service_role`-only, all `SECURITY DEFINER`:
+
+| RPC | Purpose |
+|---|---|
+| `restore_accounts(jsonb)` | re-create missing `auth.users` rows first (`profiles.id` is an FK into `auth.users`) |
+| `restore_table(text, jsonb)` | upsert one table, patching existing rows and inserting new ones |
+| `restore_database(jsonb, bool)` | the entry point: accounts first, then tables, then rebuild metadata |
+
+`DatabaseRestoreService` reads `database/database.json` out of the archive and
+sends the whole payload in a single call, so all-or-nothing is a property of the
+Postgres transaction rather than of the PHP.
+
+| Check | Result |
+|---|---|
+| round-trip: `export_table('profiles')` → `restore_database(...)` | 1 table, 50 rows, metadata re-synced 50/50 |
+| `super_user` preserved through a restore | 1, and `super_user_preserved` reported |
+| `anon` calling any of the three RPCs | denied, `42501` |
+| `authenticated` (even `super_user`) calling any of the three | denied, `42501` |
+| `service_role` | works |
+| tampered archive promoting a profile to `super_user` | refused; no account gained the claim |
+| bookkeeping table (`backup_records`) in the payload | refused, `42501` |
+| table-name injection (`'profiles; DROP TABLE profiles--'`) | refused, `22023` |
+| empty archive / wrong JSON shape / row with no `id` | refused, `22023` |
+| partial row (`id` + one column) against an existing row | patches that column, leaves the rest intact |
+| PHP unit suite `scripts/verify_database_restore.php` | **41/41** |
+| filesystem rollback suite | **23/23** |
+| production security suite | **114/114** |
+| packaging audit | **30/30** |
+
+**The escalation problem, and how it was actually solved.** Restoring a real
+archive aborted with `42501`: `sync_profile_app_metadata()` refuses to mirror a
+`super_user` profile, because `role_id` is application-writable and mirroring it
+into a JWT claim would turn a profile edit into a promotion. So the guard made
+the restore of the very accounts the archive exists to preserve impossible.
+
+Two fixes were built, tested, and **rejected**:
+
+- `ALTER TABLE ... DISABLE TRIGGER` — removes the guard for *every* session
+  during the window, including concurrent writes.
+- a transaction-local GUC the trigger checks — tested, and it is a real hole:
+  with the flag set, a `trainee` could be promoted to `super_user`, because the
+  guard could no longer tell *"restoring an existing super_user"* from
+  *"creating a new one"*.
+
+What shipped is `SET LOCAL session_replication_role = 'replica'`, confined to
+the restore's own transaction. Before choosing it, each PostgREST-reachable role
+was checked and all three are refused it:
+
+| Role | `SET LOCAL session_replication_role` |
+|---|---|
+| `anon` | `42501` |
+| `authenticated` | `42501` |
+| `service_role` | `42501` |
+| `restore_database()` (SECURITY DEFINER, owned by `postgres`) | works |
+
+So no session can suspend the trigger; only the function's own body can, and the
+setting is transaction-local, so it reverts at commit or rollback with no window
+for a concurrent write.
+
+The restore also **re-asserts the invariant itself** after writing: it snapshots
+who held `super_user` beforehand, and fails with `42501` rather than completing
+if the restore would leave anyone else holding it. Production additionally
+carries a `uq_single_super_user` UNIQUE constraint on `profiles.role_id`, so a
+second `super_user` cannot be written at all — the check is belt-and-braces and
+would still hold if that constraint were dropped.
+
+**Scope limits, stated plainly.** This restores *data into a schema that already
+exists*; it does not restore schema, and it does not restore passwords or
+sessions. A re-created account is locked with no usable password and must go
+through the normal reset flow — deliberately, because a backup archive must
+never be able to install a credential. `p_truncate=true` is destructive by
+definition and is **opt-in at the HTTP layer** (`truncate_mode=TRUNCATE`); the
+default is merge.
+
+
 ### B1. Vercel env vars are not inlined in the live build
 The last checked production bundle contained
 `createBrowserClient(r.env.NEXT_PUBLIC_SUPABASE_URL, …)` — i.e. **no values**.
@@ -141,10 +240,11 @@ reachable by the wrong role, or a controller that skips its gate.
 
 ---
 
-### B7. Database backup now works; database RESTORE does not exist yet
+### B7. Database backup AND restore both work
 
-**Status: half closed.** The export side is done and verified. The restore side
-does not exist and must not be invented late.
+**Status: closed for data.** Both halves are implemented and verified against
+production. What is still open is the deployment step below it — an untested
+restore is not a proven restore.
 
 #### Closed — logical database export (2026-10-01)
 
