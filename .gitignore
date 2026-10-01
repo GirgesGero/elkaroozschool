@@ -35,5 +35,6 @@ Thumbs.db
 *.tsbuildinfo
 
 # Per-run logs from scripts/verify_api_http.php (one per PID) and scratch probes
+.php_server.log
 .php_server_*.log
 t*.log

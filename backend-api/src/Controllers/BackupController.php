@@ -9,6 +9,7 @@ use App\Services\ZipEncryptionService;
 use App\Services\AuditLogService;
 use App\Services\SupabaseClient;
 use App\Services\BackupArchiveInspector;
+use App\Services\DatabaseExportService;
 use App\Utils\FsHelper;
 use App\Utils\Response;
 use App\Utils\Security;
@@ -102,12 +103,30 @@ class BackupController {
                 }
             }
 
-            // 2. manifest.json — written LAST so it reports what was really staged.
+            // 2. Export the database before writing the manifest.
             //
-            // includes_database is honestly false: a logical Postgres dump cannot be
-            // produced through PostgREST, and pg_dump is not available on shared
-            // hosting. Recording true here is what previously let restore/preview
-            // offer a DATABASE_ONLY mode that could never work.
+            // This used to be impossible: the manifest hardcoded
+            // includes_database => false because pg_dump is unavailable on shared
+            // hosting. That reasoning was wrong -- pg_dump is not required to make
+            // a logical export. export_manifest() / export_table() serialise any
+            // public table to jsonb from inside Postgres, over the same PostgREST
+            // endpoint the rest of the backup already uses.
+            //
+            // It is exported BEFORE the manifest so the manifest can record real
+            // counts. A database export failure aborts the whole backup: shipping
+            // an archive that silently contains no database would be worse than
+            // shipping nothing, because restore would treat it as a files-only
+            // archive the operator never asked for.
+            $dbExport = (new DatabaseExportService(new SupabaseClient()))
+                ->exportToDirectory($tempStagingDir);
+            printf(
+                '[backup] database exported: %d tables, %d rows, %d bytes',
+                $dbExport['tables'],
+                $dbExport['rows'],
+                $dbExport['bytes']
+            );
+
+            // 3. manifest.json — written LAST so it reports what was really staged.
             $manifest = [
                 'system_name' => 'EL KAROOZ School',
                 'system_version' => '2.0.0',
@@ -115,23 +134,27 @@ class BackupController {
                 'created_at' => gmdate('Y-m-d\TH:i:s\Z'),
                 'created_by' => $user['user_id'],
                 'includes_files' => $copied > 0,
-                'includes_database' => false,
+                'includes_database' => true,
                 'files_count' => $copied,
                 'files_bytes' => $copiedBytes,
-                'database_dump_note' => 'A logical Postgres dump requires pg_dump or a server-side dump endpoint; neither is available on shared hosting. This archive contains files only.',
+                'database_tables' => $dbExport['tables'],
+                'database_rows' => $dbExport['rows'],
+                'database_bytes' => $dbExport['bytes'],
+                'database_row_counts' => $dbExport['row_counts'],
+                'database_dump_note' => 'Logical export of the public schema (table data only) produced by export_manifest() and export_table() over PostgREST. This is NOT a pg_dump: it contains no schema, no indexes, no constraints and nothing from auth.users. The schema is version-controlled in supabase/migrations, so a restore requires that schema to already be deployed.',
             ];
             file_put_contents(
                 $tempStagingDir . '/manifest.json',
                 json_encode($manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
             );
 
-            // 3. Compress and encrypt to target ZIP
+            // 4. Compress and encrypt to target ZIP
             ZipEncryptionService::createEncryptedZip($tempStagingDir, $targetZipPath, $password);
 
             $fileSize = filesize($targetZipPath);
             $sha256 = hash_file('sha256', $targetZipPath);
 
-            // 4. Record in Supabase backup_records
+            // 5. Record in Supabase backup_records
             $client = new SupabaseClient();
             $client->query('backup_records', 'POST', [
                 'id' => $backupId,
@@ -144,7 +167,7 @@ class BackupController {
                 'created_by' => $user['user_id']
             ]);
 
-            // 5. Audit log
+            // 6. Audit log
             AuditLogService::log(
                 $user['user_id'],
                 $user['claims']['user_metadata']['full_name'] ?? 'إدارة',
@@ -153,7 +176,14 @@ class BackupController {
                 'backup_records',
                 $backupId,
                 null,
-                ['filename' => $filename, 'size' => $fileSize, 'storage' => $storageOption, 'files' => $copied]
+                [
+                    'filename' => $filename,
+                    'size' => $fileSize,
+                    'storage' => $storageOption,
+                    'files' => $copied,
+                    'db_tables' => $dbExport['tables'],
+                    'db_rows' => $dbExport['rows'],
+                ]
             );
 
             Response::success([
@@ -162,11 +192,11 @@ class BackupController {
                 'file_size_bytes' => $fileSize,
                 'checksum_sha256' => $sha256,
                 'files_included' => $copied,
-                'includes_database' => false,
+                'includes_database' => true,
+                'database_tables' => $dbExport['tables'],
+                'database_rows' => $dbExport['rows'],
                 'storage_path' => "/backups/full/{$filename}"
-            ], $copied > 0
-                ? 'تم إنشاء النسخة الاحتياطية وتشفيرها بنجاح'
-                : 'تم إنشاء النسخة الاحتياطية، ولكن لم تُعثر على ملفات لتضمينها');
+            ], 'تم إنشاء النسخة الاحتياطية وتشفيرها بنجاح');
         } catch (\Exception $e) {
             // Never leave a half-written archive that a later restore might pick up.
             if (file_exists($targetZipPath)) {

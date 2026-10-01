@@ -288,12 +288,87 @@ check('backup/create copies the storage tree into the archive',
     && str_contains($backup, "copy(\$item->getPathname(), \$dest)"));
 check('backup/create excludes the backups/ dir from its own archive',
     str_contains($backup, "str_starts_with(str_replace('\\\\', '/', \$rel), 'backups/')"));
-check('backup/create does not claim a database dump it cannot produce',
-    preg_match("/'includes_database'\s*=>\s*false/", $backup) === 1);
+// includes_database must be TRUE only because a real export runs first. A
+// hardcoded true with no exporter behind it is the same lie in the other
+// direction: it would advertise a database backup that does not exist.
+check('backup/create runs a real database export before writing the manifest',
+    strpos($backup, 'DatabaseExportService') !== false
+    && strpos($backup, 'exportToDirectory') !== false
+    && strpos($backup, "'includes_database' => true") !== false
+    && strpos($backup, 'exportToDirectory') < strpos($backup, "'includes_database' => true"));
+check('backup/create records the real exported counts in the manifest',
+    str_contains($backup, "'database_tables' => \$dbExport['tables']")
+    && str_contains($backup, "'database_rows' => \$dbExport['rows']"));
+check('backup/create no longer claims it cannot produce a database export',
+    preg_match("/'includes_database'\s*=>\s*false/", $backup) !== 1);
+// The manifest must not advertise a pg_dump: this is data-only, and an operator
+// restoring it needs to know the schema is not in here.
+check('the manifest states that this is not a pg_dump',
+    str_contains($backup, 'NOT a pg_dump'));
+// An export failure must abort the backup rather than yield a files-only archive
+// the operator never asked for. Structural check: the export call sits inside the
+// try whose catch reports BACKUP_FAILED, and the finally still wipes staging.
+$expAt = strpos($backup, 'exportToDirectory($tempStagingDir)');
+$catchAt = strpos($backup, 'Response::error($e->getMessage(), \'BACKUP_FAILED\'');
+$finallyAt = strpos($backup, 'FsHelper::removeDirectoryQuietly($tempStagingDir)');
+check('a database export failure aborts the whole backup',
+    $expAt !== false && $catchAt !== false && $finallyAt !== false
+    && $expAt < $catchAt && $catchAt < $finallyAt
+    && str_contains($backup, '@unlink($targetZipPath)'),
+    "export=$expAt catch=$catchAt finally=$finallyAt");
+// The staging tree holds unencrypted PII, so it must be wiped on the failure path
+// too, not only on success.
+check('staging is wiped even when the export fails',
+    $finallyAt !== false && str_contains($backup, '} catch (\\Exception $e) {'));
+// create() must not be able to report success without an export having run.
+// Scoped to create() only: list/validate/delete have their own success responses.
+// create() runs from its own signature to the next method signature. The class
+// contains four Response::success() calls in total across create/list/validate/
+// delete, so an unscoped count says nothing about create() on its own.
+$createStart = strpos($backup, 'public function create(');
+$createEnd   = strpos($backup, 'public function list(', $createStart === false ? 0 : $createStart);
+$createBody  = ($createStart !== false && $createEnd !== false && $createEnd > $createStart)
+    ? substr($backup, $createStart, $createEnd - $createStart)
+    : '';
+check('backup/create reports success only after a database export',
+    substr_count($createBody, 'Response::success(') === 1
+    && strpos($createBody, 'Response::success(') > strpos($createBody, 'exportToDirectory'),
+    substr_count($createBody, 'Response::success(') . ' success call(s) in create()');
+check('create() has no files-only fallback branch',
+    !preg_match('/\$copied\s*>\s*0\s*\?\s*\n?\s*\'[^\']*\'\s*\n?\s*:\s*\n?\s*\'/', $createBody));
 check('backup/create cleans staging in a finally block',
     preg_match('/\}\s*finally\s*\{/', $backup) === 1);
 check('backup/create removes a half-written archive on failure',
     str_contains($backup, '@unlink($targetZipPath)'));
+// 7e. DatabaseExportService: the exporter must not become an arbitrary-write or
+// an information-leak primitive now that it handles the full user base.
+$dbExport = file_get_contents($root . '/backend-api/src/Services/DatabaseExportService.php');
+check('DatabaseExportService exists', $dbExport !== false && $dbExport !== '');
+if ($dbExport !== false) {
+    check('DatabaseExportService validates table names before building a path',
+        str_contains($dbExport, 'assertSafeTableName')
+        && str_contains($dbExport, "preg_match('/^[a-z_][a-z0-9_]*\$/'"));
+    check('DatabaseExportService refuses a table over the row ceiling rather than truncating',
+        str_contains($dbExport, 'Refusing to truncate it into a partial backup'));
+    check('DatabaseExportService cross-checks exported rows against the manifest',
+        str_contains($dbExport, 'manifest declared')
+        && str_contains($dbExport, 'would be incomplete'));
+    check('DatabaseExportService refuses to write an empty export',
+        str_contains($dbExport, 'write an empty database export that a restore would treat as real')
+        && str_contains($dbExport, 'no tables were exported'));
+    check('DatabaseExportService never exports the bookkeeping tables',
+        str_contains($dbExport, "'backup_records'")
+        && str_contains($dbExport, "'import_history'"));
+    check('DatabaseExportService holds a per-table paging ceiling',
+        str_contains($dbExport, 'MAX_ROWS_PER_TABLE'));
+    check('DatabaseExportService does not log or embed any credential',
+        !preg_match('/service_role_key|jwt_secret/i', $dbExport));
+}
+// The exporter is only ever reachable through the service role key, which lives
+// in the PHP process, not in the browser. Assert nothing widened that boundary.
+check('the exporter is not exposed to any browser-facing config',
+    preg_match('/NEXT_PUBLIC_[A-Z_]*SERVICE_ROLE/', (string) @file_get_contents($root . '/frontend/.env.local')) !== 1);
+
 check('backup/delete takes storage_path from the DB, never from the request',
     str_contains($backup, 'storage_path,deleted_at&id=eq.')
     && !preg_match('/\$storagePath\s*=\s*\$body/', $backup));

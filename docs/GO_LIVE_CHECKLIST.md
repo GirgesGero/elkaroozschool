@@ -30,15 +30,29 @@ No deployment credentials exist on this machine for the PHP host, and the host i
 not answering at all (`https://elkaroozschool.is-best.net` → curl rc=56, HTTP
 rc=52). This cannot be completed from here; it needs someone with hosting access.
 
-Build the archive with `php scripts/package_zip.php` (23/23, 46 entries). It emits
+Build the archive with `php scripts/package_zip.php` (27/27, 46 entries). It emits
 the archive to `%LOCALAPPDATA%\ElKarooz-API-public_html.zip`, or to a `.build`
 suffixed name if that path is locked by another process.
+
+> ⚠️ **Check the filename you upload.** The canonical path is currently held open
+> by another process, so builds land at
+> `ElKarooz-API-public_html.zip.<pid>.build`. An older
+> `ElKarooz-API-public_html.zip` (66,539 bytes) is still sitting there from a
+> previous build and does **not** contain the database exporter. Uploading the
+> wrong one silently ships an older backend. The packager asserts every
+> `require_once` in `index.php` resolves inside the archive, and prints the exact
+> output path and size — verify those against what you upload.
+
+Environment: PHP **8.3.35** (the local binary used for all suites is 8.3.35,
+not the 8.3.14 quoted in older notes).
 
 - [ ] Upload to `public_html/` (layout in [PRODUCTION_DEPLOYMENT.md §3](PRODUCTION_DEPLOYMENT.md#3-deploying-the-php-api-to-hostinger))
 - [ ] `vendor/` present (contains `firebase/php-jwt`)
 - [ ] `.htaccess` present **at the archive root** (the web-root guard — see B2a)
 - [ ] `config/.htaccess`, `src/.htaccess`, `vendor/.htaccess`, `storage/.htaccess` all present
-- [ ] All 8 PHP env vars set
+- [ ] All PHP env vars set (`SUPABASE_URL`, `SUPABASE_ANON_KEY`,
+      `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_JWT_SECRET`, and the rest per
+      [PRODUCTION_DEPLOYMENT.md](PRODUCTION_DEPLOYMENT.md))
 - [ ] `chmod 755 storage/`
 - [ ] `https://elkaroozschool.is-best.net/health` → `"status": "ONLINE"`
 
@@ -127,6 +141,88 @@ reachable by the wrong role, or a controller that skips its gate.
 
 ---
 
+### B7. Database backup now works; database RESTORE does not exist yet
+
+**Status: half closed.** The export side is done and verified. The restore side
+does not exist and must not be invented late.
+
+#### Closed — logical database export (2026-10-01)
+
+The manifest previously hardcoded `includes_database => false`, on the grounds
+that a logical Postgres dump cannot be produced through PostgREST. That
+reasoning was wrong: `pg_dump` is not required to make a logical export.
+
+Two `service_role`-only RPCs now serialise any public table to jsonb from inside
+Postgres, over the endpoint the rest of the backup already used:
+
+| RPC | Grants | Returns |
+|---|---|---|
+| `export_manifest()` | `service_role` only | every public table + exact row count |
+| `export_table(t, l, o)` | `service_role` only | one table as jsonb, paginated |
+
+`DatabaseExportService` drives them and stages the result under
+`<staging>/database/<table>.json` before the manifest is written, so the
+manifest records real counts.
+
+| Check | Result |
+|---|---|
+| `export_manifest()` on production | 50 tables, 1091 rows total |
+| `anon` calling either RPC | denied |
+| `authenticated` (even `super_user`) calling either RPC | denied |
+| `service_role` calling either RPC | works |
+| SQL injection via `p_table` (`'profiles; DROP TABLE profiles--'`) | rejected |
+| schema escape (`'auth.users'`, `'pg_catalog.pg_authid'`) | rejected |
+| exported keys vs real `profiles` columns | no unknown keys |
+| multi-page sweep, 50 rows at 30/page | 50 rows, 50 distinct ids, no dupes |
+| PHP unit suite `scripts/verify_database_export.php` | **43/43** |
+| packaging audit (`require` coverage) | **27/27** |
+
+**Bug found and fixed during verification.** `has_more` was originally computed
+as `jsonb_array_length(rows) > p_limit`. A full page can never be longer than the
+limit, so that is **always false** — every table larger than one page reported
+"no more data" and the PHP loop stopped after page 1. `profiles` (50 rows,
+30/page) reproduced it exactly: `has_more=false` with 20 rows still unread. It
+would have produced silently truncated backups for any real table. Fixed by
+deriving `has_more` from `count(*)` of the whole table, and returning that count
+as `total_rows`. PHP now double-checks `total_rows` against the manifest count
+before accepting an export.
+
+#### Still open — no database restore path
+
+`restore/preview` and `restore/execute` restore **files only**. There is no code
+path that puts `database/*.json` back. Do not treat a produced archive as
+restorable until this is built and proven.
+
+The obstacle is real, not an oversight: `service_role` **cannot write to
+`auth.users`** over PostgREST. Verified against production. So a restore cannot
+be naive PostgREST CRUD. It needs a `SECURITY DEFINER` restore RPC (or another
+privileged boundary), and it must be **all-or-nothing** — a transaction that
+either restores every table or leaves production untouched.
+
+Required before this blocker can close:
+
+- [ ] `restore/preview` recognises a database-bearing archive and reports what a
+      database restore would touch, without touching it
+- [ ] A `SECURITY DEFINER` restore RPC, `service_role`-only, that runs the whole
+      restore in one transaction
+- [ ] `restore/execute` with `DATABASE_ONLY` and `FULL` modes, honouring the
+      all-or-nothing rule: any precondition failure leaves the database as it was
+- [ ] Identity continuity: re-created `auth.users` must keep the same UUIDs, or
+      every foreign key in `profiles`, attendance and marks breaks
+- [ ] Password/session policy decided explicitly. `auth.users` is not in the
+      export, so accounts must survive as accounts, not be re-created from
+      nothing. Rotate-on-restore must not silently re-enable a suspended account
+- [ ] Proven on a real archive, not a fixture: back up production, restore it,
+      and diff row counts per table plus a spot-check of PII
+- [ ] A rollback test first: restore inside a transaction that is then rolled
+      back, proving no partial write escapes
+
+Also note `restore/preview`'s `DATABASE_ONLY` mode was previously advertised but
+unreachable. That advertisement is a documentation defect to remove or fix
+alongside the real implementation.
+
+---
+
 ## ✅ Verified in this audit — with evidence
 
 ### Supabase
@@ -161,7 +257,28 @@ reachable by the wrong role, or a controller that skips its gate.
 | Legitimate in-root delete still works | ✅ not over-blocked |
 | Health payload leaks no secrets | ✅ |
 
-**Totals: 21/21 + 16/16 security checks passed.**
+**Totals as of 2026-10-01:**
+
+| Suite | Result |
+|---|---|
+| `php -l` syntax, all app + scripts | ✅ 0 errors |
+| `verify_production_security.php` | ✅ **93/93** |
+| `verify_database_export.php` | ✅ **43/43** |
+| `verify_restore_atomicity.php` | ✅ 23/23 |
+| `verify_backup_archive_limits.php` | ✅ 18/18 |
+| `verify_export_formats.php` | ✅ 25/25 |
+| `verify_storage_routing_runtime.php` | ✅ 62/62 |
+| `verify_storage_folder_routing.sh` | ✅ 17/17 |
+| `verify_api_http.php` (real HTTP) | ✅ 16 PASS / 0 FAIL |
+| `verify_php_role_matrix.php` | ✅ 74/74 |
+| `package_zip.php` | ✅ 27/27, 46 entries |
+
+The export suite is new; the security suite grew from 77 to 93 because the old
+check `includes_database => false` was inverted — it asserted the backup could
+*not* export a database, which became false once a real exporter existed. It now
+asserts the export is real, runs before the manifest, records real counts, and
+that an export failure aborts the backup instead of yielding a files-only
+archive.
 
 ### 🔴 CRITICAL-4: the PHP app-root bug (found while packaging)
 

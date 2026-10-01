@@ -208,6 +208,39 @@ check('the guard template is NOT shipped at the web root',
 check('no .git in the archive',
       !array_filter($names, static fn(string $n): bool => str_contains($n, '/.git/')));
 
+// Every first-party class index.php requires must actually be in the archive.
+// A stale or partial build otherwise produces an archive that looks fine and
+// then dies on the first request with a fatal "class not found" -- which on
+// shared hosting presents as a blank 500, not an obvious packaging bug.
+$zipCheck2 = new ZipArchive();
+if ($zipCheck2->open($outFile) !== true) {
+    fwrite(STDERR, "cannot reopen the archive for the require audit\n");
+    exit(1);
+}
+$indexBody = (string) $zipCheck2->getFromName('index.php');
+$missingRequires = [];
+if (preg_match_all("/require_once\s+\$appRoot\s*\.\s*'([^']+)'/", $indexBody, $m)) {
+    foreach ($m[1] as $rel) {
+        $rel = ltrim(str_replace('\\', '/', $rel), '/');
+        if ($zipCheck2->locateName($rel) === false) {
+            $missingRequires[] = $rel;
+        }
+    }
+}
+$zipCheck2->close();
+check('every class index.php requires is present in the archive',
+      $missingRequires === [], implode(', ', array_slice($missingRequires, 0, 6)));
+
+// The exporter must be packaged alongside the RPC grant it depends on: an
+// archive whose BackupController calls DatabaseExportService but does not ship
+// it cannot produce a database backup at all.
+check('DatabaseExportService is packaged with the BackupController that uses it',
+      in_array('src/Services/DatabaseExportService.php', $names, true)
+      && in_array('src/Controllers/BackupController.php', $names, true));
+check('the packaged index.php requires DatabaseExportService',
+      in_array('src/Services/DatabaseExportService.php', $names, true)
+      && str_contains($indexBody, 'DatabaseExportService'));
+
 // The guard must deny PHP, and the grant for index.php must come after it.
 $guard = (string) file_get_contents($rootTemplate);
 $denyPos  = strpos($guard, '<FilesMatch "\.php$">');
