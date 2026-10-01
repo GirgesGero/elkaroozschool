@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { phpApi, PhpApiError, type BackupCreateResult } from '@/lib/api/php';
+import { explainDbError } from '@/lib/errors/db';
 import type { Session } from '@supabase/supabase-js';
 import {
   ShieldAlert,
@@ -185,8 +186,8 @@ export default function AdminBackupsPage() {
       setOperationMsg({ type: 'success', text: 'تم حذف النسخة الاحتياطية بنجاح' });
       setSelectedBackupForDelete(null);
       fetchBackups();
-    } catch (err: any) {
-      setOperationMsg({ type: 'error', text: err.message || 'فشل حذف النسخة الاحتياطية' });
+    } catch (err) {
+      setOperationMsg({ type: 'error', text: explainDbError(err) });
     }
   };
 

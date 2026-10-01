@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
+import { explainDbError } from '@/lib/errors/db';
 import GroupSelector from '@/components/GroupSelector';
 import TraineeProfileDrawer from '@/components/TraineeProfileDrawer';
 import ServantProfileDrawer from '@/components/ServantProfileDrawer';
@@ -225,8 +226,8 @@ export default function GroupDetailsPage({ params }: PageProps) {
       // Refresh group summary in background
       const { data: sumData } = await supabase.rpc('get_group_operational_summary', { p_group_id: groupId });
       if (sumData) setSummary(sumData);
-    } catch (err: any) {
-      setNotice({ type: 'error', text: `فشل تسجيل الحضور: ${err.message}` });
+    } catch (err) {
+      setNotice({ type: 'error', text: explainDbError(err) });
     }
     setUpdatingAttendance(false);
   };

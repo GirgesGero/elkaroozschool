@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
+import { explainDbError, dbWrite } from '@/lib/errors/db';
 import {
   Bell,
   HeartHandshake,
@@ -130,10 +131,9 @@ export default function AdminNotificationsPage() {
       const { error } = await supabase
         .from('notification_templates')
         .upsert({ template_key: 'PASTORAL', template_body: pastoralMsg }, { onConflict: 'template_key' });
-      if (error) throw error;
       setStatusMsg({ type: 'success', text: 'تم حفظ وتحديث قالب رسالة الافتقاد بنجاح' });
-    } catch (err: any) {
-      setStatusMsg({ type: 'error', text: err.message || 'فشل حفظ القالب' });
+    } catch (err) {
+      setStatusMsg({ type: 'error', text: explainDbError(err) });
     } finally {
       setSavingTemplate(false);
     }
@@ -146,10 +146,9 @@ export default function AdminNotificationsPage() {
       const { error } = await supabase
         .from('notification_templates')
         .upsert({ template_key: 'BIRTHDAY', template_body: birthdayMsg }, { onConflict: 'template_key' });
-      if (error) throw error;
       setStatusMsg({ type: 'success', text: 'تم حفظ وتحديث قالب رسالة عيد الميلاد بنجاح' });
-    } catch (err: any) {
-      setStatusMsg({ type: 'error', text: err.message || 'فشل حفظ القالب' });
+    } catch (err) {
+      setStatusMsg({ type: 'error', text: explainDbError(err) });
     } finally {
       setSavingTemplate(false);
     }
@@ -160,24 +159,25 @@ export default function AdminNotificationsPage() {
     if (!newVerseText || !newVerseRef) return;
 
     try {
-      const { data, error } = await supabase
-        .from('daily_verses')
-        .insert({
-          verse_text: newVerseText,
-          reference: newVerseRef,
-          display_order: verses.length + 1
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
+      await dbWrite(
+        supabase
+          .from('daily_verses')
+          .insert({
+            verse_text: newVerseText,
+            reference: newVerseRef,
+            display_order: verses.length + 1
+          })
+          .select()
+          .single(),
+        'لم يتم تأكيد إضافة الآية.',
+      );
 
       setStatusMsg({ type: 'success', text: 'تمت إضافة الآية إلى بنك الآيات اليومية بنجاح' });
       setNewVerseText('');
       setNewVerseRef('');
       fetchData();
-    } catch (err: any) {
-      setStatusMsg({ type: 'error', text: err.message || 'فشل إضافة الآية' });
+    } catch (err) {
+      setStatusMsg({ type: 'error', text: explainDbError(err) });
     }
   };
 
@@ -188,12 +188,10 @@ export default function AdminNotificationsPage() {
         .update({ deleted_at: new Date().toISOString() })
         .eq('id', id);
 
-      if (error) throw error;
-
       setStatusMsg({ type: 'success', text: 'تم حذف الآية بنجاح' });
       fetchData();
-    } catch (err: any) {
-      setStatusMsg({ type: 'error', text: err.message || 'فشل حذف الآية' });
+    } catch (err) {
+      setStatusMsg({ type: 'error', text: explainDbError(err) });
     }
   };
 
@@ -205,7 +203,6 @@ export default function AdminNotificationsPage() {
         p_force_send: true,
         p_mode: 'SEQUENTIAL'
       });
-      if (error) throw error;
 
       if (data.success) {
         setStatusMsg({
@@ -216,8 +213,8 @@ export default function AdminNotificationsPage() {
       } else {
         setStatusMsg({ type: 'error', text: data.message || 'تعذر إرسال الآية' });
       }
-    } catch (err: any) {
-      setStatusMsg({ type: 'error', text: err.message || 'فشل إرسال الآية' });
+    } catch (err) {
+      setStatusMsg({ type: 'error', text: explainDbError(err) });
     } finally {
       setDispatching(false);
     }
@@ -228,14 +225,13 @@ export default function AdminNotificationsPage() {
     setStatusMsg(null);
     try {
       const { data, error } = await supabase.rpc('trigger_birthday_notifications');
-      if (error) throw error;
 
       setStatusMsg({
         type: 'success',
         text: `تم فحص أعياد الميلاد وإرسال ${data.total_notifications} إشعار بنجاح!`
       });
-    } catch (err: any) {
-      setStatusMsg({ type: 'error', text: err.message || 'فشل إرسال إشعارات أعياد الميلاد' });
+    } catch (err) {
+      setStatusMsg({ type: 'error', text: explainDbError(err) });
     } finally {
       setDispatching(false);
     }

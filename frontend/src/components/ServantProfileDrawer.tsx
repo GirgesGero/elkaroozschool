@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
+import { explainDbError } from '@/lib/errors/db';
 import {
   X,
   User,
@@ -170,8 +171,8 @@ export default function ServantProfileDrawer({
 
       setNotice({ type: 'success', text: 'تم حفظ صلاحيات وبيانات الخادم بنجاح!' });
       if (onProfileUpdated) onProfileUpdated();
-    } catch (err: any) {
-      setNotice({ type: 'error', text: `فشل الحفظ: ${err.message}` });
+    } catch (err) {
+      setNotice({ type: 'error', text: explainDbError(err) });
     }
     setSaving(false);
   };
@@ -207,8 +208,8 @@ export default function ServantProfileDrawer({
         setNotice({ type: 'success', text: 'تم تعيين الخادم كسكرتارية للفرقة بنجاح.' });
       }
       if (onProfileUpdated) onProfileUpdated();
-    } catch (err: any) {
-      setNotice({ type: 'error', text: `فشل التعيين: ${err.message}` });
+    } catch (err) {
+      setNotice({ type: 'error', text: explainDbError(err) });
     }
     setSaving(false);
   };
