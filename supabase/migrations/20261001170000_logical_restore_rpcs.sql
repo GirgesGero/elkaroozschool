@@ -383,6 +383,15 @@ BEGIN
     -- window for a concurrent session: the setting is transaction-local, so it
     -- is reverted automatically at commit or rollback.
     --
+    -- It also suspends trg_profiles_guard_privilege_columns, the trigger that
+    -- stops a non-admin from re-roling their own profile. That suspension is
+    -- correct for a restore: the operator is service_role, and the point of a
+    -- restore is to put the archived role_id and group_id back, including for
+    -- accounts that were demoted after the archive was taken. The guard's whole
+    -- purpose is protecting the live system from the people using it; the
+    -- restore is not one of those people, and it is reached only over the
+    -- service_role key in the server environment.
+    --
     -- Two alternatives were tested and rejected:
     --
     --   ALTER TABLE ... DISABLE TRIGGER  -- removes the guard for EVERY session
