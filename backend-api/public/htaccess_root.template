@@ -1,0 +1,100 @@
+# Root web-root guard. Copied to public_html/.htaccess by scripts/package_zip.php.
+#
+# WHY THIS FILE EXISTS
+#
+# The deployment convention for this project is FLATTENED: the contents of
+# backend-api/public/ become public_html/, and config/, src/ and vendor/ are
+# uploaded as siblings so AppRoot can resolve them via dirname(__DIR__).
+#
+# That layout puts those directories INSIDE the web root. The .htaccess that
+# ships in public/ only rewrites requests for files that do NOT exist on disk
+# (RewriteCond %{REQUEST_FILENAME} !-f), so it never sees them: a request for
+# /config/supabase.php or /src/Utils/AppRoot.php hits an existing file and is
+# served verbatim by Apache before any rule routes it to index.php.
+#
+# Consequences of leaving them reachable:
+#   - Full PHP source disclosure for config/ and src/: internal paths, env var
+#     names, the whole auth model, every endpoint.
+#   - vendor/ discloses the exact dependency set and versions.
+#   - Any .php file that lands in the web root executes. No current upload path
+#     writes there, but that is a property of today's code, not something the
+#     server enforces.
+#
+# This file denies the internals outright. mod_authz_core runs before mod_php, so
+# a denied request is a 403 with no script execution.
+#
+# Deploy requirement: this must sit at public_html/.htaccess. If the host serves
+# the backend from a subdirectory instead, place it at that directory's root.
+#
+# VERIFICATION STATUS: the guard is checked structurally by scripts/package_zip.php
+# (deny section present, grant present, deny ordered before grant). It has NOT been
+# exercised against a live Apache: no Apache or httpd binary is available on this
+# machine, and the PHP host is not answering. Before go-live, request
+#   GET /config/supabase.php  -> expect 403
+#   GET /src/Utils/AppRoot.php -> expect 403
+#   GET /index.php or /api/health -> expect 200/404 from the app, never a 403
+# on the deployed host and confirm all three. A source-disclosure regression here
+# is silent, so this must be an explicit post-deploy check, not an assumption.
+#
+# NOTE ON ORDERING: Apache applies <Files>/<FilesMatch> sections in the order they
+# appear, and a later section overrides an earlier one for the same file. The
+# deny-all-PHP section therefore comes FIRST and the explicit grant for index.php
+# comes AFTER it. Reversing those two sections would expose every .php file in the
+# web root, including config/supabase.php.
+
+# ---------------------------------------------------------------------------
+# 1. Deny every PHP file in the web root.
+# ---------------------------------------------------------------------------
+<FilesMatch "\.php$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
+# ---------------------------------------------------------------------------
+# 2. Re-grant the front controller only. Must stay after section 1.
+# ---------------------------------------------------------------------------
+<Files "index.php">
+    <IfModule mod_authz_core.c>
+        Require all granted
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Allow from all
+    </IfModule>
+</Files>
+
+# ---------------------------------------------------------------------------
+# 3. Front-controller routing, mirroring public/.htaccess so the flattened root
+#    behaves identically to the non-flattened layout.
+# ---------------------------------------------------------------------------
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
+
+    RewriteCond %{REQUEST_METHOD} ^(TRACE|TRACK|CONNECT|DEBUG) [NC]
+    RewriteRule ^.*$ - [F]
+
+    RewriteRule ^(\.env|\.git|\.htaccess|\.sql|\.bak|\.log|\.ini|\.sh|\.lock|\.ya?ml)$ - [F,L]
+    RewriteRule ^(composer\.(json|lock)|package(-lock)?\.json)$ - [F,L]
+
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^(.*)$ index.php [QSA,L]
+</IfModule>
+
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-XSS-Protection "1; mode=block"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+    Header unset X-Powered-By
+    Header always unset X-Powered-By
+</IfModule>
+
+Options -Indexes -ExecCGI
+AddDefaultCharset UTF-8
