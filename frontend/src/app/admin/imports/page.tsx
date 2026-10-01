@@ -192,7 +192,7 @@ export default function AdminImportsPage() {
     }
   };
 
-  const handleExportTrainees = async (format: 'csv' | 'excel') => {
+  const handleExportTrainees = async (format: 'csv') => {
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -228,7 +228,7 @@ export default function AdminImportsPage() {
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.setAttribute('href', url);
-      link.setAttribute('download', `trainees_export_${Date.now()}.${format === 'csv' ? 'csv' : 'csv'}`);
+      link.setAttribute('download', `trainees_export_${Date.now()}.csv`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -348,17 +348,19 @@ export default function AdminImportsPage() {
             </button>
           </div>
 
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex items-center justify-between">
+          <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 flex items-center justify-between opacity-70">
             <div>
-              <h3 className="font-bold text-white mb-1">تصدير سجلات المتدربين (Excel)</h3>
-              <p className="text-xs text-slate-400">كشف حسابات المتدربين متوافق مع Excel</p>
+              <h3 className="font-bold text-slate-300 mb-1">تصدير سجلات المتدربين (Excel / XLSX)</h3>
+              <p className="text-xs text-slate-500">
+                غير متاح حالياً — التصدير بصيغة CSV فقط. لن نُنزّل ملف CSV باسم xlsx.
+              </p>
             </div>
             <button
-              onClick={() => handleExportTrainees('excel')}
-              className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 px-4 py-2 rounded-xl text-xs font-semibold transition"
+              disabled
+              className="flex items-center gap-2 bg-slate-800/60 border border-slate-700 text-slate-500 px-4 py-2 rounded-xl text-xs font-semibold cursor-not-allowed"
             >
-              <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
-              تحميل كشف
+              <FileSpreadsheet className="w-4 h-4" />
+              غير متاح
             </button>
           </div>
         </div>

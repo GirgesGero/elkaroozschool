@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
+import { phpApi, PhpApiError, type BackupCreateResult } from '@/lib/api/php';
+import type { Session } from '@supabase/supabase-js';
 import {
   ShieldAlert,
   Download,
@@ -50,6 +52,11 @@ export default function AdminBackupsPage() {
   const [restoreMode, setRestoreMode] = useState<'FULL' | 'DATABASE_ONLY' | 'FILES_ONLY'>('FULL');
   const [restoring, setRestoring] = useState(false);
   const [operationMsg, setOperationMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  // The database only stores archive metadata (name, size, checksum). Restoring needs
+  // the actual encrypted ZIP, so the operator has to attach the file they hold. We keep
+  // the File objects in memory for this page only — never uploaded, never persisted.
+  const [backupFiles, setBackupFiles] = useState<Record<string, File>>({});
 
   useEffect(() => {
     fetchBackups();
@@ -78,6 +85,9 @@ export default function AdminBackupsPage() {
 
       setIsAdmin(true);
 
+      const { data: sessionData } = await supabase.auth.getSession();
+      setSession(sessionData.session ?? null);
+
       const { data, error } = await supabase
         .from('backup_records')
         .select('*')
@@ -105,49 +115,56 @@ export default function AdminBackupsPage() {
     setOperationMsg(null);
 
     try {
-      // Create backup record in Supabase
-      const timestamp = new Date().toISOString().replace(/[-:T.]/g, '').slice(0, 14);
-      const filename = `backup_elkarooz_enc_${timestamp}.zip`;
-      const dummyChecksum = Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
-
-      const { data, error } = await supabase
-        .from('backup_records')
-        .insert({
-          filename,
-          file_size_bytes: 1048576 * 2.5, // 2.5 MB
-          storage_type: storageOption === 'HOSTINGER' ? 'HOSTINGER' : 'DOWNLOAD_ONLY',
-          storage_path: `backups/${filename}`,
-          status: 'COMPLETED',
-          checksum_sha256: dummyChecksum
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      // Log in audit
-      await supabase.rpc('log_operational_event', {
-        p_operation: 'BACKUP_CREATE_AES256',
-        p_entity_type: 'backup_records',
-        p_entity_id: filename,
-        p_status: 'SUCCESS',
-        p_details: { storage_type: storageOption, filename },
-        p_checksum: dummyChecksum
+      // The archive is produced by the PHP backend: it snapshots the storage tree,
+      // exports the database, and writes a real AES-256 ZIP whose sha256 it computes.
+      // Nothing about that file is invented in the browser, and a success message is
+      // only shown once the backend has actually returned a created archive.
+      const result = await phpApi<BackupCreateResult>('/backup/create', {
+        session,
+        body: {
+          encryption_password: backupPassword,
+          storage_option: storageOption === 'HOSTINGER' ? 'HOSTINGER' : 'DOWNLOAD_ONLY',
+        },
       });
 
-      setOperationMsg({ type: 'success', text: `تم إنشاء النسخة الاحتياطية المشفرة بنجاح: ${filename}` });
+      const dbNote = result.includes_database
+        ? ` · قاعدة البيانات: ${result.database_tables ?? 0} جدول / ${result.database_rows ?? 0} صف`
+        : '';
+
+      setOperationMsg({
+        type: 'success',
+        text: `تم إنشاء النسخة الاحتياطية فعلياً: ${result.filename} (${result.files_included} ملف${dbNote})`,
+      });
       setBackupPassword('');
       fetchBackups();
-    } catch (err: any) {
-      setOperationMsg({ type: 'error', text: err.message || 'فشل إنشاء النسخة الاحتياطية' });
+    } catch (err) {
+      const message =
+        err instanceof PhpApiError
+          ? err.message
+          : 'فشل إنشاء النسخة الاحتياطية. لم يتم إنشاء أي ملف.';
+      setOperationMsg({ type: 'error', text: message });
     } finally {
       setCreatingBackup(false);
     }
   };
 
+  /**
+   * Attaches the operator's encrypted ZIP to a listed archive so it can be restored.
+   * The file is held in memory for this page only; it is never stored or re-uploaded
+   * anywhere except to /restore/execute at the moment the operator confirms.
+   */
+  const handleAttachFile = (backupId: string, file: File | null) => {
+    if (!file) return;
+    if (!file.name.toLowerCase().endsWith('.zip')) {
+      setOperationMsg({ type: 'error', text: 'الملف يجب أن يكون أرشيف ZIP.' });
+      return;
+    }
+    setBackupFiles((prev) => ({ ...prev, [backupId]: file }));
+    setOperationMsg({ type: 'success', text: `تم إرفاق الملف ${file.name} لهذه النسخة.` });
+  };
+
   const handleDeleteBackup = async () => {
     if (!selectedBackupForDelete) return;
-
     try {
       const { error } = await supabase
         .from('backup_records')
@@ -175,6 +192,15 @@ export default function AdminBackupsPage() {
 
   const handleRestoreBackup = async () => {
     if (!selectedBackupForRestore) return;
+
+    const source = backupFiles[selectedBackupForRestore.id];
+    if (!source) {
+      setOperationMsg({
+        type: 'error',
+        text: 'ملف النسخة الاحتياطية غير موجود على هذا الجهاز. ارفع الملف من جديد قبل الاستعادة.',
+      });
+      return;
+    }
     if (!restorePassword) {
       setOperationMsg({ type: 'error', text: 'يرجى إدخال كلمة مرور فك تشفير النسخة' });
       return;
@@ -184,32 +210,42 @@ export default function AdminBackupsPage() {
     setOperationMsg(null);
 
     try {
-      // 1. Create Pre-Restore Safety Backup
-      const safetyChecksum = Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
-      await supabase.rpc('log_operational_event', {
-        p_operation: 'PRE_RESTORE_SAFETY_BACKUP',
-        p_entity_type: 'system_rollback_point',
-        p_entity_id: 'safety_' + Date.now(),
-        p_status: 'SUCCESS',
-        p_details: { trigger: 'RESTORE_OPERATION', target_backup: selectedBackupForRestore.filename },
-        p_checksum: safetyChecksum
+      // The backend re-opens the archive, re-validates it, takes a safety backup, and
+      // rolls the whole thing back on any failure. Passing the user's own password is
+      // unavoidable: the archive is AES encrypted with a key the server never stored.
+      const form = new FormData();
+      form.append('backup_zip', source);
+      form.append('encryption_password', restorePassword);
+      form.append('restore_mode', restoreMode === 'FULL' ? 'FULL_SYSTEM' : restoreMode);
+      form.append('confirm_restore', 'YES');
+      form.append('truncate_mode', 'MERGE');
+
+      const result = await phpApi<{ mode?: string; rolled_back?: boolean }>('/restore/execute', {
+        session,
+        formData: form,
+        timeoutMs: 600_000,
       });
 
-      // 2. Perform Atomic Restore
-      await supabase.rpc('log_operational_event', {
-        p_operation: 'RESTORE_EXECUTE_' + restoreMode,
-        p_entity_type: 'backup_records',
-        p_entity_id: selectedBackupForRestore.filename,
-        p_status: 'SUCCESS',
-        p_details: { mode: restoreMode, filename: selectedBackupForRestore.filename },
-        p_checksum: selectedBackupForRestore.checksum_sha256
-      });
+      if (result.rolled_back) {
+        setOperationMsg({
+          type: 'error',
+          text: 'فشلت الاستعادة وتم التراجع تلقائياً. النظام في حالته السابقة.',
+        });
+        return;
+      }
 
-      setOperationMsg({ type: 'success', text: `تمت استعادة النظام بنجاح من النسخة ${selectedBackupForRestore.filename}` });
+      setOperationMsg({
+        type: 'success',
+        text: `تمت استعادة النظام فعلياً بنمط ${result.mode ?? restoreMode}.`,
+      });
       setSelectedBackupForRestore(null);
       setRestorePassword('');
-    } catch (err: any) {
-      setOperationMsg({ type: 'error', text: err.message || 'فشل تنفيذ الاستعادة' });
+    } catch (err) {
+      const message =
+        err instanceof PhpApiError
+          ? err.message
+          : 'فشل تنفيذ الاستعادة. لم يُطبَّق أي تغيير على النظام.';
+      setOperationMsg({ type: 'error', text: message });
     } finally {
       setRestoring(false);
     }
@@ -411,6 +447,7 @@ export default function AdminBackupsPage() {
                     <th className="pb-3">موقع التخزين</th>
                     <th className="pb-3">رمز التحقق (SHA-256)</th>
                     <th className="pb-3">تاريخ الإنشاء</th>
+                    <th className="pb-3">ملف الأرشيف</th>
                     <th className="pb-3 pl-4 text-center">الإجراءات</th>
                   </tr>
                 </thead>
@@ -434,6 +471,23 @@ export default function AdminBackupsPage() {
                       </td>
                       <td className="py-4 text-xs text-slate-400">
                         {new Date(b.created_at).toLocaleString('ar-EG')}
+                      </td>
+                      <td className="py-4">
+                        <label className="inline-flex items-center gap-1.5 cursor-pointer px-2.5 py-1 rounded-lg border border-slate-700 bg-slate-800/60 hover:border-amber-500/50 text-xs text-slate-300 transition">
+                          <Upload className="w-3.5 h-3.5" />
+                          {backupFiles[b.id] ? 'تغيير الملف' : 'إرفاق ملف ZIP'}
+                          <input
+                            type="file"
+                            accept=".zip,application/zip"
+                            className="hidden"
+                            onChange={(e) => handleAttachFile(b.id, e.target.files?.[0] ?? null)}
+                          />
+                        </label>
+                        {backupFiles[b.id] && (
+                          <span className="block mt-1.5 text-[11px] text-emerald-400 truncate max-w-[160px]" title={backupFiles[b.id].name}>
+                            {backupFiles[b.id].name}
+                          </span>
+                        )}
                       </td>
                       <td className="py-4 pl-4">
                         <div className="flex items-center justify-center gap-2">
@@ -513,6 +567,16 @@ export default function AdminBackupsPage() {
                 <div><strong>نقطة الأمان التلقائية:</strong> سيتم إنشاء Pre-Restore Safety Backup تلقائياً قبل البدء.</div>
               </div>
 
+              {!backupFiles[selectedBackupForRestore.id] && (
+                <div className="bg-red-500/10 border border-red-500/30 p-3 rounded-xl text-xs text-red-300 space-y-2">
+                  <p className="font-bold">الملف غير مرفق — لا يمكن تنفيذ الاستعادة.</p>
+                  <p>
+                    قاعدة البيانات تخزّن بيانات النسخة فقط (الاسم، الحجم، والبصمة). الاستعادة تحتاج
+                    أرشيف ZIP نفسه. أغلق هذه النافذة وأرفق الملف من عمود «ملف الأرشيف».
+                  </p>
+                </div>
+              )}
+
               <div className="space-y-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 mb-2">
@@ -559,9 +623,14 @@ export default function AdminBackupsPage() {
                 </button>
                 <button
                   type="button"
-                  disabled={restoring}
+                  disabled={restoring || !backupFiles[selectedBackupForRestore.id]}
                   onClick={handleRestoreBackup}
-                  className="flex items-center gap-2 px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-bold transition shadow-lg shadow-emerald-900/30 disabled:opacity-50"
+                  title={
+                    backupFiles[selectedBackupForRestore.id]
+                      ? undefined
+                      : 'أرفق ملف الأرشيف أولاً'
+                  }
+                  className="flex items-center gap-2 px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-bold transition shadow-lg shadow-emerald-900/30 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   {restoring ? (
                     <>
