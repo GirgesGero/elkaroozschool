@@ -5,41 +5,151 @@ use App\Middleware\JwtAuthMiddleware;
 use App\Middleware\RbacMiddleware;
 use App\Services\SupabaseClient;
 use App\Services\AuditLogService;
+use App\Services\SpreadsheetWriter;
+use App\Services\SpreadsheetUnavailableException;
 use App\Utils\Response;
 
+/**
+ * Bulk data export (SRS 35).
+ *
+ * Export is admin-only by product decision: bulk exfiltration of trainee PII
+ * (name, phone, birth date) must not be reachable by any group-scoped role. Only
+ * admin and super_user keep it; super_user stays global because that is its role
+ * everywhere else. This tightens the previous rule that allowed servant and
+ * secretariat to export their own group — "contained" is not the requirement.
+ */
 class ExportController {
+    /**
+     * Allowlist of exportable entities.
+     *
+     * $entity used to be accepted from the query string but never used to pick a
+     * table: every request exported `profiles` filtered to trainees while logging
+     * the requested entity name, so entity=attendance_records silently returned
+     * trainee PII under the wrong label. It is an allowlist key now, so an unknown
+     * entity is a 400 rather than a confidently mislabelled dataset.
+     */
+    private const ENTITIES = [
+        'trainees' => [
+            'query'  => 'profiles?role_id=eq.trainee&deleted_at=is.null&order=full_name',
+            'scoped' => true,
+            'label'  => [
+                'username'   => 'اسم المستخدم',
+                'full_name'  => 'الاسم بالكامل',
+                'group_id'   => 'رقم الفرقة',
+                'phone'      => 'الهاتف',
+                'birth_date' => 'تاريخ الميلاد',
+                'address'    => 'العنوان',
+                'is_active'  => 'نشط',
+            ],
+        ],
+        'servants' => [
+            'query'  => 'profiles?role_id=eq.servant&deleted_at=is.null&order=full_name',
+            'scoped' => true,
+            'label'  => [
+                'username'  => 'اسم المستخدم',
+                'full_name' => 'الاسم بالكامل',
+                'group_id'  => 'رقم الفرقة',
+                'phone'     => 'الهاتف',
+                'is_active' => 'نشط',
+            ],
+        ],
+        'secretariat' => [
+            'query'  => 'profiles?role_id=eq.secretariat&deleted_at=is.null&order=full_name',
+            'scoped' => true,
+            'label'  => [
+                'username'  => 'اسم المستخدم',
+                'full_name' => 'الاسم بالكامل',
+                'group_id'  => 'رقم الفرقة',
+                'phone'     => 'الهاتف',
+            ],
+        ],
+        'attendance' => [
+            'query'  => 'attendance_records?order=attendance_date.desc&limit=10000',
+            'scoped' => false,
+            'label'  => [
+                'attendance_date' => 'التاريخ',
+                'status'          => 'الحالة',
+                'notes'           => 'ملاحظات',
+            ],
+        ],
+        'groups' => [
+            'query'  => 'groups?order=id',
+            'scoped' => false,
+            'label'  => [
+                'name_ar' => 'اسم الفرقة',
+            ],
+        ],
+    ];
+
     public function exportData(): void {
         $user = JwtAuthMiddleware::authenticate();
-
-        // Export is an admin-only capability by product decision: bulk
-        // exfiltration of trainee PII (name, phone, birth date) must not be
-        // reachable by any group-scoped role. Only admin and super_user keep
-        // it; super_user stays global because that is its role everywhere else.
-        //
-        // This tightens the previous rule, which allowed servant and
-        // secretariat to export their own group. That was already contained
-        // to the caller's own group, but "contained" is not the requirement —
-        // the requirement is admin-only.
         RbacMiddleware::requireRoles($user, ['admin', 'super_user']);
 
-        $entity = $_GET['entity'] ?? 'trainees';
-        $format = $_GET['format'] ?? 'csv';
+        $entity = (string) ($_GET['entity'] ?? 'trainees');
+        $format = strtolower((string) ($_GET['format'] ?? 'csv'));
 
-        // Global roles select the group explicitly. group_id=0 means all
-        // groups. The value is cast to int, so it cannot be used to inject
-        // anything into the PostgREST query string.
-        $groupId = isset($_GET['group_id']) ? (int)$_GET['group_id'] : 0;
+        if (!array_key_exists($entity, self::ENTITIES)) {
+            Response::error(
+                'نوع البيانات المطلوبة غير مدعوم',
+                'INVALID_ENTITY',
+                400,
+                ['supported' => array_keys(self::ENTITIES)]
+            );
+        }
+
+        // Formats are capability-detected, so this list never advertises a format
+        // the deployment cannot actually produce.
+        $supported = SpreadsheetWriter::formats();
+        if (!array_key_exists($format, $supported)) {
+            Response::error(
+                'صيغة التصدير غير مدعومة في هذا التثبيت',
+                'INVALID_FORMAT',
+                400,
+                ['supported' => array_keys($supported)]
+            );
+        }
+
+        $spec = self::ENTITIES[$entity];
+
+        // Cast to int, so it cannot inject anything into the PostgREST query string.
+        // 0 means all groups, which only the global roles reaching this point use.
+        $groupId = isset($_GET['group_id']) ? (int) $_GET['group_id'] : 0;
         if ($groupId < 0) {
             $groupId = 0;
         }
+        if ($groupId > 0 && !$spec['scoped']) {
+            Response::error(
+                'هذا النوع لا يدعم التصفية حسب الفرقة',
+                'GROUP_FILTER_UNSUPPORTED',
+                400,
+                ['entity' => $entity]
+            );
+        }
 
-        $client = new SupabaseClient();
-        $query = "profiles?role_id=eq.trainee&deleted_at=is.null";
+        $query = $spec['query'];
         if ($groupId > 0) {
             $query .= "&group_id=eq.{$groupId}";
         }
+
+        $client = new SupabaseClient();
         $res = $client->query($query);
-        $data = $res['data'] ?? [];
+
+        if (($res['status'] ?? 0) < 200 || ($res['status'] ?? 0) >= 300) {
+            Response::error('تعذر جلب البيانات للتصدير', 'EXPORT_QUERY_FAILED', 502, $res['data'] ?? null);
+        }
+
+        $data = is_array($res['data'] ?? null) ? $res['data'] : [];
+
+        // Column order comes from the allowlist, so headers are stable and readable
+        // regardless of what PostgREST happened to return.
+        $columns = array_keys($spec['label']);
+        $rows = array_map(
+            static fn(array $row): array => array_map(
+                static fn(string $c) => $row[$c] ?? '',
+                $columns
+            ),
+            $data
+        );
 
         AuditLogService::log(
             $user['user_id'],
@@ -47,27 +157,29 @@ class ExportController {
             $user['role'],
             'DATA_EXPORT',
             $entity,
-            (string)$groupId,
+            (string) $groupId,
             null,
-            ['entity' => $entity, 'format' => $format, 'count' => count($data)]
+            ['entity' => $entity, 'format' => $format, 'count' => count($rows)]
         );
 
-        if ($format === 'csv') {
-            header('Content-Type: text/csv; charset=utf-8');
-            header("Content-Disposition: attachment; filename=elkarooz_{$entity}_group_{$groupId}.csv");
-            $output = fopen('php://output', 'w');
-            fputs($output, "\xEF\xBB\xBF"); // UTF-8 BOM for Excel
-
-            if (!empty($data)) {
-                fputcsv($output, array_keys($data[0]));
-                foreach ($data as $row) {
-                    fputcsv($output, array_map(fn($v) => is_array($v) ? json_encode($v) : $v, $row));
-                }
-            }
-            fclose($output);
-            exit;
+        if ($format === 'json') {
+            Response::success([
+                'entity'   => $entity,
+                'group_id' => $groupId,
+                'columns'  => $spec['label'],
+                'count'    => count($rows),
+                'rows'     => $rows,
+            ], 'بيانات التصدير');
         }
 
-        Response::success($data, 'بيانات التصدير');
+        $filename = 'elkarooz_' . $entity . '_group_' . $groupId . '.' . $supported[$format];
+
+        try {
+            // Throws SpreadsheetUnavailableException rather than silently emitting
+            // something that is not the requested format.
+            SpreadsheetWriter::stream($format, $spec['label'], $rows, $filename);
+        } catch (SpreadsheetUnavailableException $e) {
+            Response::error($e->getMessage(), 'EXPORT_FORMAT_UNAVAILABLE', 501);
+        }
     }
 }

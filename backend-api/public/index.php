@@ -105,13 +105,28 @@ try {
     elseif ($path === '/backup/list' && $requestMethod === 'GET') {
         (new \App\Controllers\BackupController())->list();
     }
+    // SRS 26: an archive must be validated BEFORE it is ever uploaded to storage,
+    // otherwise a corrupt file consumes space and a later restore attempt finds it.
+    elseif ($path === '/backup/validate-zip' && $requestMethod === 'POST') {
+        (new \App\Controllers\BackupController())->validateZip();
+    }
+    elseif ($path === '/backup/delete' && $requestMethod === 'POST') {
+        (new \App\Controllers\BackupController())->delete();
+    }
     elseif ($path === '/restore/preview' && $requestMethod === 'POST') {
         (new \App\Controllers\RestoreController())->preview();
+    }
+    // SRS 25.4/25.5: the missing execute path. Atomic (safety backup + auto rollback).
+    elseif ($path === '/restore/execute' && $requestMethod === 'POST') {
+        (new \App\Controllers\RestoreController())->execute();
     }
 
     // Bulk Import & Export
     elseif ($path === '/import/trainees' && $requestMethod === 'POST') {
         (new \App\Controllers\ImportController())->importTrainees();
+    }
+    elseif ($path === '/import/history' && $requestMethod === 'GET') {
+        (new \App\Controllers\ImportController())->history();
     }
     elseif ($path === '/export/data' && $requestMethod === 'GET') {
         (new \App\Controllers\ExportController())->exportData();

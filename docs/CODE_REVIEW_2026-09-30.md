@@ -288,3 +288,99 @@ SRS §25/§26/§35 بتحدد، و`index.php` فيه 9 routes فقط:
 ⚠️ **الحزمة محلية وليست مرفوعة إلى Hostinger.** لا يُعلن إصلاح الرفع/التصدير/JWT
 كـproduction-fixed قبل رفعها وإعادة اختبار الاستغلال على الخادم المنشور — موقف تغييره:
 استضافة PHP ما زالت معطّلة (TLS renegotiation).
+
+---
+
+# إغلاق الفجوات الناقصة في الـ backend — 2026-10-01
+
+**النطاق:** PHP backend فقط (`backend-api/`). الواجهة **لم تُعدَّل** — `frontend/src/app/admin/backups/page.tsx` تُسجَّل كـgap توثيقي، و`imports/page.tsx` تستدعي RPC مباشرة من المتصفح فلا تحتاج PHP أصلاً.
+
+## الفجوات التي كانت ناقصة، وما صار لها
+
+| المسار | قبل | الآن |
+|---|---|---|
+| `POST /restore/execute` | **غير موجود** — الـSRS §§25.4/25.5 بلا تنفيذ | `AtomicRestoreService`: نسخة وقائية ← apply ← rollback تلقائي عند أي `Throwable` |
+| `POST /backup/validate-zip` | **غير موجود** | فحص الحاوية + حدود ZIP bomb (حجم، عدد مدخلات، نسبة ضغط) |
+| `POST /backup/delete` | **غير موجود** | soft-delete + حذف الملف من القرص مع containment |
+| `GET /import/history` | **غير موجود** | سجل الاستيراد بحد أقصى 200 صف |
+| `GET /export/data` | `$entity` **مقبول ومُهمَل** | allowlist للكيانات + كشف قدرات الصيغ |
+
+## أخطاء حقيقية اكتُشفت أثناء الإغلاق
+
+**1. `RestoreController::preview` كان يترك محتوى مفكوك التشفير على القرص**
+
+```php
+unlink($manifestPath);
+rmdir($extractDir);      // يفشل بصمت: المجلد لسه فيه كل الملفات المستخرجة
+```
+
+كل الملفات عدا `manifest.json` كانت تبقى في temp. الآن `finally { FsHelper::removeDirectoryQuietly() }`.
+
+**2. `BackupController::create` كان ينتج أرشيفاً فارغاً**
+
+كان يحط `manifest.json` فقط، ثم يسجل `status=COMPLETED` و`checksum_sha256` حقيقي. أي نسخة احتياطية «ناجحة» كانت فارغة تماماً من بيانات. الآن يمرّ على شجرة `storage/` ويستثني `backups/` لمنع self-reference.
+
+**3. `ImportController::importTrainees` كان يسجّل نجاحاً لم يحدث**
+
+```php
+'new_accounts_count' => count($validatedData),
+'status' => 'SUCCESS',   // لم يُستدعَ الـRPC ولا مرة
+```
+
+**4. عقد الـRPC كاد يجعل الاستيراد كله يذهب لفرقة 1**
+
+`pg_get_functiondef` على الإنتاج كشف أن `import_trainees_bulk_atomic` يحلّ المجموعة عبر `groups.name_ar` (نص عربي) لا `group_id`، ويقرأ `father_name` لا `parent_phone`، ويُرجع `new_accounts` لا `*_count`، **وكتب `import_history` و`audit_logs` بنفسه**. لو أرسلنا `group_id` لانهار كل سطر على `COALESCE(v_group_id, 1)`.
+
+**5. `service_role` يُفشل كل RPC محمي بـ`auth.uid()`**
+
+`import_trainees_bulk_atomic` يرمي `Unauthorized` ما لم `is_admin_or_super_user()` تحققت. دليل حي:
+
+```sql
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claims = '{}';
+SELECT public.is_admin_or_super_user();   -- false
+```
+
+استدعاء PHP بمفتاح `service_role` كان سيُرفض **دائماً**. الحل: `SupabaseClient::withActorToken()` يمرّر توكن المستخدم نفسه فتبقى الـDB gate حقيقية. **لم تُحذف الـDB check** — ده كان هيتحول من حاجز حقيقي إلى تجاوز.
+
+**6. لا PDF ولا Excel متاحان فعلاً**
+
+`composer.json` يعلن `phpoffice/phpspreadsheet` لكن `vendor/` فيه `firebase/php-jwt` فقط. الصيغ الآن **مكتشفة وقت التشغيل**: `excel` لا يُعرض إلا إذا `class_exists()` نجح، و`pdf` **ليس في القائمة أصلاً** — PDF بعربي يحتاج خط Unicode مدمج **و** bidi shaping، ولا واحد منهم موجود على استضافة مشتركة. PDF بعربي مقطّع معكوس أسوأ من رفض 501.
+
+**7. OWASP formula injection في CSV**
+
+قيمة تبدأ بـ `=` أو `+` أو `-` أو `@` تُنفَّذ كمعادلة في Excel. اسم متدرّب مخزَّن يجب ألّا يصبح محتوى تنفيذياً على جهاز الأدمن. الآن مُحيَّدة، مع اختبار يثبت أن الـtab **في وسط** النص يبقى كما هو حتى لا تتلف الملاحظات متعددة الأسطر.
+
+## نتائج التحقق
+
+```
+PHP syntax (جميع الملفات)     syntax_errors=0
+verify_production_security    77/77   (كان 33/33 — أُضيف 44 assertion للفجوات)
+verify_restore_atomicity      23/23   (تشمل rollback يُرجع البايتات الأصلية)
+verify_backup_archive_limits  18/18   (أرشيفات ZIP حقيقية مشفرة AES-256)
+verify_export_formats         25/25   (تشمل تحييد formula injection)
+verify_storage_routing        62/62 runtime + 17/17 source
+verify_api_http               16 PASS / 0 FAIL
+production RLS                50/50 tables, rls_off=0
+```
+
+### نقطة مهمة عن دقة الاختبارات
+
+اختبارات الاستعادة **الأولى كانت تفتقر للـZipArchive** — extension غير مفعّلة في بناء PHP المحلي. كل اختبار «أرشيف» كان يشتغل على مجلدات عادية ويثبت **لا شيء** عن مسارات ZIP. بعد تفعيل `extension=php_zip` (مع تصحيح `extension_dir` اللي كان يشير إلى `C:\php\ext` غير الموجود) صار bomb/round-trip يُختبران فعلاً.
+
+كذلك حقن العطل في مسار الاستعادة فشل **ثلاث مرات** لسبب مفيد: `chmod(0000)` لا يعمل على Windows، والتصادم مع مجلد موجود يمتصّه الـsnapshot قبل الـapply، ومدخل الـarchive أبُه ملف لا يمكن إنشاؤه أصلاً. الحل: **حقن داخل الخدمة نفسها** بعد أول كتابة فعلية، وتثبيت **الخاصية** (الملف رجع لمحتواه الأصلي) لا **تسلسل الكتابة**، لأن ترتيب `DirectoryIterator` يختلف بين أنظمة الملفات.
+
+## حالة الإنتاج — لم تتغير
+
+```
+PHP host   DOWN (rc=56 / rc=52)
+Vercel     /login = 200
+Supabase   auth endpoint سليم
+```
+
+الحزمة الجديدة **لم تُرفع** — لا بيانات Hostinger منشورة. كل ما سبق **متحقَّق محلياً على الكود، غير مثبت على خادم منشور**.
+
+## gap توثيقي (قرار المستخدم: لا تعديل الواجهة)
+
+- `frontend/src/app/admin/backups/page.tsx` يكتب سجلات `backup_records` بأسماء/checksum دون إنشاء ZIP — ولا يوجد `fetch` للـPHP API إطلاقاً في الواجهة.
+- `frontend/src/app/admin/imports/page.tsx` تستدعي `import_trainees_bulk_atomic` من المتصفح مباشرة، فتتجاوز PHP و`/import/history` بالكامل.

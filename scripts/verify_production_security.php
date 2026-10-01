@@ -123,7 +123,8 @@ foreach (['servant', 'secretariat', 'trainee'] as $banned) {
 check('export: no non-admin group fallback branch remains',
     !str_contains($export, '$user[' . "'group_id'" . ']'));
 check('export: group_id is int-cast from the query string',
-    str_contains($export, '(int)$_GET[' . "'group_id'" . ']'));
+    preg_match('/\(int\)\s*\$_GET\[' . "'group_id'" . '\]/', $export) === 1,
+    'no (int) cast on $_GET[group_id]');
 
 // --------------------------------------- 4. path traversal in delete is fixed
 $svc = file_get_contents($root . '/backend-api/src/Services/StorageBridgeService.php');
@@ -225,6 +226,139 @@ check('saveUploadedFile verifies containment after mkdir',
 $appSrc = file_get_contents($root . '/backend-api/config/app.php');
 check('CORS includes the deployed Vercel origin', str_contains($appSrc, 'elkaroozschool-seven.vercel.app'));
 check('localhost CORS gated behind non-production', str_contains($appSrc, "array_unshift(\$corsOrigins, 'http://localhost:3000')"));
+
+// ------------------------------------- 7. backup/restore/export gap closure
+// These lock in the invariants established while closing the backend gaps. Each
+// one previously failed and would silently regress.
+
+// 7a. restore/preview must not leave decrypted content behind.
+// The old implementation unlinked ONE file then rmdir'd a directory that still
+// held every extracted file, so the rmdir failed silently and plaintext backups
+// stayed in the system temp dir.
+$restore = file_get_contents($root . '/backend-api/src/Controllers/RestoreController.php');
+$previewStart = strpos($restore, 'function preview');
+$previewEnd   = strpos($restore, 'function execute');
+$previewBlock = ($previewStart === false || $previewEnd === false)
+    ? '' : substr($restore, $previewStart, $previewEnd - $previewStart);
+check('restore/preview has no bare rmdir() of a populated directory',
+    preg_match('/\brmdir\s*\(/', $previewBlock) !== 1,
+    'found rmdir() in preview');
+check('restore/preview cleans the staging dir with FsHelper',
+    str_contains($previewBlock, 'removeDirectoryQuietly'));
+check('restore/preview cleanup runs in a finally block',
+    preg_match('/\}\s*finally\s*\{/', $previewBlock) === 1);
+check('restore/preview runs the full archive inspector, not just a manifest read',
+    str_contains($previewBlock, 'BackupArchiveInspector::inspect'));
+check('restore/preview refuses an invalid archive before any restore',
+    str_contains($previewBlock, 'PRE_RESTORE_VALIDATION_FAILED'));
+
+// 7b. RBAC runs before the upload is read on every new admin-only route.
+check('restore/preview authorises before reading $_FILES',
+    strpos($previewBlock, 'requireAdminOrSuperUser') !== false
+    && strpos($previewBlock, 'requireAdminOrSuperUser') < strpos($previewBlock, "isset(\$_FILES"));
+$execStart = strpos($restore, 'function execute');
+$execBlock = $execStart === false ? '' : substr($restore, $execStart);
+check('restore/execute exists and requires explicit confirmation',
+    str_contains($execBlock, 'CONFIRMATION_REQUIRED')
+    && str_contains($execBlock, "confirm_restore"));
+check('restore/execute authorises before reading $_FILES',
+    strpos($execBlock, 'requireAdminOrSuperUser') !== false
+    && strpos($execBlock, 'requireAdminOrSuperUser') < strpos($execBlock, "isset(\$_FILES"));
+check('restore/execute routes through AtomicRestoreService',
+    str_contains($execBlock, 'AtomicRestoreService'));
+check('restore/execute reports rollback honestly rather than as success',
+    str_contains($execBlock, 'RESTORE_FAILED_ROLLED_BACK'));
+
+// 7c. The atomic restore service really does take a safety backup and roll back.
+$atomic = file_get_contents($root . '/backend-api/src/Services/AtomicRestoreService.php');
+check('AtomicRestoreService stages a safety backup before applying',
+    preg_match('/createSafetyBackup/', $atomic) === 1);
+check('AtomicRestoreService rolls back on Throwable, not just Exception',
+    preg_match('/catch\s*\(\s*\\\\?Throwable/', $atomic) === 1,
+    'no Throwable catch found');
+check('AtomicRestoreService re-validates the archive at execute time',
+    str_contains($atomic, 'BackupArchiveInspector::inspect'));
+check('AtomicRestoreService test seam defaults to disabled',
+    preg_match('/\$failAfterFirstWrite\s*=\s*\'\'/', $atomic) === 1);
+
+// 7d. backup/create must actually contain data, not just a manifest.
+$backup = file_get_contents($root . '/backend-api/src/Controllers/BackupController.php');
+check('backup/create copies the storage tree into the archive',
+    str_contains($backup, 'RecursiveIteratorIterator')
+    && str_contains($backup, "copy(\$item->getPathname(), \$dest)"));
+check('backup/create excludes the backups/ dir from its own archive',
+    str_contains($backup, "str_starts_with(str_replace('\\\\', '/', \$rel), 'backups/')"));
+check('backup/create does not claim a database dump it cannot produce',
+    preg_match("/'includes_database'\s*=>\s*false/", $backup) === 1);
+check('backup/create cleans staging in a finally block',
+    preg_match('/\}\s*finally\s*\{/', $backup) === 1);
+check('backup/create removes a half-written archive on failure',
+    str_contains($backup, '@unlink($targetZipPath)'));
+check('backup/delete takes storage_path from the DB, never from the request',
+    str_contains($backup, 'storage_path,deleted_at&id=eq.')
+    && !preg_match('/\$storagePath\s*=\s*\$body/', $backup));
+check('backup/delete enforces containment before unlinking',
+    str_contains($backup, 'str_starts_with($realFile, $realBackupRoot . DIRECTORY_SEPARATOR)'));
+check('backup/validate-zip enforces a compression-ratio cap (ZIP bomb)',
+    str_contains($backup, 'MAX_RATIO'));
+check('backup/validate-zip enforces an expanded-size cap',
+    str_contains($backup, 'MAX_EXPANDED_BYTES'));
+check('backup/validate-zip rejects a non-ZIP by signature before extraction',
+    str_contains($backup, 'PK'));
+
+// 7e. import must go through the atomic RPC and must not double-record history.
+$import = file_get_contents($root . '/backend-api/src/Controllers/ImportController.php');
+check('import/trainees calls the atomic RPC instead of fabricating SUCCESS',
+    str_contains($import, "rpc('import_trainees_bulk_atomic'"));
+check('import/trainees no longer hardcodes a SUCCESS status',
+    preg_match("/'status'\s*=>\s*'SUCCESS'/", $import) !== 1);
+check('import/trainees does not write a second import_history row',
+    !str_contains($import, "'import_history', 'POST'"));
+// The RPC resolves groups by groups.name_ar, not by numeric id. The controller
+// must therefore map the sheet's GroupID onto the Arabic name before sending it,
+// otherwise every row silently lands in group 1 (the RPC's COALESCE default).
+check('import/trainees maps GroupID to the Arabic group_name the RPC expects',
+    str_contains($import, "'group_name'")
+    && str_contains($import, '$groupNames[(string) $row[' . "'GroupID'" . ']]'));
+check('the group name map covers exactly the three live groups',
+    preg_match_all('/=>\s*.الفرقة/u', $import) === 3,
+    'found ' . preg_match_all('/=>\s*.الفرقة/u', $import) . ' Arabic group names');
+check('import/trainees forwards the actor token so auth.uid() resolves',
+    str_contains($import, 'withActorToken($this->bearerToken())'));
+check('import/history bounds its own result set',
+    str_contains($import, 'min(200'));
+check('import never logs a password',
+    !preg_match("/'password'\s*=>\s*\$row\['Password'\]\s*\]\s*,\s*\n\s*'total_rows'/", $import));
+
+// 7f. export: allowlisted entities, capability-detected formats, no formula injection.
+$export = file_get_contents($root . '/backend-api/src/Controllers/ExportController.php');
+check('export/entity is an allowlist key, not an interpolated table name',
+    str_contains($export, 'const ENTITIES')
+    && str_contains($export, 'INVALID_ENTITY'));
+check('export rejects a group filter on a non-scoped entity',
+    str_contains($export, 'GROUP_FILTER_UNSUPPORTED'));
+check('export advertises only formats the deployment can produce',
+    str_contains($export, 'SpreadsheetWriter::formats()'));
+check('export fails loudly when a format is unavailable',
+    str_contains($export, 'EXPORT_FORMAT_UNAVAILABLE'));
+$writer = file_get_contents($root . '/backend-api/src/Services/SpreadsheetWriter.php');
+check('SpreadsheetWriter neutralises formula injection',
+    str_contains($writer, "'\" . \$s") || str_contains($writer, "= \"'\" . \$s"));
+check('SpreadsheetWriter refuses to advertise PDF without a shaping library',
+    str_contains($writer, 'PDF') && str_contains($writer, 'formats()'));
+
+// 7g. SupabaseClient must be able to present the actor, else every auth-gated RPC
+// would fail with a NULL auth.uid() under service_role.
+$supa = file_get_contents($root . '/backend-api/src/Services/SupabaseClient.php');
+check('SupabaseClient exposes rpc()', str_contains($supa, 'public function rpc('));
+check('SupabaseClient can present the actor token instead of service_role',
+    str_contains($supa, 'withActorToken') && str_contains($supa, '$this->actorToken ?? $this->serviceRoleKey'));
+
+// 7h. The new routes are actually registered.
+$router = file_get_contents($root . '/backend-api/public/index.php');
+foreach (['/backup/validate-zip', '/backup/delete', '/restore/execute', '/import/history'] as $route) {
+    check("route $route is registered", str_contains($router, "'" . $route . "'"));
+}
 
 // ---------------------------------------------------------------- report
 $pass = count(array_filter($results, fn($r) => $r['ok']));
