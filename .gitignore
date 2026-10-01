@@ -33,3 +33,4 @@ Thumbs.db
 
 # Next.js incremental typecheck cache
 *.tsbuildinfo
+.php_server.log
