@@ -67,7 +67,8 @@ this as a hard gate rather than a formality.
 No successful `username + password` login has been executed against production at
 any point in this project. Role gates are proven locally with real signed tokens
 (`verify_php_role_matrix.php` 74/74) and in the database (`verify_role_matrix.sql`
-32/32), but neither substitutes for a real login against the deployed host.
+34/34, 0 failures), but neither substitutes for a real login against the deployed
+host.
 
 - [ ] Log in as **admin** → lands on the dashboard
 - [ ] Log in as **trainee** → sees only their own group
@@ -93,14 +94,28 @@ theoretical one.
 - [ ] Confirm the backfill did not promote or demote anyone unexpectedly:
       compare `profiles` vs `raw_app_meta_data` for all 50 accounts
 
-### B5. `profiles` and `raw_app_meta_data` have no sync mechanism
-The backfill was a one-shot migration. Nothing keeps the two tables in step, so
-the next role change, group move, or suspension will drift again and silently
-re-open the same gap.
+### B5. `profiles` and `raw_app_meta_data` have no sync mechanism — FIXED, deployed
+Closed by `20261001150000_sync_profile_app_metadata.sql`, applied to production and
+verified: the trigger exists, and all 50/50 accounts still agree on role, group_id
+and is_active with RLS intact (50/50, rls_off = 0).
 
-- [ ] Add a trigger on `profiles` that mirrors `role_id` / `group_id` /
-      `is_active` into `raw_app_meta_data` on INSERT/UPDATE
-- [ ] Verify with a live role change, not just a schema inspection
+Measured behaviour on production, inside a rolled-back transaction:
+group 2→1 propagated, role→servant propagated, restore propagated, suspension and
+soft-delete both flipped `is_active` to false, and unrelated metadata keys
+(`provider`, `providers`) survived the merge. Escalating a profile to
+`super_user` is refused with SQLSTATE 42501, and only `service_role` can execute
+the function.
+
+- [x] Trigger mirrors role / group_id / is_active on INSERT and on UPDATE of the
+      privilege columns
+- [x] Verified with real role, group and suspension changes in a rollback transaction
+- [x] `super_user` escalation refused (42501)
+- [x] Unrelated metadata keys preserved through the merge
+- [ ] Still requires B4: existing sessions still need to be expired
+
+Note: `roles.id` *is* the role name (varchar), there is no `roles.role_name`
+column. A first draft of the migration joined to one and would have failed on
+apply.
 
 ### B6. No route × role × group matrix on production HTTP
 `verify_php_role_matrix.php` exercises the middleware gates directly with signed

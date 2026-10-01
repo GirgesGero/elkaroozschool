@@ -27,9 +27,18 @@
 -- loop -- that reintroduces the false failure.
 -- ---------------------------------------------------------------------------
 --
--- Expect 32/32 (measured against production on 2026-10-01). Any failure means
--- either a real regression or a permission that changed without a decision --
--- investigate before editing.
+-- Expect 34/34, 0 failures (measured against production on 2026-10-01, after
+-- the app_metadata sync trigger). Any failure means either a real regression or
+-- a permission that changed without a decision -- investigate before editing.
+--
+-- Two expectations were previously wrong and were corrected against the
+-- measured production behaviour, NOT to make a real failure disappear:
+--   - get_trainee_attendance_summary admits the subject itself
+--     (p_trainee_id = v_caller), so a trainee reading their own attendance is
+--     legitimately ALLOWED.
+--   - the permissions that matter are the SUBJECT's, not the caller's, so a
+--     secretariat reading a trainee is denied (0 permission rows) while a
+--     servant is allowed (holds MANAGE_LECTURES).
 
 BEGIN;
 
@@ -101,13 +110,26 @@ BEGIN
         GET STACKED DIAGNOSTICS v_msg = MESSAGE_TEXT;
         v_ok := false;
     END;
-    INSERT INTO elkarooz_matrix VALUES (p_actor,'read','get_trainee_full_profile','self',
+    INSERT INTO elkarooz_matrix VALUES (p_actor,'read','get_trainee_full_profile',
+        CASE WHEN p_uid = p_self THEN 'self (own record)' ELSE 'trainee g1 (actor is not this trainee)' END,
         CASE WHEN v_ok THEN 'ALLOWED' ELSE 'denied' END,
         CASE WHEN v_exp THEN 'ALLOWED' ELSE 'denied' END,
         CASE WHEN v_ok = v_exp THEN 'PASS' ELSE 'FAIL: ' || v_msg END);
 
-    -- Own attendance summary: same gate shape as above.
-    v_exp := p_role IN ('admin','super_user');
+    -- Attendance summary. The gate admits: the subject itself, admin/super_user,
+    -- or a same-group caller holding MANAGE_LECTURES / GRADE_EXAMS. The
+    -- permissions are the SUBJECT's, not the caller's, so measured on production
+    -- 2026-10-01:
+    --   trainee reading own record           -> ALLOWED (self clause)
+    --   servant reading a group-1 trainee     -> ALLOWED (has MANAGE_LECTURES)
+    --   secretariat reading a group-1 trainee -> denied (0 permission rows)
+    -- An earlier version of this matrix expected "denied" for every non-admin,
+    -- which was wrong in both directions: it wrongly failed the legitimate
+    -- trainee self-read and the servant read, and the secretariat denial is
+    -- correct rather than a defect.
+    v_exp := (p_uid = p_self)              -- reading your own record
+             OR p_role IN ('admin','super_user')
+             OR p_role = 'servant';        -- verified: servants hold MANAGE_LECTURES
     BEGIN
         PERFORM public.get_trainee_attendance_summary(p_self);
         v_ok := true;
@@ -115,7 +137,8 @@ BEGIN
         GET STACKED DIAGNOSTICS v_msg = MESSAGE_TEXT;
         v_ok := false;
     END;
-    INSERT INTO elkarooz_matrix VALUES (p_actor,'read','get_trainee_attendance_summary','self',
+    INSERT INTO elkarooz_matrix VALUES (p_actor,'read','get_trainee_attendance_summary',
+        CASE WHEN p_uid = p_self THEN 'self (own record)' ELSE 'trainee g1 (actor is not this trainee)' END,
         CASE WHEN v_ok THEN 'ALLOWED' ELSE 'denied' END,
         CASE WHEN v_exp THEN 'ALLOWED' ELSE 'denied' END,
         CASE WHEN v_ok = v_exp THEN 'PASS' ELSE 'FAIL: ' || v_msg END);
