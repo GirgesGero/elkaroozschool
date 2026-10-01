@@ -115,6 +115,10 @@ $addTree = static function (string $srcDir, string $archivePrefix) use ($zip): i
         $rel  = str_replace('\\', '/', substr($file->getPathname(), strlen($srcDir) + 1));
         $name = $archivePrefix === '' ? $rel : $archivePrefix . '/' . $rel;
         if ($rel === '.htaccess') { continue; } // handled explicitly below
+        // The guard template is a build input, not something to serve. It is
+        // copied to .htaccess below; shipping it too would put a second,
+        // differently-named copy in the web root for no reason.
+        if ($rel === 'htaccess_root.template') { continue; }
         $zip->addFile($file->getPathname(), $name);
         $count++;
     }
@@ -197,6 +201,9 @@ foreach ($internalDirs as $d) {
 
 check('no .env in the archive',
       !array_filter($names, static fn(string $n): bool => (bool) preg_match('#(^|/)\.env#', $n)));
+check('the guard template is NOT shipped at the web root',
+      !in_array('htaccess_root.template', $names, true),
+      'it is a build input; shipping it serves a redundant copy');
 check('no .git in the archive',
       !array_filter($names, static fn(string $n): bool => str_contains($n, '/.git/')));
 
