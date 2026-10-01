@@ -23,13 +23,59 @@ $docroot = $be . '/public';
 
 $logFile = $root . '/.php_server_' . getmypid() . '.log';
 @unlink($logFile);
-// Detach fully: the built-in server must not inherit this process's stdio, otherwise the
-// caller blocks waiting for the pipe to close. Redirect every stream to a file.
-$cmd = escapeshellarg(PHP_BINARY)
+
+// Windows notes, learned the hard way:
+//  - The docroot must use BACKSLASHES. cmd /C rejects the forward-slash form
+//    with "The filename, directory name, or volume label syntax is incorrect."
+//  - Do NOT wrap in cmd /C at all; spawn php.exe directly.
+//  - Do NOT call proc_close(). It blocks until the child exits, and the child is
+//    a long-running server, so the harness deadlocks. proc_terminate() is the
+//    correct teardown.
+//  - Do NOT also redirect stdout/stderr in the command string. proc_open already
+//    owns those handles and a second writer to the same file is a sharing
+//    violation on Windows.
+//
+// The original harness used `start /B` + pclose(). pclose() only closes the
+// pipe; the server kept running, so every run leaked an orphan that held its
+// log file open. That is what left PID 5824 holding .php_server.log and blocking
+// later builds. The listener is resolved by port at shutdown and killed with
+// taskkill /T so the whole tree goes.
+$cmd = escapeshellarg(str_replace('/', '\\', PHP_BINARY))
     . ' -S 127.0.0.1:' . $port
-    . ' -t ' . escapeshellarg($docroot)
-    . ' < NUL > ' . escapeshellarg($logFile) . ' 2>&1';
-pclose(popen('start /B "" ' . $cmd, 'r'));
+    . ' -t ' . escapeshellarg(str_replace('/', '\\', $docroot));
+
+$serverProc = proc_open(
+    $cmd,
+    [['pipe', 'r'], ['file', $logFile, 'w'], ['file', $logFile, 'w']],
+    $pipes
+);
+if (!is_resource($serverProc)) {
+    fwrite(STDERR, "FATAL: could not spawn the built-in server\n");
+    exit(1);
+}
+$serverPid = (int) (proc_get_status($serverProc)['pid'] ?? 0);
+
+register_shutdown_function(static function () use ($serverProc, $serverPid, $port, $logFile): void {
+    // Find whatever php.exe is actually listening on the port. When the harness
+    // was interrupted, $serverProc may already be gone, so the port is the
+    // reliable signal.
+    $pid = 0;
+    $netstat = @shell_exec('netstat -ano -p tcp 2>nul | findstr "127.0.0.1:' . $port . '"');
+    if (is_string($netstat)) {
+        foreach (preg_split('/\R/', $netstat) as $line) {
+            if (preg_match('/LISTENING\s+(\d+)\s*$/i', trim($line), $m)) {
+                $pid = (int) $m[1];
+                break;
+            }
+        }
+    }
+    if ($pid > 0) {
+        @shell_exec('taskkill /PID ' . $pid . ' /T /F 2>nul');
+    } elseif ($serverPid > 0) {
+        @proc_terminate($serverProc);
+    }
+    @unlink($logFile);
+});
 
 // Poll until the port answers instead of sleeping a fixed amount.
 $ready = false;
