@@ -24,13 +24,14 @@
 $root   = dirname(__DIR__);
 $beRoot = $root . '/backend-api';
 $outFile = getenv('LOCALAPPDATA') . '/ElKarooz-API-public_html.zip';
-// If the canonical path is locked by another process, fall back to a unique
-// name so the build still produces a verifiable artifact.
-$lockedOut = !@unlink($outFile) && file_exists($outFile);
-if ($lockedOut) {
-    $outFile = $outFile . '.build';
+// If the canonical path is held open by another process, fall back to a unique
+// name. A FIXED fallback name is not enough: once that one is locked too, every
+// later run fails identically. A PID-suffixed name cannot already be in use.
+if (file_exists($outFile) && !@unlink($outFile)) {
+    $outFile = sprintf('%s.%d.build', $outFile, getmypid());
     @unlink($outFile);
-    echo "  [WARN] the previous archive is held open by another process;\n         building to " . basename($outFile) . " instead.\n";
+    echo "  [WARN] the previous archive is held open by another process;\n";
+    echo "         building to " . basename($outFile) . " instead.\n";
 }
 
 // Directories that must exist in the archive. Each is application internals and
