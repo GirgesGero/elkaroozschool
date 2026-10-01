@@ -26,21 +26,89 @@ Login cannot work until this is fixed.
       `curl -s $BASE/_next/static/chunks/app/login/<hash>.js | grep -c kgqgnqjkrghvktymbimz` → `≥ 1`
 
 ### B2. PHP API is not deployed
+No deployment credentials exist on this machine for the PHP host, and the host is
+not answering at all (`https://elkaroozschool.is-best.net` → curl rc=56, HTTP
+rc=52). This cannot be completed from here; it needs someone with hosting access.
+
+Build the archive with `php scripts/package_zip.php` (23/23, 46 entries). It emits
+the archive to `%LOCALAPPDATA%\ElKarooz-API-public_html.zip`, or to a `.build`
+suffixed name if that path is locked by another process.
+
 - [ ] Upload to `public_html/` (layout in [PRODUCTION_DEPLOYMENT.md §3](PRODUCTION_DEPLOYMENT.md#3-deploying-the-php-api-to-hostinger))
 - [ ] `vendor/` present (contains `firebase/php-jwt`)
-- [ ] `.htaccess` present
+- [ ] `.htaccess` present **at the archive root** (the web-root guard — see B2a)
+- [ ] `config/.htaccess`, `src/.htaccess`, `vendor/.htaccess`, `storage/.htaccess` all present
 - [ ] All 8 PHP env vars set
 - [ ] `chmod 755 storage/`
 - [ ] `https://elkaroozschool.is-best.net/health` → `"status": "ONLINE"`
 
+### B2a. Web-root guard is unverified against a real Apache
+`config/`, `src/` and `vendor/` sit inside the web root under the flattened
+layout, and the `.htaccess` shipped in `public/` does not protect them — its
+front-controller rule only fires for paths that are not real files, so
+`/config/supabase.php` is served verbatim.
+
+`htaccess_root.template` denies every `.php` and re-grants `index.php`, and
+`scripts/package_zip.php` asserts that structure. That is a **structural**
+check only: no Apache or httpd binary is available on this machine and the host
+is not answering, so the guard has never been exercised against a live server.
+
+Run these three on the deployed host. The first two must be 403.
+
+- [ ] `GET /config/supabase.php` → **403**
+- [ ] `GET /src/Utils/AppRoot.php` → **403**
+- [ ] `GET /api/health` → 200 (proves `index.php` was not caught by the deny)
+- [ ] `GET /vendor/composer/installed.json` → **403**
+
+Source disclosure would be completely silent if the guard were lost, so treat
+this as a hard gate rather than a formality.
+
 ### B3. End-to-end login never tested
 No successful `username + password` login has been executed against production at
-any point in this project.
+any point in this project. Role gates are proven locally with real signed tokens
+(`verify_php_role_matrix.php` 74/74) and in the database (`verify_role_matrix.sql`
+32/32), but neither substitutes for a real login against the deployed host.
 
 - [ ] Log in as **admin** → lands on the dashboard
 - [ ] Log in as **trainee** → sees only their own group
 - [ ] Log in as **servant** → sees only their own group
 - [ ] Log in as **secretariat** → sees only their own group
+- [ ] Log in as **super_user** → global access
+- [ ] Suspended account → refused with `ACCOUNT_SUSPENDED` / 403
+
+### B4. Sessions issued before the metadata backfill are still valid
+The backfill moved `role_id` / `group_id` / `is_active` from `profiles` into
+`auth.users.raw_app_meta_data` (production verified 50/50 on all three fields).
+The JWT middleware reads those claims, so any **already-issued** token still
+carries the old, pre-backfill claims — including for the 10 trainee accounts
+that previously had no metadata at all, which were resolving to
+`role = authenticated, group_id = 0`.
+
+`JwtAuthMiddleware` now rejects `is_active = false`, but that check only sees the
+claims inside the presented token. Nothing forces an existing token to be
+re-read. Until sessions are expired this is a live authorization gap, not a
+theoretical one.
+
+- [ ] Force sign-out of all users, or revoke sessions, after deploy
+- [ ] Confirm the backfill did not promote or demote anyone unexpectedly:
+      compare `profiles` vs `raw_app_meta_data` for all 50 accounts
+
+### B5. `profiles` and `raw_app_meta_data` have no sync mechanism
+The backfill was a one-shot migration. Nothing keeps the two tables in step, so
+the next role change, group move, or suspension will drift again and silently
+re-open the same gap.
+
+- [ ] Add a trigger on `profiles` that mirrors `role_id` / `group_id` /
+      `is_active` into `raw_app_meta_data` on INSERT/UPDATE
+- [ ] Verify with a live role change, not just a schema inspection
+
+### B6. No route × role × group matrix on production HTTP
+`verify_php_role_matrix.php` exercises the middleware gates directly with signed
+JWTs. It does not go over HTTP, so it cannot catch a route that is registered but
+reachable by the wrong role, or a controller that skips its gate.
+
+- [ ] For each of the 5 roles × the full route list, record the real status code
+- [ ] Confirm `403` responses carry the error envelope, not an HTML error page
 
 ---
 
