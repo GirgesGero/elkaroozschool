@@ -33,4 +33,7 @@ Thumbs.db
 
 # Next.js incremental typecheck cache
 *.tsbuildinfo
-.php_server.log
+
+# Per-run logs from scripts/verify_api_http.php (one per PID) and scratch probes
+.php_server_*.log
+t*.log
