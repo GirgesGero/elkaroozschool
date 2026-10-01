@@ -48,8 +48,23 @@ class StorageController {
         } elseif ($folderType === 'feed') {
             $yearMonth = date('Y/m');
             $targetSubDir = "feed/group_{$groupId}/{$yearMonth}";
+        } elseif ($folderType === 'gallery' || $folderType === 'general') {
+            // TD 10.1 puts galleries under gallery/{album_id}, and gallery_items
+            // carries a real album_id. Keying on folder_type alone collapsed both
+            // 'general' and 'gallery' into the same directory via the old catch-all
+            // else branch, so an album's images were never separated and
+            // album_id was ignored on the write path.
+            $ALLOWED_ALBUMS = ['general', 'gallery'];
+            $albumId = $_POST['album_id'] ?? $folderType;
+            if (!in_array($albumId, $ALLOWED_ALBUMS, true)) {
+                Response::error('معرّف الألبوم غير صالح', 'INVALID_ALBUM_ID', 400);
+            }
+            $targetSubDir = "gallery/group_{$groupId}/{$albumId}";
         } else {
-            $targetSubDir = "gallery/group_{$groupId}/{$folderType}";
+            // Unreachable while the allowlist and the branches above agree, but a
+            // future folder_type must fail loudly rather than land in a shared
+            // directory by accident.
+            Response::error('نوع المجلد غير مدعوم', 'UNSUPPORTED_FOLDER_TYPE', 400);
         }
 
         FileSecurityMiddleware::validateUpload($_FILES['file'], $folderType);

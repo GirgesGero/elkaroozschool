@@ -185,7 +185,14 @@ $uploadEnd   = strpos($ctrl, 'function delete');
 $uploadBlock = ($uploadStart === false || $uploadEnd === false)
     ? ''
     : substr($ctrl, $uploadStart, $uploadEnd - $uploadStart);
-check('gallery path is group-scoped', str_contains($uploadBlock, '"gallery/group_{$groupId}/{$folderType}"'));
+// Assert the INTENT (group-scoped, album-keyed), not the old literal. The old
+// string was "gallery/group_{$groupId}/{$folderType}", which is precisely the
+// bug: 'general' and 'gallery' both collapsed into it. Pinning that literal
+// meant the harness failed when the bug was fixed -- a test defending a bug.
+check('gallery path is group-scoped', str_contains($uploadBlock, 'gallery/group_{$groupId}/'));
+check('gallery path is keyed off $albumId, not $folderType',
+    str_contains($uploadBlock, '{$albumId}')
+    && !str_contains($uploadBlock, 'gallery/group_{$groupId}/{$folderType}'));
 check('feed path is group-scoped', str_contains($uploadBlock, '"feed/group_{$groupId}/{$yearMonth}"'));
 $calls = substr_count(substr($uploadBlock, 0, strpos($uploadBlock, 'FileSecurityMiddleware')), 'enforceGroupScope');
 check('enforceGroupScope called unconditionally (1x, outside the academic if)', $calls === 1, "calls=$calls");

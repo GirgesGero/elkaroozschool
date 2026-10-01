@@ -1044,7 +1044,8 @@ class JwtAuthMiddleware {
 ### 9.2 وحدة التخزين والملفات (Storage Module)
 - **Endpoint:** `POST /api/storage/upload`
   - **Auth:** Bearer JWT (Roles: `admin`, `super_user`, `servant`, `secretariat`).
-  - **Request:** `multipart/form-data` (`file`: binary, `folder_type`: 'users'|'feed'|'curriculum'|'mp3'|'books'|'research'|'gallery', `group_id`: 1|2|3).
+  - **Request:** `multipart/form-data` (`file`: binary, `folder_type`: 'users'|'feed'|'curriculum'|'lectures'|'mp3'|'books'|'research'|'gallery'|'general', `group_id`: 1|2|3, `user_role`: 'trainees'|'servants'|'secretariat'|'admins' (مطلوب عند `folder_type=users` فقط), `album_id`: 'general'|'gallery' (مطلوب عند `folder_type=gallery` فقط)).
+  - **ملاحظة (2026-10-01):** `folder_type` متاح بحكم allowlist في `StorageController.php` (`$ALLOWED_FOLDERS`، 9 قيم). أي قيمة خارجها **ترد 400** ولا تُوجَّه لأي مجلد. القيمتان `lectures` و`general` كانتا خارج قاموس TD القديم؛ أُضيفتا لأن جداول الإنتاج فيهما فعلًا (`lectures.audio_url`، `gallery_items` + `gallery_albums.album_id`).
   - **Response 200:**
     ```json
     {
@@ -1170,6 +1171,56 @@ class JwtAuthMiddleware {
 ## 10. معمارية وهيكل التخزين على Hostinger (Hostinger Storage Architecture)
 
 ### 10.1 الهيكلية الشجرية للمجلدات (Folder Hierarchy)
+
+> **تعديل 2026-10-01 — العزل بين المجموعات.** الأشجار في النسخة الأولى من هذه الوثيقة كانت
+> تضع `feed/{year}/{month}` و`gallery/{album_id}` **من غير `group_N`**، وهو ما يجعل ملفات
+> المجموعات الثلاث تشترك في نفس المجلد على القرص. ده يخالف مبدأ العزل (§4.1: «بيانات كل
+> مجموعة ومستخدميها ومحتواها خاص بها») لأن الفصل بيكون منطقيًا في قاعدة البيانات فقط، بينما
+> المسار المشترك يبقى قابلًا للافتراض بين المجموعات على مستوى الخادم. الشكل المطبَّق في
+> `StorageController.php` يضيف `group_N` لكل مسار متاح للكتابة، وتُبقي الأشجار أدناه كمرجع
+> للقارئ مع تصحيحها.
+>
+> **الشكل المطبَّق فعليًا** (مصدر الحقيقة: `scripts/verify_storage_routing_runtime.php`):
+>
+> | `folder_type` | المسار الفعلي |
+> |---|---|
+> | `curriculum` / `lectures` / `books` / `research` / `mp3` | `academic/group_{N}/{type}` |
+> | `users` | `users/{user_role}/group_{N}` |
+> | `feed` | `feed/group_{N}/{YYYY}/{MM}` |
+> | `gallery` / `general` | `gallery/group_{N}/{album_id}` |
+>
+> **انحرافان متبقّيان عن هذه الشجرة، موثّقان في `CODE_REVIEW_2026-09-30.md`:**
+> 1. `books` و`research` كانا في الشجرة على مستوى الجذر (`books/group_1/`)، والكود يرفعهما
+>    تحت `academic/group_{N}/`. الشكل المطبَّق هو المختار (**قرار 2026-10-01**): توحيد
+>    الملفات المرفوعة تحت `academic/` مع إبقاء `group_N` في المسار. تم التحقق أن **لا يوجد أي
+>    ملف production على الشكل القديم** — انظر «التحقق من البيانات الموجودة» أدناه.
+> 2. الشجرة تسمّي مجلد الصوتيات `audio_mp3`، والكود يرفعه `academic/group_{N}/mp3` مع
+>    `lectures` مستقل. الشكل المطبَّق هو المختار؛ `audio_mp3` لم يُنشأ على القرص.
+>
+> ### التحقق من البيانات الموجودة (2026-10-01)
+>
+> قبل تثبيت الشكل المطبَّق، فُحصت كل الأعمدة الحاملة لمسارات ملفات على الإنتاج
+> (`gallery_items.image_url`، `post_images.storage_path/image_url`، `gallery_albums.cover_url`،
+> `books.file_url/cover_url`، `curriculums.file_url`، `lectures.audio_url`،
+> `mp3_tracks.audio_url`، `researches.file_url`، `profiles.avatar_url`،
+> `lecturers.avatar_url`، `import_history.original_file_storage_path`).
+>
+> **النتيجة: صفر مراجع على أي شكل قديم.**
+>
+> | الفحص | العدد |
+> |---|---|
+> | `books/group_` (الجذر) | **0** |
+> | `research/group_` (الجذر) | **0** |
+> | `feed/{YYYY}/{MM}/` (بلا group) | **0** |
+> | `gallery/{album}` (بلا group) | **0** |
+> | `academic/group_` (الشكل الجديد) | 8 — كلها `curriculums.file_url` Demo |
+> | مسارات خارج نظام EL KAROOZ | 71 (روابط خارجية / Bible / غير مرتبطة بتخطيط التخزين) |
+> | `post_images.storage_path` | 10 — كلها `feed/{post_id}_{idx}.jpg`، تُكتب من الواجهة لا من `StorageController` |
+>
+> **خلاصة:** **لا حاجة لهجرة ملفات.** الخطر الأكبر في التقرير الأصلي («أي ملفات مرفوعة قبل
+> التغيير تبقى في مسار قديم») **غير مُثبت على الإنتاج** — الاستعلام أعلاه هو سبب اعتماد الشكل
+> المطبَّق وتحديث الـ TD عليه، وليس العكس.
+
 ```text
 /hostinger_storage_root/
 │
@@ -1183,35 +1234,37 @@ class JwtAuthMiddleware {
 │   └── lecturers/
 │
 ├── feed/
-│   └── {year}/
-│       └── {month}/
+│   └── group_{N}/              # ← مُضاف: العزل بين المجموعات
+│       └── {year}/
+│           └── {month}/
 │
 ├── academic/
 │   ├── group_1/
 │   │   ├── curriculum/
 │   │   ├── lectures/
-│   │   └── audio_mp3/
+│   │   └── mp3/                # ← كان audio_mp3 في الشجرة الأولى
 │   ├── group_2/
 │   │   ├── curriculum/
 │   │   ├── lectures/
-│   │   └── audio_mp3/
+│   │   └── mp3/
 │   └── group_3/
 │       ├── curriculum/
 │       ├── lectures/
-│       └── audio_mp3/
+│       └── mp3/
 │
-├── books/
+├── books/                      # مُستخدَم كـ folder_type داخل academic/ لا كجذر مستقل
 │   ├── group_1/
 │   ├── group_2/
 │   └── group_3/
 │
-├── research/
+├── research/                   # مُستخدَم كـ folder_type داخل academic/ لا كجذر مستقل
 │   ├── group_1/
 │   ├── group_2/
 │   └── group_3/
 │
 ├── gallery/
-│   └── {album_id}/
+│   └── group_{N}/              # ← مُضاف: العزل بين المجموعات
+│       └── {album_id}/
 │
 ├── backups/
 │   ├── full/                   # النسخ الدائمة المشفرة (حذف يدوي فقط بتأكيد)
