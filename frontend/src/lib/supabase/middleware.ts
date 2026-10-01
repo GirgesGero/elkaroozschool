@@ -1,5 +1,7 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
+import { canAccessPath } from '@/lib/auth/routeAccess';
+import type { Database } from '@/types/supabase';
 
 function isPublicPath(pathname: string): boolean {
   return (
@@ -57,6 +59,28 @@ export async function updateSession(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
     return NextResponse.redirect(url);
+  }
+
+  // Role gate. This runs after getUser() and before the response is returned, so a
+  // role that is not allowed on this path is redirected without the page ever
+  // rendering. The role comes from the JWT, which is signed by Supabase — not from
+  // anything the client can set.
+  if (user) {
+    // getClaims() verifies the signature, so the role read here cannot be forged by
+    // the client the way a cookie or a header could. The metadata is mirrored onto the
+    // JWT by the sync_profile_app_metadata trigger whenever a profile changes.
+    const { data } = await supabase.auth.getClaims();
+    const claims = data?.claims as
+      | { app_metadata?: { role?: unknown }; user_metadata?: { role_id?: unknown } }
+      | undefined;
+    const role = claims?.app_metadata?.role ?? claims?.user_metadata?.role_id;
+
+    if (!canAccessPath(role, request.nextUrl.pathname)) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/';
+      url.search = '';
+      return NextResponse.redirect(url);
+    }
   }
 
   // Redirect from login to feed if already logged in
