@@ -552,3 +552,81 @@ link.setAttribute('download', `trainees_export_${Date.now()}.${format === 'csv' 
 | **B10** | **واجهة backup/restore وهمية بالكامل** | كل ثقة العميل في النسخ الاحتياطي · المرحلة 9 كليًا |
 
 **حالة المشروع بعد هذا الاكتشاف:** `NOT READY` — وبأسباب **أنثق** من السابق.
+
+---
+
+## 🔴 تصحيح ثانٍ مُلزم — استنتاج الـ14 جدول كان خاطئاً
+
+> **هذا يصحّح ما ورد في المرحلة 1A.** أُضيف بعد اختبار فعلي على production، لا بعد قراءة الكود فقط.
+
+### ما قلته قبلاً (خطأ)
+
+> «14 جدول عليها عمليات كتابة من المتصفح ومفيش ولا policy للكتابة فيها»
+
+### لماذا كان خطأ
+
+الاستعلام الذي أنتج هذا الرقم كان:
+
+```sql
+WHERE cmd IN ('INSERT','UPDATE','DELETE')   -- ❌
+```
+
+PostgreSQL يسجّل policy شاملة واحدة كـ`cmd = 'ALL'`، **لا** كثلاث policies منفصلة. فاستعلامي عدّ `ALL` على أنها "لا سياسة".
+
+### الحقيقة المُتحقَّق منها
+
+**كل الـ14 جدول لديه سياسة كتابة.** الاستعلام الصحيح:
+
+```sql
+SELECT tablename, policyname, cmd, qual, with_check FROM pg_policies
+WHERE schemaname='public';
+```
+
+يعطي **26 policy** على الـ14 جدول — معظمها `cmd='ALL'` مع `qual` مقيّد بالدور.
+
+| الجدول | السياسة | الشرط |
+|---|---|---|
+| `backup_records` | Admin manage backup_records | `is_admin_or_super_user()` |
+| `import_history` | Admin manage import_history | `is_admin_or_super_user()` |
+| `servant_permissions` | Manage servant permissions | `is_admin_or_super_user()` + `with_check` |
+| `group_secretariat` | Admin manage secretariat assignments | `is_admin_or_super_user()` + `with_check` |
+| `user_favorites` | Manage favorites | `user_id = auth.uid()` |
+| `daily_verses` | Authenticated read daily verses | **`SELECT` فقط — read-only عمداً** |
+| `marathon_answers` | Manage marathon answers | `has_servant_permission('MANAGE_MARATHON')` |
+| `marathon_questions` | Manage marathon questions | نفس الشرط |
+| `marathon_sections` | Manage marathon sections | نفس الشرط |
+| `gallery_items` | Manage gallery items | admin أو servant/secretariat في نفس المجموعة |
+| `mp3_tracks` | Manage mp3 tracks | admin أو servant/secretariat في نفس المجموعة |
+| `exam_grades` | Servant with GRADE_EXAMS manage grades | `has_servant_permission('GRADE_EXAMS')` + نفس المجموعة |
+| `attendance_records` | Secretariat record attendance | `is_secretariat_of_group()` |
+| `post_images` | Manage post images | صاحب المنشور أو admin |
+
+### اختبار فعلي على production (داخل `BEGIN … ROLLBACK`)
+
+| السيناريو | النتيجة |
+|---|---|
+| admin يكتب `user_favorites` (له) | **مسموح** (قيد `42804` على item_type، مش RLS) |
+| admin يكتب `servant_permissions` | **مسموح** (قيد `23505` تكرار، مش RLS) |
+| admin يكتب `daily_verses` | **مرفوض `42501`** — تصميمي: read-only |
+| servant يكتب `daily_verses` | **مرفوض `42501`** |
+| **servant يكتب صلاحية مستخدم آخر** | **مرفوض `42501`** ✅ |
+
+**التصعيد مسدود. الـRLS يعمل.**
+
+### 📌 التعديل على المرحلة 1A
+
+المرحلة 1A تُلغى كـ"إضافة سياسات". تُستبدل بـ:
+
+#### المرحلة 1A (مُعدَّلة) — تحسين رسائل الخطأ فقط
+
+| # | المهمة | المعيار |
+|---|---|---|
+| 1A.1 | تحويل `42501`/`42804`/`23505` لرسائل عربية مفهومة | المستخدم يفهم السبب |
+| 1A.2 | توضيح `daily_verses` كـread-only في الواجهة | لا زر إضافة لآية إن كانت معطلة |
+| 1A.3 | إضافة `.catch` للكتابات المتبقية | صفر صمت |
+
+### الخطأ الجوهري اللي أنا السبب فيه
+
+قعدت أستنتج من **استعلام catalog غلط** بدل ما أقرأ الأسماء الحقيقية للسياسات، وقلت للـuser "14 جدول بلا سياسة" وأنا مبنياً على رقم واحد مش متحقق منه. **الاختبار الفعلي هو اللي صحّح كلامي، مش القراءة بتاعتي.**
+
+> **قاعدة جديدة:** أي رقم عن حالة نظام يُنشر بعد تنفيذه مرة واحدة على production، لا من استعلام catalog فقط.
