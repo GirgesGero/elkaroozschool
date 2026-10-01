@@ -35,6 +35,21 @@ class JwtAuthMiddleware {
                         $claims = [];
                     }
 
+                    // A suspended account keeps a cryptographically valid token
+                    // until it expires. Supabase does not revoke access tokens on
+                    // suspension, so without this check a disabled user stays
+                    // operational for the remainder of the token lifetime.
+                    // app_metadata.is_active is mirrored from profiles.is_active by
+                    // migration 20261001130000_backfill_app_metadata_from_profiles.
+                    $isActive = $claims['app_metadata']['is_active'] ?? true;
+                    if ($isActive === false || $isActive === 'false' || $isActive === 0) {
+                        Response::error(
+                            'الحساب موقوف. راجع إدارة المدرسة.',
+                            'ACCOUNT_SUSPENDED',
+                            403
+                        );
+                    }
+
                     return [
                         'user_id' => $claims['sub'] ?? null,
                         'role' => $claims['app_metadata']['role'] ?? ($claims['role'] ?? 'trainee'),

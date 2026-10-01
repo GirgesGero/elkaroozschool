@@ -21,7 +21,7 @@ foreach ([
 $port = (int)($argv[1] ?? 8391);
 $docroot = $be . '/public';
 
-$logFile = $root . '/.php_server.log';
+$logFile = $root . '/.php_server_' . getmypid() . '.log';
 @unlink($logFile);
 // Detach fully: the built-in server must not inherit this process's stdio, otherwise the
 // caller blocks waiting for the pipe to close. Redirect every stream to a file.
@@ -209,5 +209,5 @@ if (preg_match('/LISTENING\s+(\d+)/', $netstat, $m)) {
 usleep(300_000);
 
 print("\n--- server log tail ---\n");
-print implode("\n", array_slice(explode("\n", (string) @file_get_contents($root . '/.php_server.log')), -6));
-@unlink($root . '/.php_server.log');
+print implode("\n", array_slice(explode("\n", (string) @file_get_contents($logFile)), -6));
+@unlink($logFile);
