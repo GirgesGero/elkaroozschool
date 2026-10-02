@@ -563,7 +563,24 @@ PHP — فاللي شفته في الـscreenshot الأول («Something Went W
 فكان ممكن أكتب suite كاملة وأتفلها من غير ما تشتغل. و`jsx: 'automatic'` كان ناقص فينفعش أي component test.
 وكمان `cleanup` مش شغّال تلقائياً تحت plain vitest.
 
-**الباقي:** صفر component tests على الـ10 صفحات الـadmin (Supabase-bound) — دي محتاجة mocks لـclient، وشغل منفصل.
+**تغطية `tests/phpApi.test.ts` (24 حالة):** `src/lib/api/php.ts` هو الـgateway الوحيد للـPHP
+backend، و كان **غير مغطى بالكامل** وهو أعلى módulo حساسية في التطبيق.
+اتغطّى: `NEXT_PUBLIC_PHP_API_URL` الناقصة تفشل ببصوت عالٍ، الـJWT بتاع اليوزر بس (مفيش service-role)،
+multipart ما بياخدش Content-Type، body فاضي ما بينبعتش، HTTP 200 بـ envelope مش success **بيرمي**،
+`cache: no-store`، الخطأ-network vs الخطأ-config مختلفين، والـtimeout (120s افتراضي للـbackup)
+بيقول "قد تكون ما زالت تعمل" مش "فشلت".
+
+**بوجين حقيقيين اتكشفوا بالاختبارات:**
+1. `phpApiBaseUrl()` كانت جوّه الـ`try` block بتاع الـrequest، فـURL ناقصة كانت بتترجم لـ`PHP_API_UNREACHABLE` —
+   "اتأكد من اتصالك" بدل "NEXT_PUBLIC_PHP_API_URL مش مضبوطة". اتنقل الاستدعاء **قبل** الـtry.
+2. `phpApiBaseUrl()` كانت بتتحقق `raw.trim()` لكنها **بترجّع `raw` غير مقصوصة**، فـ`'   '` كانت بتعدّي وترسل طلب لـ`'   /backup/create'`.
+   اتصلّح بـ`raw.trim()` في الرجوع.
+
+**إثبات الـsuite:** mutation منفصل لكل إصلاح — الـrevert of fix1 فشل test واحد، والـrevert of fix2 فشل testين.
+(الـmutation الأولى مجمّعة ما أمسكتش fix2 لأن الاتنين `PhpApiError`، فأُضيف assert على الـ`code`.)
+
+
+**الباقي:** صفر component tests على الـ3 صفحات الـadmin (Supabase-bound) — محتاجة mock للـclient، وشغل منفصل.
 
 #### ❌ لم يُنفَّذ (يحتاج production أو جهاز)
 
@@ -602,22 +619,22 @@ PHP — فاللي شفته في الـscreenshot الأول («Something Went W
 
 | السويت | النتيجة |
 |---|---|
-| `frontend` — vitest | **72 / 72** |
+| `frontend` — vitest | **96 / 96** |
 | `scripts/verify_rate_limit_atomicity.php` | **4 / 4** |
 | `scripts/verify_client_ip.php` | **7 / 7** |
 | `scripts/verify_archive_attacks.php` | **8 / 8** |
 | `scripts/package_zip.php` | **34 / 34** |
-| **المجموع** | **125 assertion، صفر فشل** |
+| **المجموع** | **149 assertion، صفر فشل** |
 
 مضاف للـCI: frontend (tsc + vitest + next build) + backend (4 سكربتات PHP).
-5 ملفات اختبار (منها `.tsx`)، 62 commit محلي، شجرة نضيفة، صفر push لـGitHub.
+6 ملفات اختبار (منها `.tsx`)، 63 commit محلي، شجرة نضيفة، صفر push لـGitHub.
 
 ### مراحل مُقفَلة
 
 | # | المرحلة | الدليل |
 |---|---|---|
 | 1 | الـRLS + الكتابة | 14 جدول / 26 policy · `REVOKE FROM PUBLIC` على 8 RPCs · `daily_verses` read-only |
-| 4 | اختبارات الواجهة + CI | 72 اختبار · 5 ملفات · CI من وظيفتين · أول component test |
+| 4 | اختبارات الواجهة + CI | 96 اختبار · 6 ملفات · CI من وظيفتين · component test + PHP gateway |
 | 5 | أخطاء + تصلّب | بلا تسريب `getMessage()` · `ClientIp` · rate limiter ذرّي · `.user.ini` |
 | 8 | اختبارات الاستغلال | **7/7 على production داخل rollback** + **8/8 محلياً** |
 | 9 | جزئي | manifest + service worker مُصلحان ومُختبَران · 4 أيقونات PWA |
@@ -696,7 +713,7 @@ PHP — فاللي شفته في الـscreenshot الأول («Something Went W
 | B13 | **PWA manifest كان يمنع التثبيت** → مُقفل 2026-10-02 | — |
 | B14 | **stored XSS في service worker** → مُقفل 2026-10-02 | — |
 | B15 | ~~8.7-8.10 غير مُنفَّذة~~ → **مُقفل 2026-10-02**؛ ثغرة bomb حقيقية اتكتشف واتصلحت | — |
-| B16 | ~~مفيش component tests~~ → **مُقفل جزئياً** (GroupSelector). الـ10 صفحات الـadmin لسه بلا render test | تغطية الـadmin |
+| B16 | ~~مفيش component tests~~ → **مُقفل جزئياً** (GroupSelector + phpApi). الـ3 صفحات الـadmin لسه بلا render test | تغطية الـadmin |
 | B17 | استخراج الأرشيف كان بلا حدود → **مُقفل** بـ`ArchiveExtractor` | — |
 
 ---

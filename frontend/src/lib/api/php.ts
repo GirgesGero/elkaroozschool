@@ -40,7 +40,11 @@ function phpApiBaseUrl(): string {
       0,
     );
   }
-  return raw.replace(/\/+$/, '');
+  // Trim before stripping slashes: a value like "   " passes the emptiness check above
+  // on the trimmed string but would otherwise be returned verbatim, producing a request
+  // to "   /backup/create" that fails as an unreachable host rather than as the config
+  // error it is.
+  return raw.trim().replace(/\/+$/, '');
 }
 
 interface RequestOptions {
@@ -72,12 +76,18 @@ export async function phpApi<T = unknown>(path: string, options: RequestOptions 
     headers['Content-Type'] = 'application/json';
   }
 
+  // Resolve the base URL before entering the try block. Inside it, a configuration error
+  // is indistinguishable from a network failure: both are caught below and reported as
+  // "unreachable", which sends an operator to check their connection when the real
+  // problem is a missing environment variable.
+  const url = phpApiBaseUrl();
+
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
   let response: Response;
   try {
-    response = await fetch(`${phpApiBaseUrl()}${path}`, {
+    response = await fetch(`${url}${path}`, {
       method,
       headers,
       signal: controller.signal,
