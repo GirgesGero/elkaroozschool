@@ -1,18 +1,18 @@
-# خطة إكمال مشروع مدرسة الكاروز — 10 مراحل
+# خطة إكمال مشروع مدرسة الكاروز - 10 مراحل
 
 > **الحالة الحالية:** `NOT READY`
 > **تاريخ الفحص:** 2026-10-01 · SHA `6519986` · branch `main`
-> **نوع الخطة:** تنفيذية، مبنية على فحص الكود والـDB الفعلي — لا على تقارير سابقة.
+> **نوع الخطة:** تنفيذية، مبنية على فحص الكود والـDB الفعلي - لا على تقارير سابقة.
 
 ---
 
 ## كيف تُقرأ هذه الخطة
 
 كل مرحلة لها:
-- **الهدف** — سطر واحد
-- **المهام** — أرقام، كل واحدة قابلة للتحقق بمعيار صريح
-- **معيار القبول** — لا يُعتبر "تم" إلا بنتيجة أمر حقيقي
-- **التبعية** — ماذا يجب أن يُنجز قبلها
+- **الهدف** - سطر واحد
+- **المهام** - أرقام، كل واحدة قابلة للتحقق بمعيار صريح
+- **معيار القبول** - لا يُعتبر "تم" إلا بنتيجة أمر حقيقي
+- **التبعية** - ماذا يجب أن يُنجز قبلها
 
 **قاعدة صارمة:** لا يُكتب `تم` إلا بنتيجة أمر مُنفَّذ. الاختبار الذي يمر لأن توقعه اتغيّر ليس `PASS`.
 
@@ -68,7 +68,7 @@ round-trip: profiles=50 · metadata_match=50/50 · provider_keys=48
 
 ---
 
-## 🔴 المرحلة 0 — تثبيت خط الأساس
+## 🔴 المرحلة 0 - تثبيت خط الأساس
 
 **الهدف:** تجميد الحالة الفعلية في git، حتى لا تتغير الأرقام تحت المراحل التالية.
 
@@ -80,17 +80,17 @@ round-trip: profiles=50 · metadata_match=50/50 · provider_keys=48
 | 0.4 | `npx next build` نظيف + `tsc` نظيف | `exit 0` مثبت في الملف |
 
 **التبعية:** لا شيء. هذه نقطة البداية.
-**مخاطرة:** صفر — كل تغيير هنا توثيق فقط.
+**مخاطرة:** صفر - كل تغيير هنا توثيق فقط.
 
 ---
 
-## 🔴 المرحلة 1 — الـ14 جدول بلا سياسة كتابة
+## 🔴 المرحلة 1 - الـ14 جدول بلا سياسة كتابة
 
 **الهدف:** إغلاق أكبر فجوة منطقية في المشروع.
 
 ### التشخيص المُتحقَّق
 
-الـfrontend ينفّذ **127 استعلام بيانات مباشرة** على Supabase بمفتاح `anon` — أي أن كل الصلاحيات متحقّنة في RLS، وهذا سليم.
+الـfrontend ينفّذ **127 استعلام بيانات مباشرة** على Supabase بمفتاح `anon` - أي أن كل الصلاحيات متحقّنة في RLS، وهذا سليم.
 
 لكن في المقابل، **14 جدول** تظهر فيها عمليات كتابة من المتصفح، و**مفيش ولا policy للكتابة** فيها:
 
@@ -103,7 +103,7 @@ backup_records       import_history
 
 **النتيجة العملية:** إما أن الكتابة ترفض في الـDB، أو تمر عبر RPC. في الحالتين الـfrontend لا يعرض للمستخدم أي تفسير.
 
-### الفحص الثاني — الصمت في الواجهة
+### الفحص الثاني - الصمت في الواجهة
 
 | الملف | الجدول | `.catch` | error state | alert/toast |
 |---|---|---|---|---|
@@ -133,7 +133,7 @@ backup_records       import_history
 | 1.5 | إخفاء زر الحفظ عند الفشل +Friendly retry بدلodata ضائعة |
 
 **معيار القبول:**
-- كل كتابة من المتصفح: إمّا تنجح، أو المستخدم يرى رسالة واضحة — **صفر صمت**
+- كل كتابة من المتصفح: إمّا تنجح، أو المستخدم يرى رسالة واضحة - **صفر صمت**
 - كل migration مُختبَرة في transaction بـ`ROLLBACK` أولًا
 - `next build` + `tsc` نظيفان بعد التعديل
 
@@ -141,7 +141,7 @@ backup_records       import_history
 
 ---
 
-## 🔴 المرحلة 2 — قياس الأداء الحقيقي
+## 🔴 المرحلة 2 - قياس الأداء الحقيقي
 
 **الهدف:** تحويل «لا أعرف إن كان بطيئًا» إلى أرقام.
 
@@ -149,7 +149,7 @@ backup_records       import_history
 
 ```
 /trainees          5.13 kB · 181 kB first load
-/attendance            —    · 181 kB
+/attendance            -    · 181 kB
 /marathon/manage   5.25 kB · 175 kB
 /gallery           3.97 kB · 174 kB
 First Load JS shared: 87.3 kB   ← ممتاز
@@ -168,13 +168,13 @@ Middleware: 86.4 kB
 
 ---
 
-## 🟠 المرحلة 3 — ربط الـPHP API بالواجهة
+## 🟠 المرحلة 3 - ربط الـPHP API بالواجهة
 
 **الهدف:** سدّ فجوة معمارية قائمة فعلاً.
 
-**المُتحقَّق:** `NEXT_PUBLIC_PHP_API_URL` معرّف في `frontend/.env.local`، **ولا يوجد ولا استدعاء واحد** في `frontend/src` — تم بحث كل `fetch()` ذات مسار مطلق، فالنتيجة صفر.
+**المُتحقَّق:** `NEXT_PUBLIC_PHP_API_URL` معرّف في `frontend/.env.local`، **ولا يوجد ولا استدعاء واحد** في `frontend/src` - تم بحث كل `fetch()` ذات مسار مطلق، فالنتيجة صفر.
 
-**النتيجة:** الـPHP API (13 route) منها backup / restore / export / import / storage — كله بلا واجهة استخدام.
+**النتيجة:** الـPHP API (13 route) منها backup / restore / export / import / storage - كله بلا واجهة استخدام.
 
 ### المهام
 
@@ -190,9 +190,9 @@ Middleware: 86.4 kB
 
 ---
 
-## 🟠 المرحلة 4 — اختبارات و CI للواجهة
+## 🟠 المرحلة 4 - اختبارات و CI للواجهة
 
-**الهدف:** منع انحدار الجودة — currently صفر اختبارات وصفر CI.
+**الهدف:** منع انحدار الجودة - currently صفر اختبارات وصفر CI.
 
 | # | المهمة | المعيار |
 |---|---|---|
@@ -207,9 +207,9 @@ Middleware: 86.4 kB
 
 ---
 
-## 🟡 المرحلة 5 — معالجة الأخطاء والتصلّب المتبقية
+## 🟡 المرحلة 5 - معالجة الأخطاء والتصلّب المتبقية
 
-من `REMEDIATION_PLAN.md` مرحلة 7 — حالة التحقق الفعلية:
+من `REMEDIATION_PLAN.md` مرحلة 7 - حالة التحقق الفعلية:
 
 | # | المهمة | الحالة |
 |---|---|---|
@@ -224,11 +224,11 @@ Middleware: 86.4 kB
 
 ---
 
-## 🔵 المرحلة 6 — النشر والاختبار على الخادم الحقيقي
+## 🔵 المرحلة 6 - النشر والاختبار على الخادم الحقيقي
 
 **الهدف:** تحوّل كل التحقق المحلي إلى تحقق على production.
 
-**البلocker:** لا توجد بيانات نشر محفوظة محليًا — `[REDACTED]`
+**البلocker:** لا توجد بيانات نشر محفوظة محليًا - `[REDACTED]`
 
 | # | المهمة | المعيار |
 |---|---|---|
@@ -236,7 +236,7 @@ Middleware: 86.4 kB
 | 6.2 | حل تعطّل PHP host (`rc=56` / `rc=52`) | `curl -I` يعيد 200 على `/health` |
 | 6.3 | تفعيل SSL صحيح | شهادة صالحة، بلا تحذير |
 | 6.4 | رفع حزمة `public_html.zip` | `/health` يرد فعليًا |
-| 6.5 | **اختبار حرّاس web-root على Apache حقيقي** | `config/.htaccess` etc. ترد 403 فعليًا — لا تحقق بنيوي فقط |
+| 6.5 | **اختبار حرّاس web-root على Apache حقيقي** | `config/.htaccess` etc. ترد 403 فعليًا - لا تحقق بنيوي فقط |
 | 6.6 | تسجيل دخول حقيقي على الخادم المنشور | استجابة `200` + `role` صحيح |
 | 6.7 | `POST /restore/execute` من production | round-trip ناجح عبر HTTP، لا عبر SQL مباشر |
 | 6.8 | ضبط CORS بين `elkaroozschool-seven.vercel.app` والـPHP | طلب حقيقي ينجح |
@@ -246,7 +246,7 @@ Middleware: 86.4 kB
 
 ---
 
-## 🔵 المرحلة 7 — مصفوفة أدوار على production
+## 🔵 المرحلة 7 - مصفوفة أدوار على production
 
 **الهدف:** إثبات الفصل على الخادم المنشور، لا على localhost.
 
@@ -265,7 +265,7 @@ Middleware: 86.4 kB
 
 ---
 
-## 🔵 المرحلة 8 — اختبارات الاستغلال (-rollback only)
+## 🔵 المرحلة 8 - اختبارات الاستغلال (-rollback only)
 
 **الهدف:** إعادة تشغيل كل استغلال مكتشف سابقًا، على production، داخل معاملة قابلة للتراجع.
 
@@ -275,7 +275,7 @@ Middleware: 86.4 kB
 | 8.2 | ANON يقرأ PII عبر `get_trainee_attendance_summary` | `42501` |
 | 8.3 | `anon`/`authenticated` يستدعيان RPCs التصدير | `42501` |
 | 8.4 | `authenticated` يستدعي restore RPC بclaims super_user مزيفة | `42501` |
-| 8.5 | تصعيد trainee → `super_user` | `42501` أو `23505` — **مفيش ثغرة** (مُتحقَّق) |
+| 8.5 | تصعيد trainee → `super_user` | `42501` أو `23505` - **مفيش ثغرة** (مُتحقَّق) |
 | 8.6 | تعديل `PASTORAL` من `super_user` | `403` (admin فقط) |
 | 8.7 | traversal على رفع الملفات | `400` |
 | 8.8 | ZIP bomb / archive bomb | رفض |
@@ -283,11 +283,11 @@ Middleware: 86.4 kB
 | 8.10 | `session_replication_role='replica'` من دور عام | `42501` (مُتحقَّق) |
 | 8.11 | restore بأرشيف معدَّل الترقية | `23505` من `uq_single_super_user` (مُتحقَّق) |
 
-> **كل اختبار ينفَّذ داخل `BEGIN ... ROLLBACK`.** التحقق يستخدم `SET LOCAL ROLE authenticated` + `request.jwt.claims` — **لا** `current_user = postgres` أبدًا.
+> **كل اختبار ينفَّذ داخل `BEGIN ... ROLLBACK`.** التحقق يستخدم `SET LOCAL ROLE authenticated` + `request.jwt.claims` - **لا** `current_user = postgres` أبدًا.
 
 ---
 
-## 🟠 المرحلة 9 — تجربة المستخدم والـPWA
+## 🟠 المرحلة 9 - تجربة المستخدم والـPWA
 
 **الهدف:** “سهلة وبسيطة” = شرط قابل للقياس.
 
@@ -301,12 +301,12 @@ Middleware: 86.4 kB
 | 9.6 | Installability + offline fallback | Lighthouse PWA ≥ 90 |
 | 9.7 | RTL + RTL icons + تباعد متسق | مراجعة بصرية لكل صفحة |
 | 9.8 | اختبار على شاشة 360px | لا تمرير أفقي |
-| 8.9 | توحيد الأيقونات — **favicon ناقص** (مُتحقَّق) | أيقونة في كل route |
+| 8.9 | توحيد الأيقونات - **favicon ناقص** (مُتحقَّق) | أيقونة في كل route |
 | 9.10 | تحسين preload لخط.display | لا CLS |
 
 ---
 
-## 🔵 المرحلة 10 — الجاهزية والتوثيق
+## 🔵 المرحلة 10 - الجاهزية والتوثيق
 
 | # | المهمة |
 |---|---|
@@ -323,11 +323,11 @@ Middleware: 86.4 kB
 
 | # | البند | القرار |
 |---|---|---|
-| 10.1 | الـfixtures في production (حسابين بـ`1111...` و`2222...`) | **لا تُحذف تلقائيًا** — يلزم قرار صريح من صاحب المشروع |
+| 10.1 | الـfixtures في production (حسابين بـ`1111...` و`2222...`) | **لا تُحذف تلقائيًا** - يلزم قرار صريح من صاحب المشروع |
 | 10.2 | الـsessions القديمة بعد metadata backfill | تحتاج revoke/refresh قسري |
-| 10.3 | الأسرار في git history | الخيار A (دوران) موصى به — history يبقى مرئيًا لكن غير صالح |
-| 10.4 | XLSX / PDF export | غير متاحين — الرد الصريح `unavailable` أفضل من التزييف |
-| 10.5 | استعادة كلمة المرور / MFA | **لا** — قرار أمني صحيح، ويجب توثيقه بوضوح |
+| 10.3 | الأسرار في git history | الخيار A (دوران) موصى به - history يبقى مرئيًا لكن غير صالح |
+| 10.4 | XLSX / PDF export | غير متاحين - الرد الصريح `unavailable` أفضل من التزييف |
+| 10.5 | استعادة كلمة المرور / MFA | **لا** - قرار أمني صحيح، ويجب توثيقه بوضوح |
 
 ---
 
@@ -374,20 +374,20 @@ Middleware: 86.4 kB
 
 | المرحلة | المدة | الموازي |
 |---|---|---|
-| 0 — خط الأساس | يوم | — |
-| 1 — 14 جدول | 3 أيام | — |
-| 5 — أخطاء | يومان | مع 1 |
-| 4 — اختبارات + CI | 3 أيام | بعد 1 |
-| 6 — نشر | أسبوع | يحتاج B1 + B2 |
-| 2 — أداء | يومان | بعد 6 |
-| 3 — ربط PHP | أسبوع | بعد 6 |
-| 7 — مصفوفة أدوار | 3 أيام | بعد 6 |
-| 8 — استغلال | يومان | بعد 6 |
-| 9 — UX + PWA | 5 أيام | بعد 6 |
-| 10 — توثيق | يومان | آخر |
+| 0 - خط الأساس | يوم | - |
+| 1 - 14 جدول | 3 أيام | - |
+| 5 - أخطاء | يومان | مع 1 |
+| 4 - اختبارات + CI | 3 أيام | بعد 1 |
+| 6 - نشر | أسبوع | يحتاج B1 + B2 |
+| 2 - أداء | يومان | بعد 6 |
+| 3 - ربط PHP | أسبوع | بعد 6 |
+| 7 - مصفوفة أدوار | 3 أيام | بعد 6 |
+| 8 - استغلال | يومان | بعد 6 |
+| 9 - UX + PWA | 5 أيام | بعد 6 |
+| 10 - توثيق | يومان | آخر |
 
 **إجمالي ressource الطريقتين:** 26 يوم عمل.
-**مع الكتل (B1/B2):** غير محدد — يعتمد على صاحب المشروع.
+**مع الكتل (B1/B2):** غير محدد - يعتمد على صاحب المشروع.
 
 ---
 
@@ -396,7 +396,7 @@ Middleware: 86.4 kB
 لا يُكتب `READY` إلا تحقق **كل** بند:
 
 - [ ] خط الأساس مثبَّت
-- [ ] كل كتابة في الواجهة إما تنجح أو تُظهر رسالة — صفر صمت
+- [ ] كل كتابة في الواجهة إما تنجح أو تُظهر رسالة - صفر صمت
 - [ ] كل الـ14 جدول لها قرار موثَّق
 - [ ] CI خضراء على كل PR
 - [ ] PHP host يرد 200 على `/health` + SSL صالح
@@ -413,7 +413,7 @@ Middleware: 86.4 kB
 
 ---
 
-## ملحق — نتائج الفحص الفعلي
+## ملحق - نتائج الفحص الفعلي
 
 ### ما هو مُتحقَّق خاطئ شائعًا
 
@@ -422,14 +422,14 @@ Middleware: 86.4 kB
 | “الـPHP API متكامل ومربوط” | 13 route، **صفر** استدعاء من الواجهة |
 | “كل الجداول محمية” | 50/50 RLS ✅، لكن الكتابة بـ**3** insert فقط |
 | “الواجهة جاهزة” | 0 اختبارات، 0 CI، 8/12 صفحة تكتب بصمت |
-| “كل الروابط تعمل” | PHP `rc=56` — لا يستجيب |
+| “كل الروابط تعمل” | PHP `rc=56` - لا يستجيب |
 | “فريق جاهز للإنتاج” | لا يوجد deployment runbook مُختبَر |
 
 ### تحقّقات منفَّذة أثناء كتابة هذه الخطة
 
 ```
 tsc --noEmit      exit 0
-next lint         exit 0  (warnings فقط — stale closures في useEffect)
+next lint         exit 0  (warnings فقط - stale closures في useEffect)
 next build        exit 0  (22 صفحة)
 Supabase          50 tables · 50 RLS · 90 policies · 0 بلا policy
 Escalation test   admin→super_user = denied:23505 ✅ لا ثغرة
@@ -443,27 +443,27 @@ session_repl      anon/authenticated/service_role = 42501 ✅
 - كلاهما `service_role` فقط
 - استرجاع `all-or-nothing` داخل transaction واحدة
 - لا استعادة لكلمة المرور أو MFA
-- لا custom GUC لتجاوز الـtriggers — **`session_replication_role`** حصرًا داخل `SECURITY DEFINER`
-- إخفاء عناصر UI ليس أمانًا — الإجبار يجب أن يكون في route/RPC/RLS/API/storage
+- لا custom GUC لتجاوز الـtriggers - **`session_replication_role`** حصرًا داخل `SECURITY DEFINER`
+- إخفاء عناصر UI ليس أمانًا - الإجبار يجب أن يكون في route/RPC/RLS/API/storage
 
 ---
 
-## 🔴 تصحيح مُلزم — بعد مراجعة `/admin/backups` و `/admin/imports`
+## 🔴 تصحيح مُلزم - بعد مراجعة `/admin/backups` و `/admin/imports`
 
 > **هذا التصحيح يلغي استنتاجات أعلاه ويغلب عليها.** أُضيف بعد قراءة الكود سطرًا سطرًا.
 
 ### الاستنتاج الخاطئ الذي تم إبطاله
 
 كتبت في المرحلة 1:
-> «الـPHP API (13 route) منها backup / restore / export / import — كله بلا واجهة استخدام»
+> «الـPHP API (13 route) منها backup / restore / export / import - كله بلا واجهة استخدام»
 
 **غير صحيح.** `/admin/backups` فيه UI كامل لـ backup + restore + AES-256 + `DATABASE_ONLY` / `FILES_ONLY`.
 
-**الاستنتاج الصحيح:** الواجهة **لا تستدعي الـPHP API إطلاقًا** (صفر `fetch` لـ HTTP) — لكن ليس لأن الق functionalities غير موجودة، بل لأن **الأزرار نفسها وهمية بالكامل**.
+**الاستنتاج الصحيح:** الواجهة **لا تستدعي الـPHP API إطلاقًا** (صفر `fetch` لـ HTTP) - لكن ليس لأن الق functionalities غير موجودة، بل لأن **الأزرار نفسها وهمية بالكامل**.
 
 ### 🔴 الاكتشاف الأخطر: واجهة احتياطي/استعادة مُزيّفة بالكامل
 
-**الملف:** `frontend/src/app/admin/backups/page.tsx` — 583 سطر
+**الملف:** `frontend/src/app/admin/backups/page.tsx` - 583 سطر
 
 #### `handleCreateBackup` (L104-146)
 
@@ -475,9 +475,9 @@ status: 'COMPLETED',                                                    // L120 
 
 ولا `fetch`، ولا `Blob`، ولا `crypto`، ولا `JSZip`، ولا اتصال بـPHP API.
 
-**النتيجة:** زر يقول **«تم إنشاء النسخة الاحتياطية المشفرة بنجاح»** — ولم يُنشأ ملف.
+**النتيجة:** زر يقول **«تم إنشاء النسخة الاحتياطية المشفرة بنجاح»** - ولم يُنشأ ملف.
 
-#### `handleRestoreBackup` (L176-216) — الأخطر من النوعين
+#### `handleRestoreBackup` (L176-216) - الأخطر من النوعين
 
 ```js
 await supabase.rpc('log_operational_event', {... p_status: 'SUCCESS' ...});  // L189
@@ -485,9 +485,9 @@ await supabase.rpc('log_operational_event', {... p_status: 'SUCCESS' ...});  // 
 setOperationMsg({ type:'success', text:'تمت استعادة النظام بنجاح' });        // L208
 ```
 
-**لا يقرأ ملفاً. لا يفكّ تشفير. لا يغيّر الـDB. لا يتحقق من كلمة المرور** (اكتفى بـ`if (!restorePassword) return` — فحص وجود لا صحة).
+**لا يقرأ ملفاً. لا يفكّ تشفير. لا يغيّر الـDB. لا يتحقق من كلمة المرور** (اكتفى بـ`if (!restorePassword) return` - فحص وجود لا صحة).
 
-الاستعادة الوحيدة الحقيقية في المشروع هي `DatabaseRestoreService.php` في الـPHP API — **ولا شيء في الواجهة يصل إليها.**
+الاستعادة الوحيدة الحقيقية في المشروع هي `DatabaseRestoreService.php` في الـPHP API - **ولا شيء في الواجهة يصل إليها.**
 
 **تقييم الخطورة:** هذا ليس ثغرة أمنية، بل **نزاهة نظام**. أسوأ من الفشل الصامت: النظام **يقول إنه نجح** ويكتب سجل نجاح في الـaudit log. الـadmin يستعيد ثقته في نسخه الاحتياطية وهي غير موجودة أصلاً.
 
@@ -495,10 +495,10 @@ setOperationMsg({ type:'success', text:'تمت استعادة النظام بن�
 
 ```sql
 -- backup_records insert كـ admin
-→ denied:42703   (لا grant أصلاً — أضيق من RLS)
+→ denied:42703   (لا grant أصلاً - أضيق من RLS)
 ```
 
-الزر يفشل عند الـDB — لكن `catch` يعرض رسالة، فالسلوك هنا **مقبول نسبياً**؛ المشكلة الأساسية هي الوهم في المسار الناجح المزروع.
+الزر يفشل عند الـDB - لكن `catch` يعرض رسالة، فالسلوك هنا **مقبول نسبياً**؛ المشكلة الأساسية هي الوهم في المسار الناجح المزروع.
 
 ### 🔴 تصحيح ثانٍ: `handleDeleteBackup` (L148-174)
 
@@ -506,7 +506,7 @@ setOperationMsg({ type:'success', text:'تمت استعادة النظام بن�
 .from('backup_records').update({ deleted_at: ... })   // soft delete في الواجهة
 ```
 
-تحقق: لا `DELETE` policy على `backup_records` (2 delete policies فقط في المشروع كله). إذاً الحذف **فاشل أيضاً** — لكن الرسالة تُظهر نجاحاً؟ لا، `throw error` يعمل. السلوك هنا سليم، فقط الميزة معطّلة.
+تحقق: لا `DELETE` policy على `backup_records` (2 delete policies فقط في المشروع كله). إذاً الحذف **فاشل أيضاً** - لكن الرسالة تُظهر نجاحاً؟ لا، `throw error` يعمل. السلوك هنا سليم، فقط الميزة معطّلة.
 
 ### 🔴 اكتشاف ثالث: Excel export يكذب باسم الملف
 
@@ -516,22 +516,22 @@ setOperationMsg({ type:'success', text:'تمت استعادة النظام بن�
 link.setAttribute('download', `trainees_export_${Date.now()}.${format === 'csv' ? 'csv' : 'csv'}`);
 ```
 
-`format === 'csv' ? 'csv' : 'csv'` — الطرفان نفس القيمة. لو اختار المستخدم **Excel** ينزّل ملف **CSV**.
+`format === 'csv' ? 'csv' : 'csv'` - الطرفان نفس القيمة. لو اختار المستخدم **Excel** ينزّل ملف **CSV**.
 
 ### ✅ ما هو سليم فعلاً (تصحيح مُكمِّل)
 
 | المكوّن | الحكم |
 |---|---|
-| `handleExecuteImport` (L143-190) | **حقيقي بالكامل** — `rpc('import_trainees_bulk_atomic')`، dry-run، All-or-Nothing، error handling صحيح |
-| `handleExportTrainees` (L195-236) | **حقيقي** — قراءة `profiles` + CSV + audit |
-| Auth guard في الواجهة | **سليم** — `['admin','super_user']` وغيرهم مرفوض |
-| `backup_records` / `import_history` قراءة | **سليم** — قراءة السجل فقط |
+| `handleExecuteImport` (L143-190) | **حقيقي بالكامل** - `rpc('import_trainees_bulk_atomic')`، dry-run، All-or-Nothing، error handling صحيح |
+| `handleExportTrainees` (L195-236) | **حقيقي** - قراءة `profiles` + CSV + audit |
+| Auth guard في الواجهة | **سليم** - `['admin','super_user']` وغيرهم مرفوض |
+| `backup_records` / `import_history` قراءة | **سليم** - قراءة السجل فقط |
 
 ### 📌 التحديث الإجباري للمرحلة 1
 
 المرحلة 1 تُرقَّم إلى **المرحلة 1A** (سياسات الكتابة) وتُضاف إليها:
 
-#### 🔴 المرحلة 1B — إزالة واجهة التزييف (أعلى أولوية في المشروع)
+#### 🔴 المرحلة 1B - إزالة واجهة التزييف (أعلى أولوية في المشروع)
 
 | # | المهمة | المعيار |
 |---|---|---|
@@ -543,19 +543,19 @@ link.setAttribute('download', `trainees_export_${Date.now()}.${format === 'csv' 
 | 1B.6 | إصلاح اسم ملف Excel → إما دعم حقيقي أو **إخفاء الزر** | لا يكذب الاسم |
 | 1B.7 | فحص **كل** زر في المشروع بحثًا عن نفس النمط | جدول `زر → هل يعمل فعلاً؟` |
 
-> **قاعدة جديدة تُضاف:** لا يُكتب `تم` ولا `نجاح` في الكود إلا بعد **استجابة حقيقية مؤكدة**. كل زر في النظام يجب أن يكون له **مصدر حقيقة واحد** — إما `fetch` حقيقي، أو `RPC` يعيد `success:true` بعد تنفيذ فعلي.
+> **قاعدة جديدة تُضاف:** لا يُكتب `تم` ولا `نجاح` في الكود إلا بعد **استجابة حقيقية مؤكدة**. كل زر في النظام يجب أن يكون له **مصدر حقيقة واحد** - إما `fetch` حقيقي، أو `RPC` يعيد `success:true` بعد تنفيذ فعلي.
 
-### 🔴 B10 — بلocker جديد
+### 🔴 B10 - بلocker جديد
 
 | # | البلocker | يحجب |
 |---|---|---|
 | **B10** | **واجهة backup/restore وهمية بالكامل** | كل ثقة العميل في النسخ الاحتياطي · المرحلة 9 كليًا |
 
-**حالة المشروع بعد هذا الاكتشاف:** `NOT READY` — وبأسباب **أنثق** من السابق.
+**حالة المشروع بعد هذا الاكتشاف:** `NOT READY` - وبأسباب **أنثق** من السابق.
 
 ---
 
-## 🔴 تصحيح ثانٍ مُلزم — استنتاج الـ14 جدول كان خاطئاً
+## 🔴 تصحيح ثانٍ مُلزم - استنتاج الـ14 جدول كان خاطئاً
 
 > **هذا يصحّح ما ورد في المرحلة 1A.** أُضيف بعد اختبار فعلي على production، لا بعد قراءة الكود فقط.
 
@@ -582,7 +582,7 @@ SELECT tablename, policyname, cmd, qual, with_check FROM pg_policies
 WHERE schemaname='public';
 ```
 
-يعطي **26 policy** على الـ14 جدول — معظمها `cmd='ALL'` مع `qual` مقيّد بالدور.
+يعطي **26 policy** على الـ14 جدول - معظمها `cmd='ALL'` مع `qual` مقيّد بالدور.
 
 | الجدول | السياسة | الشرط |
 |---|---|---|
@@ -591,7 +591,7 @@ WHERE schemaname='public';
 | `servant_permissions` | Manage servant permissions | `is_admin_or_super_user()` + `with_check` |
 | `group_secretariat` | Admin manage secretariat assignments | `is_admin_or_super_user()` + `with_check` |
 | `user_favorites` | Manage favorites | `user_id = auth.uid()` |
-| `daily_verses` | Authenticated read daily verses | **`SELECT` فقط — read-only عمداً** |
+| `daily_verses` | Authenticated read daily verses | **`SELECT` فقط - read-only عمداً** |
 | `marathon_answers` | Manage marathon answers | `has_servant_permission('MANAGE_MARATHON')` |
 | `marathon_questions` | Manage marathon questions | نفس الشرط |
 | `marathon_sections` | Manage marathon sections | نفس الشرط |
@@ -607,7 +607,7 @@ WHERE schemaname='public';
 |---|---|
 | admin يكتب `user_favorites` (له) | **مسموح** (قيد `42804` على item_type، مش RLS) |
 | admin يكتب `servant_permissions` | **مسموح** (قيد `23505` تكرار، مش RLS) |
-| admin يكتب `daily_verses` | **مرفوض `42501`** — تصميمي: read-only |
+| admin يكتب `daily_verses` | **مرفوض `42501`** - تصميمي: read-only |
 | servant يكتب `daily_verses` | **مرفوض `42501`** |
 | **servant يكتب صلاحية مستخدم آخر** | **مرفوض `42501`** ✅ |
 
@@ -617,7 +617,7 @@ WHERE schemaname='public';
 
 المرحلة 1A تُلغى كـ"إضافة سياسات". تُستبدل بـ:
 
-#### المرحلة 1A (مُعدَّلة) — تحسين رسائل الخطأ فقط
+#### المرحلة 1A (مُعدَّلة) - تحسين رسائل الخطأ فقط
 
 | # | المهمة | المعيار |
 |---|---|---|
@@ -630,3 +630,73 @@ WHERE schemaname='public';
 قعدت أستنتج من **استعلام catalog غلط** بدل ما أقرأ الأسماء الحقيقية للسياسات، وقلت للـuser "14 جدول بلا سياسة" وأنا مبنياً على رقم واحد مش متحقق منه. **الاختبار الفعلي هو اللي صحّح كلامي، مش القراءة بتاعتي.**
 
 > **قاعدة جديدة:** أي رقم عن حالة نظام يُنشر بعد تنفيذه مرة واحدة على production، لا من استعلام catalog فقط.
+
+---
+
+## B11 - 2026-10-02: production host is DOWN, and the PHP backend is verified sound
+
+### The blocker found
+
+`https://elkaroozschool.is-best.net` accepts TCP on 80 and 443 but returns no HTTP
+response at all. Not a slow site, not a build error - the socket opens and closes.
+
+```
+curl https://elkaroozschool.is-best.net/login
+  -> schannel: remote party requests renegotiation   (x2)
+  -> server closed abruptly (missing close_notify)
+  -> exit 56
+
+curl http://elkaroozschool.is-best.net/login
+  -> Empty reply from server
+```
+
+DNS is fine: `elkaroozschool.is-best.net -> 185.27.134.59` (confirmed via 8.8.8.8; the
+local resolver refuses queries, which is a local network setting, not a site fault).
+
+The certificate itself is valid and correctly scoped:
+
+```
+subject = CN=is-best.net
+issuer  = ZeroSSL ECC DV SSL CA 2
+SAN     = DNS:is-best.net, DNS:*.is-best.net
+valid   = 2026-09-02 .. 2026-12-01
+```
+
+`*.is-best.net` does cover `elkaroozschool.is-best.net`, and the dates are current. So
+this is not an expired or mismatched certificate. The renegotiation loop is a hosting
+or server-config fault, and it cannot be fixed from the repository.
+
+**This blocks phase 2 and phase 6.** No real performance number can be measured and no
+end-to-end role test can run against a host that does not answer.
+
+### What WAS verified: the PHP backend is sound
+
+Run locally under PHP 8.3.35, because the code can be checked independently of the host.
+
+| Check | Result |
+|---|---|
+| Syntax check, all non-vendor PHP files | 31/31 pass |
+| `GET /health` | 200, reports v2.0.0, php 8.3.35 |
+| `GET /api/health` (base-prefix strip) | 200 |
+| Unknown route | 404 `ROUTE_NOT_FOUND` |
+| CORS preflight from the production origin | 204, allows the headers the app sends |
+| Protected route, no token | 401 `UNAUTHORIZED` |
+| Protected route, `Basic` header | 401 |
+| Protected route, forged HS256 token | 401 `INVALID_TOKEN` |
+| Protected route, garbage token | 401 `INVALID_TOKEN` |
+
+The forged-token result is the important one. `JwtAuthMiddleware` once fell back to
+unverified decoding, which would have let a caller hand itself the role `super_user`.
+That branch now fails closed, and the test above confirms it: a self-crafted token
+claiming `role: super_user` is rejected, not honoured.
+
+Config also fails closed. `config/supabase.php` requires all four env vars and aborts
+with `CONFIG_MISSING` rather than defaulting to a guessable JWT secret, so a
+misconfigured host cannot silently boot with auth switched off. No secret is committed
+to the repository.
+
+### Unpushed work
+
+6 commits are local only. `origin/main` is behind. They are not on any live site, and
+the site that is configured as production is not serving, so there is nothing to deploy
+to until the host is fixed.
