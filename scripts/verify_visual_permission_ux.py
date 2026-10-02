@@ -4,8 +4,15 @@ import uuid
 import datetime
 from supabase import create_client, Client
 
-SUPABASE_URL = "https://xuxgswuvffqezqwhidrd.supabase.co"
-ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh1eGdzd3V2ZmZxZXpxd2hpZHJkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDMwMzM4MTgsImV4cCI6MjA1ODYwOTgxOH0.tUuY4YkG5bU1aXG86H8_kQZk_vI1f5W0F3w1N9-x1x0"
+# Supabase project URL and key come from the environment. A key committed here is
+# a live bearer credential: anyone with the repo can read production data with it, and
+# it stays valid in every clone and in git history after a later delete.
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
+if not SUPABASE_URL:
+    raise SystemExit("SUPABASE_URL is not set -- refusing to run against an implicit project.")
+ANON_KEY = os.environ.get("SUPABASE_ANON_KEY", "")
+if not ANON_KEY:
+    raise SystemExit("SUPABASE_ANON_KEY is not set -- refusing to run without a key.")
 SERVICE_ROLE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
 
 def run_visual_permission_ux_tests():

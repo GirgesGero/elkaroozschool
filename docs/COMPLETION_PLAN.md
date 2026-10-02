@@ -624,7 +624,8 @@ multipart ما بياخدش Content-Type، body فاضي ما بينبعتش، H
 | `scripts/verify_client_ip.php` | **7 / 7** |
 | `scripts/verify_archive_attacks.php` | **8 / 8** |
 | `scripts/package_zip.php` | **34 / 34** |
-| **المجموع** | **149 assertion، صفر فشل** |
+| `scripts/verify_no_credential_leaks.py` | **4 / 4** |
+| **المجموع** | **153 assertion، صفر فشل** |
 
 مضاف للـCI: frontend (tsc + vitest + next build) + backend (4 سكربتات PHP).
 6 ملفات اختبار (منها `.tsx`)، 63 commit محلي، شجرة نضيفة، صفر push لـGitHub.
@@ -649,6 +650,19 @@ multipart ما بياخدش Content-Type، body فاضي ما بينبعتش، H
 | 7 | مصفوفة الأدوار على production | محجوبة بـ6 |
 | 9 (باقي) | 9.1، 9.6-9.8 | محتاج origin منشور / جهاز |
 | 10 | التوثيق النهائي | يعتمد على 6 و7 |
+
+### 🔑 اكتشاف أثناء إقفال بند الأسرار (2026-10-03)
+
+بند «لا أسرار في git» كان **متوقّع ✅ بالقراءة بالعين**. لما اتحوّل لفحص آلي،
+طلع **11 script متتبَّع** فيه `eyJ…` حقيقي — `ANON_KEY` لـproject `kgqgnqjkrghvktymbimz`،
+موجود من أول commit (`3118e6e`).
+
+- الـ**anon** key معرّف بـpublic (بيوصل للمتصفح)، بس لسه bearer credential بيقرأ،
+  وبيحدّد الـproduction project، و**مفيش un-commit**.
+- الشجرة اتنضّفت: كلهم بقوا `os.environ.get(...)` + `raise SystemExit` لو الـenv ناقص،
+  ومفيش JWT في الـZIP ولا في `.env.local` (متـgitignore).
+- **الباقي مفيش حل محلي:** المفتاح لسه في الـhistory. لازم **دوران** من Supabase
+  (الخيار A في 10.3). الـCI بقى يفشل لو أي key رجع.
 
 ### 🔴 العائق الحقيقي — واحد، وهو الحاجز الأكبر
 
@@ -715,6 +729,7 @@ multipart ما بياخدش Content-Type، body فاضي ما بينبعتش، H
 | B15 | ~~8.7-8.10 غير مُنفَّذة~~ → **مُقفل 2026-10-02**؛ ثغرة bomb حقيقية اتكتشف واتصلحت | — |
 | B16 | ~~مفيش component tests~~ → **مُقفل جزئياً** (GroupSelector + phpApi). الـ3 صفحات الـadmin لسه بلا render test | تغطية الـadmin |
 | B17 | استخراج الأرشيف كان بلا حدود → **مُقفل** بـ`ArchiveExtractor` | — |
+| B18 | **anon key حقيقي في git history** من أول commit. الشجرة اتنضّفت، بس **المفتاح ما اتدوّرش** ولا اتمسح من الـhistory. أي حد عنده كلوز للريبو يقدر يقراه | لا شغل محلي — يحتاج **دوران المفتاح من Supabase** |
 
 ---
 
@@ -778,7 +793,8 @@ multipart ما بياخدش Content-Type، body فاضي ما بينبعتش، H
 - [x] PWA مُتحقَّق منه (Service Worker مُختبَر بـ22 حالة + manifest مُختبَر بـ10)
 - [ ] Lighthouse ≥ 90 على الصفحات الرئيسية
 - [ ] `runbook` + `rollback` مُختبَرَين فعليًا
-- [ ] لا أسرار في git أو ZIP أو التقارير
+- [x] لا أسرار في git أو ZIP أو التقارير — **أُغلق 2026-10-03**: `scripts/verify_no_credential_leaks.py` 4/4،
+      وكشف 11 script متتبَّع فيه anon key حقيقي (مشروع `kgqgnqjkrghvktymbimz`)
 
 **حتى ذلك الحين: `NOT READY`.**
 

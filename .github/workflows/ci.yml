@@ -79,3 +79,13 @@ jobs:
       # archive on disk but the service extracts it in memory.
       - name: Archive and spreadsheet attacks are blocked
         run: php -d memory_limit=512M scripts/verify_archive_attacks.php
+
+      # No credential may live in tracked source or in the deployable archive. This was
+      # a READY-gate item that had been signed off by reading files by hand, while
+      # eleven tracked scripts carried a real Supabase anon key -- so it is now a
+      # machine check rather than a habit.
+      #
+      # A committed key cannot be un-committed. This failing means the key is already in
+      # history and in every existing clone: rotate it in Supabase, then purge.
+      - name: No credential is committed
+        run: python scripts/verify_no_credential_leaks.py

@@ -1,10 +1,18 @@
+import os
 import urllib.request
 import urllib.error
 import json
 import sys
 
-SUPABASE_URL = "https://kgqgnqjkrghvktymbimz.supabase.co"
-ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtncWducWprcmdodmt0eW1iaW16Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAzNjk2NzgsImV4cCI6MjEwNTk0NTY3OH0.QHZCfNWf97-3fCONdMeXnWqeZMYyZ8NHIFfTwnHnj-w"
+# Credentials come from the environment. A key pasted here is a live bearer
+# credential: it grants read access under whatever role it carries, it works for
+# anyone holding the repo, and deleting the line later does not remove it from
+# git history or from existing clones.
+
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
+ANON_KEY = os.environ.get("SUPABASE_ANON_KEY", "")
+if not ANON_KEY:
+    raise SystemExit("SUPABASE_ANON_KEY is not set -- refusing to run without a key.")
 
 results = []
 
