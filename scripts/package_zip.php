@@ -59,6 +59,12 @@ echo "=== 1. Preconditions ===\n";
 check('backend-api/public/index.php exists', is_file($beRoot . '/public/index.php'));
 check('backend-api/public/.htaccess exists', is_file($beRoot . '/public/.htaccess'));
 
+// Remediation 5.2. If this is absent the deploy still runs, so the failure would not
+// surface at boot -- it would surface later as a PHP warning printed into a response
+// body. Asserting it here makes an accidental omission a build failure instead.
+check('backend-api/public/.user.ini exists (remediation 5.2)',
+      is_file($beRoot . '/public/.user.ini'));
+
 $rootTemplate = $beRoot . '/public/htaccess_root.template';
 check('root guard template exists', is_file($rootTemplate));
 
@@ -272,6 +278,12 @@ check('every class index.php requires is present in the archive',
 // The exporter must be packaged alongside the RPC grant it depends on: an
 // archive whose BackupController calls DatabaseExportService but does not ship
 // it cannot produce a database backup at all.
+// 5.2: the per-directory php.ini has to travel to the web root. It only works if PHP
+// finds it in the directory it is executing from, which for a flattened deploy is the
+// archive root -- not inside public/ under its own name.
+check('.user.ini is packaged at the archive root',
+      in_array('.user.ini', $names, true));
+
 check('DatabaseExportService is packaged with the BackupController that uses it',
       in_array('src/Services/DatabaseExportService.php', $names, true)
       && in_array('src/Controllers/BackupController.php', $names, true));

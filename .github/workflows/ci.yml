@@ -38,3 +38,34 @@ jobs:
         env:
           NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
           NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
+
+  backend:
+    name: Backend — PHP syntax, concurrency, deploy package
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: zip, curl, fileinfo
+          coverage: none
+
+      # The rate limiter's bug was a lost update under concurrency, which no
+      # single-threaded check can catch: the counter read and the write both look
+      # correct in isolation. It runs 24 real OS processes at one counter, and a
+      # regression makes two of them observe the same value.
+      - name: Rate limiter increment is atomic
+        run: php scripts/verify_rate_limit_atomicity.php
+
+      # Every IP the application stores or buckets on has to be a real address, never
+      # whatever a caller typed into X-Forwarded-For.
+      - name: Client IP cannot be forged by a header
+        run: php scripts/verify_client_ip.php
+
+      # The deployable archive, with its structural assertions (no secrets, web-root
+      # guards present, every required class included). A packaging failure must break
+      # the build, not wait for the next upload to a live host.
+      - name: Deploy package builds and passes its assertions
+        run: php scripts/package_zip.php
