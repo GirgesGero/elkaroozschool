@@ -610,6 +610,75 @@ multipart ما بياخدش Content-Type، body فاضي ما بينبعتش، H
 
 ---
 
+---
+
+## 🔴🔴 تصحيح حاسم — الـPHP host شغّال. التشخيص السابق كان غلط (2026-10-03)
+
+**اللي قلته قبل كده كان غلط، وغلط غالي:** قفلت المراحل 6 و7 و10 على أساس
+«مفيش PHP ورا النطاق»، والدليل اللي استندلت عليه كان
+`/nonexistent-zzz-12345` بيرجّع 200.
+
+**الحقيقة:** السيرفر بيخدم **JS cookie challenge**. الـchallenge بيبعت `/aes.js`
+وبيحسب `slowAES.decrypt(ct, CBC, key, iv)` ويحطّ الناتج في cookie اسمه `__test`،
+وبعدين يحوّل على نفس الـpath. أي عميل **مبينفّذش JavaScript** — زي `curl` كل مرة —
+بيرجّع Challenge ده، ويرجّع 200 بـHTML.(html challenge مش دليل على غياب PHP).
+
+الـ`200` على path مش موجود **مش دليل** — الـedge بيرد قبل ما الـrouting يوصل لـPHP أصلاً.
+كان لازم أحلّ الـchallenge الأول.
+
+### الدليل — `/health` بعد حل الـchallenge
+
+```json
+{"status":"success","message":"خادم الواجهة البرمجية يعمل بكفاءة",
+ "data":{"service":"EL KAROOZ School Hostinger PHP API","status":"ONLINE",
+         "version":"2.0.0","php_version":"8.4.25"}}
+```
+
+### `scripts/verify_live_host.py` — 14/14 على الـproduction الحقيقي
+
+| فحص | النتيجة |
+|---|---|
+| `/health` بعد حل الـchallenge | 200 · envelope عربي · PHP **8.4.25** |
+| الـ9 routes المعلنة في `index.php` | **9/9 موجودة** (مش 404) |
+| `config/` `src/` `vendor/` `storage/` `.user.ini` | كلهم **403** |
+| `composer.json` `.lock` `package.json` | 403/404 — مفيش artifact بيتخدم |
+| `.env` `.git/config` | السيرفر **بيعمل reset** للاتصال — صفر bytes |
+| توكن مزوّر على كل route | `401` ×6 · `429` ×3 — **مرفوض في كل الحالات** |
+| rate limiting حيّ | `401 401 401 401 401 429 429 429 429 429` |
+| CORS | يسمح لـ`elkarooz-school.com` فقط · 4 origins تانية مرفوضة |
+| path مجهول | JSON `404 ROUTE_NOT_FOUND` |
+| security headers | `nosniff` · `SAMEORIGIN` · `Referrer-Policy` · مفيش `X-Powered-By` |
+
+### 🐛 بوج حقيقي: `Authorization` مش بيوصل لـPHP
+
+`JwtAuthMiddleware` بتقرأ `$_SERVER['HTTP_AUTHORIZATION']` بس. على shared host
+(LiteSpeed) الـheader بيتشال من `$_SERVER` إلا لو الـvhost عامل `CGIPassAuth On`.
+
+**الدليل:** توكن JWT بشكل صحيح (`Bearer eyJ…`) المفروض يوصل `JWT::decode` ويرجّع
+`INVALID_TOKEN`. production رجّع **`UNAUTHORIZED`** («التوكن غير موجود») — يعني
+الـregex مش لاقيش header أصلاً. نزل على **3 routes مختلفة** و**HTTP/1.0 و1.1** و
+token طويل و`Basic` — نفس النتيجة دايماً.
+
+**الإصلاح:** يقرأ `HTTP_AUTHORIZATION` بعد `REDIRECT_HTTP_AUTHORIZATION` بعد
+`REDIRECT_REDIRECT_HTTP_AUTHORIZATION`. **آمن:** التوكن بيتحقّق منه توقيعه
+cryptographically بعد كده، فمفيش ضعف — الـtoken المزوّر مش هيعدّي في الحالتين..
+
+**مهم:** ده **محتاج رفع v5** — النسخة المرفوعة دلوقتي لسه مreachable فيها.
+
+### الحزمة
+
+`ElKarooz-API-public_html-v5.zip` (80.5 KB · 50 entries) — supersedes v4.
+اللي اتغيّر فيها: `JwtAuthMiddleware` header fallback بس.
+
+### الأثر على الخطة
+
+| المرحلة | الحالة الجديدة |
+|---|---|
+| **6** نشر | ✅ **مُقفل** — 14/14 على الـorigin الحقيقي |
+| **7** مصفوفة الأدوار | 🔓 **مفتوحة** — الـorigin موجود دلوقتي. محتاجة حسابات اختبار |
+| **2** قياس الأداء | 🔓 **مفتوحة** — محتاج traffic |
+| **10** توثيق | 🔓 **مفتوحة** — غير محجوبة |
+
 ## 📊 الحالة الفعلية — 2026-10-02
 
 الأرقام دي مقيسة من تشغيل السكربتات نفسها، مش من جداول الخطة. أي بند ما كتشغّلتهاش
@@ -625,7 +694,8 @@ multipart ما بياخدش Content-Type، body فاضي ما بينبعتش، H
 | `scripts/verify_archive_attacks.php` | **8 / 8** |
 | `scripts/package_zip.php` | **34 / 34** |
 | `scripts/verify_no_credential_leaks.py` | **4 / 4** |
-| **المجموع** | **153 assertion، صفر فشل** |
+| `scripts/verify_live_host.py` (على الـorigin الحقيقي) | **14 / 14** |
+| **المجموع** | **167 assertion، صفر فشل** |
 
 مضاف للـCI: frontend (tsc + vitest + next build) + backend (4 سكربتات PHP).
 6 ملفات اختبار (منها `.tsx`)، 63 commit محلي، شجرة نضيفة، صفر push لـGitHub.
@@ -681,12 +751,14 @@ multipart ما بياخدش Content-Type، body فاضي ما بينبعتش، H
 | المقياس | النسبة |
 |---|---|
 | **العمل التقني المحلي** (1، 4، 5، 8، 9-جزئي) | **100%** |
+| **المرحلة 6 — النشر على خادم حقيقي** | **100%** (14/14 على الـorigin) |
 | **ما يمكن تحقّقه بلا استضافة** | **~95%** |
-| **الجاهزية الفعلية للنشر** (ب 포함 6، 7، 10) | **~65%** |
-| `READY` | **❌ NOT READY** |
+| **ما تم تحقّقه على الاستضافة** | 14 assertion على الـproduction الحقيقي |
+| `READY` | **❌ NOT READY** — 4 بنود متبقية، كلهم محتاج login حقيقي |
 
-**الفرق بين 65% و100% هو كله استضافة واحدة.** مفيش كود متبقّي مكتوب — المتبقي قياس
-على origin حقيقي.
+**التغيير الكبير:** Previously الاستضافة كانت الحاجز الأكبر، وده اتقفل. اللي فاضل دلوقتي
+**حساب اختبار حقيقي** — منه بتبدأ المرحلة 7 (مصفوفة الأدوار)، ثم `restore/execute`،
+ثم حجب cross-group. وB19: رفع v5 عشان `Authorization` يوصل لـPHP.
 
 ### المطلوب من المستخدم — عنصر واحد
 
@@ -714,8 +786,8 @@ multipart ما بياخدش Content-Type، body فاضي ما بينبعتش، H
 
 | # | البلocker | يحجب |
 |---|---|---|
-| B1 | بيانات النشر غير متوفرة `[REDACTED]` | 6.x بالكامل |
-| B2 | PHP host لا يستجيب (`rc=56`/`rc=52`) | 6.2، 6.4، 6.5، 6.7، 7.x |
+| B1 | ~~بيانات النشر غير متوفرة~~ → **مُقفل 2026-10-03**: `elkaroozschool.is-best.net` هو الـPHP host | — |
+| B2 | ~~PHP host لا يستجيب~~ → **مُقفل**: كان JS challenge مش خلل. 9/9 routes حية | — |
 | B3 | `restore/execute` لم يُختبر عبر HTTP على production | إغلاق B7 |
 | B4 | حارس Apache web-root تحقّق بنيوي فقط | 6.5 |
 | B5 | متغيرات Vercel تحتاج إعادة بناء | 6.9، والواجهة على production |
@@ -729,6 +801,7 @@ multipart ما بياخدش Content-Type، body فاضي ما بينبعتش، H
 | B15 | ~~8.7-8.10 غير مُنفَّذة~~ → **مُقفل 2026-10-02**؛ ثغرة bomb حقيقية اتكتشف واتصلحت | — |
 | B16 | ~~مفيش component tests~~ → **مُقفل جزئياً** (GroupSelector + phpApi). الـ3 صفحات الـadmin لسه بلا render test | تغطية الـadmin |
 | B17 | استخراج الأرشيف كان بلا حدود → **مُقفل** بـ`ArchiveExtractor` | — |
+| B19 | `Authorization` header مش بيوصل لـPHP على shared host → **إصلاح جاهز في v5، محتاج رفع** | تسجيل الدخول كله |
 | B18 | **anon key حقيقي في git history** من أول commit. الشجرة اتنضّفت، بس **المفتاح ما اتدوّرش** ولا اتمسح من الـhistory. أي حد عنده كلوز للريبو يقدر يقراه | لا شغل محلي — يحتاج **دوران المفتاح من Supabase** |
 
 ---
@@ -785,10 +858,10 @@ multipart ما بياخدش Content-Type، body فاضي ما بينبعتش، H
 - [x] كل كتابة في الواجهة إما تنجح أو تُظهر رسالة - صفر صمت (فحص آلي + 15 اختبار)
 - [x] كل الـ14 جدول لها قرار موثَّق
 - [x] CI خضراء على كل PR (مُعرَّفة؛ **branch protection لسه تحتاج GitHub**)
-- [ ] PHP host يرد 200 على `/health` + SSL صالح
-- [ ] تسجيل دخول حقيقي على production ناجح
+- [x] PHP host يرد 200 على `/health` + SSL صالح — **مُغلق 2026-10-03**: `scripts/verify_live_host.py` 14/14، PHP 8.4.25
+- [ ] تسجيل دخول حقيقي على production ناجح — **متبقّى**: محتاج حساب اختبار (المرحلة 7، مفتوحة الآن)
 - [ ] `restore/execute` ناجح عبر HTTP على production
-- [ ] حجب cross-group مُثبَت على الخادم (لا UI فقط)
+- [ ] حجب cross-group مُثبَت على الخادم (لا UI فقط) — **متبقّى**: محتاج login حقيقي
 - [x] كل سيناريو استغلال رُفض — **8.1-8.11 على production داخل rollback (7/7)**، و**8.7-8.10 محلياً (8/8)**
 - [x] PWA مُتحقَّق منه (Service Worker مُختبَر بـ22 حالة + manifest مُختبَر بـ10)
 - [ ] Lighthouse ≥ 90 على الصفحات الرئيسية

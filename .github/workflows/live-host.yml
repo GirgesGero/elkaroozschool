@@ -1,0 +1,33 @@
+name: live host
+
+# Verifies the deployed PHP origin rather than the local source.
+#
+# Kept out of the per-PR build on purpose: it sends real requests to a shared host and
+# spends the rate-limit budgets that the application itself uses, so running it on every
+# push would degrade the live site for whoever is testing it. Trigger it by hand before a
+# release, or after re-uploading the package.
+#
+# The host answers a JavaScript cookie challenge; scripts/verify_live_host.py solves it,
+# which is what a browser does. No authentication is bypassed -- every guarded route is
+# expected to refuse the forged token.
+
+on:
+  workflow_dispatch:
+    inputs:
+      host:
+        description: 'Origin to verify (default: the live host)'
+        required: false
+        default: 'elkaroozschool.is-best.net'
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install the AES dependency
+        run: pip install cryptography
+      - name: Verify the deployed origin
+        run: python scripts/verify_live_host.py '${{ github.event.inputs.host || 'elkaroozschool.is-best.net' }}'
