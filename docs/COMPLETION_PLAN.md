@@ -205,6 +205,36 @@ Middleware: 86.4 kB
 
 **التبعية:** 1.4 (لازم الـerror handling تكون موجودة قبل اختبارها).
 
+
+### ✅ مُنفَّذ فعلاً (2026-10-02)
+
+| # | الحالة | الدليل |
+|---|---|---|
+| 4.1 | ✅ | `vitest@3.2.7` مثبَّت، `npm test` + `npm run test:watch` في `package.json` |
+| 4.2 | ✅ | `tests/routeAccess.test.ts` - مصفوفة 14 حالة (دور × مسار) مكتوبة بخط اليد |
+| 4.3 | ✅ | `tests/dbErrors.test.ts` - 15 حالة على `explainDbError` و `dbWrite` |
+| 4.4 | ⚠️ جزئي | مغطى بالكامل (15 حالة) لكن بلا mocks لـ Supabase — الاختبار على المنطق لا على الشبكة |
+| 4.5 | ✅ | `.github/workflows/ci.yml` - وظيفتان: `frontend` (tsc + vitest + next build) و `backend` (3 سكربتات PHP) |
+| 4.6 | ❌ | لم يُنفَّذ - يحتاج branch protection على GitHub، ومخزون محلي |
+
+**المجموع: `29/29` ناجحة.**
+
+**حالة الـ4.4 الصريحة:** لا توجد أي مكتبة mock لـ Supabase في المشروع، والـ29 اختبارًا كلها نقية (pure). ده مقصود: اختبار
+الشبكة الحقيقية هنا كان هيعطي green على production مكسور. الفجوة الحقيقية المتبقية هي **component tests**: لا يوجد
+render لـ React tree والـ11 حالة الناقصة-error-handling مُغطّاة بمنطقها لا بسلوكها المُصيَّر.
+
+#### 🐛 بوج حقيقي كشفه 4.3 (أُصلح)
+
+`dbWrite()` كان يرمي نص الـ`fallbackMessage` كما هو. لو مرّر caller نصًا فاضيًا (وهو ممكن في الاستعمال العادي، والTypeScript
+لا يمنع `''`)، النتيجة `new Error('')` → صندوق خطأ **أبيض** في الواجهة. نفس الصمت اللي الوحدة موجودتين أصلاً عشان تمنعه.
+الإصلاح: `fallbackMessage || '…'` بجملة بديلة.
+
+تم التأكد إن الاختبار بيمسك التغيير: بإعادة الكود لنسخة `throw new Error(fallbackMessage)` الأصلية، فشل الاختبار
+`always rejects with a non-empty message, even given an empty fallback`، ورجع 29/29 بعد الإصلاح.
+
+**تصحيح في الخطة:** البند 4.5 كاتبة "typecheck + lint + build + tests" — مفيش `lint` في الـCI ولا في `package.json` أصلاً
+(مفيش eslint config بالمشروع). أُضيفت الأجزاء الموجودة فعلاً بدل ما أوصف حداً غير موجود.
+
 ---
 
 ## 🟡 المرحلة 5 - معالجة الأخطاء والتصلّب المتبقية
@@ -351,7 +381,7 @@ PHP — فاللي شفته في الـscreenshot الأول («Something Went W
 | 8.3 | `anon`/`authenticated` يستدعيان RPCs التصدير | `42501` |
 | 8.4 | `authenticated` يستدعي restore RPC بclaims super_user مزيفة | `42501` |
 | 8.5 | تصعيد trainee → `super_user` | `42501` أو `23505` - **مفيش ثغرة** (مُتحقَّق) |
-| 8.6 | تعديل `PASTORAL` من `super_user` | `403` (admin فقط) |
+| 8.6 | `authenticated` يغيّر `role_id` أو `deleted_at` لصف | لا صف معدل — `42501` (أُعيد بناءه، انظر أدناه) |
 | 8.7 | traversal على رفع الملفات | `400` |
 | 8.8 | ZIP bomb / archive bomb | رفض |
 | 8.9 | حقن CSV formula | محايدة |
@@ -359,6 +389,46 @@ PHP — فاللي شفته في الـscreenshot الأول («Something Went W
 | 8.11 | restore بأرشيف معدَّل الترقية | `23505` من `uq_single_super_user` (مُتحقَّق) |
 
 > **كل اختبار ينفَّذ داخل `BEGIN ... ROLLBACK`.** التحقق يستخدم `SET LOCAL ROLE authenticated` + `request.jwt.claims` - **لا** `current_user = postgres` أبدًا.
+> **تصحيح مُلزم على 8.3 و 8.6:** السكربت كان مكتوباً قبل الفحص الفعلي للجداول، وافتراضه خطأ في حالتين:
+>
+> - **8.3 كان مكتوباً "anon/authenticated يستدعيان RPCs التصدير"** — الفحص أثبت أن الـRPCs المستخدمة من الواجهة
+>   (`get_trainee_full_profile`, `get_trainee_attendance_summary`) لازم تفضل متاحة لـ`authenticated`، وإلا الواجهة مكسورة.
+>   الاختبار الصحيح هو: `anon` فقط، ومعه الإтверاد السالب.
+> - **8.6 كان مبنياً على `PASTORAL`** — ما هو **غير موجود**: لا في production، لا في migrations، لا في كود التطبيق.
+>   أُعيد بناءه حول السلوك الحقيقي: `authenticated` عادي لا يقدر يرقّي `role_id` إلى `super_user` ولا يضبط `deleted_at`.
+>
+> عمود `profiles.user_role` **غير موجود** — العمود الفعلي هو `profiles.role_id`. أي سكربت يستخدم `user_role` يفشل،
+> وهذا كان سبب أول خطأ في التشغيل.
+
+### ✅ مُنفَّذ فعلاً — 7/7 PASS على production (2026-10-02)
+
+السكربت: `scripts/verify_exploitation_suite.sql`. النتيجة الفعلية من تشغيله على production:
+
+| السيناريو | | النتيجة المُتحقَّق منها |
+|---|---|---|
+| 8.1 | ANON عبر `get_trainee_full_profile` | ✅ `42501` عند الـACL |
+| 8.2 | ANON عبر `get_trainee_attendance_summary` | ✅ `42501` عند الـACL |
+| 8.3 | ANON على 6 RPCs (3 group + 3 session/export) | ✅ `6/6` مرفوضة |
+| 8.4 | `restore_accounts` بـclaims `super_user` مزيفة | ✅ `42501` — الإذن مربوط بالدور لا بالـclaim |
+| 8.5 | ترقية `role_id` → `super_user` من دور عادي | ✅ `0` صف معدل |
+| 8.6 | تغيير `role_id` / `deleted_at` من دور عادي | ✅ `0 / 0` صف معدل |
+| 8.11 | إعادة تشغيل restore | ✅ `23505` |
+
+**كله داخل rollback — مفيش صف اتغيّر في production.**
+
+#### 🔴 اكتشاف مهم: ACL رجعت من جديد بدون migration مسجَّلة
+
+`has_function_privilege('anon', …, 'EXECUTE')` كان `true` رغم إن `20261001` كان شيل الـgrant. السبب: `REVOKE … FROM anon`
+**مش كافي** — الـPostgres بيدي `EXECUTE` لـ`PUBLIC` افتراضياً على أي دالة جديدة، و`anon` عضو في `PUBLIC`. فلازم
+`REVOKE EXECUTE … FROM PUBLIC`، مش من `anon` بس.
+
+الإصلاح: `supabase/migrations/20261002_revoke_public_execute_on_data_reading_rpcs.sql` — شيل الإذن من `PUBLIC` على
+الدوال الثماني، مع إبقاء `authenticated` (للواجهة) و`service_role` (للعمليات الإدارية). اتنفّذ على production، وبعدها
+`anon_exec=false` على الثماني، وprobes فردية رجّعت `42501`.
+
+> **فجوة مؤجَّلة موثّقة:** التعديل اتنفّذ كـraw SQL على production. لازم يتأكد إنه في ledger
+> `supabase_migrations.schema_migrations` برقم `20261002` — لو مش مسجَّل، إعادة بناء الـDB هترجّع `PUBLIC EXECUTE`.
+> دي مش حاجة أقدر أعملها بنفسي من هنا (محتاجة إنشاء migration من لوحة Supabase أو `supabase migration up`).
 
 ---
 

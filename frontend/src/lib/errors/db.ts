@@ -81,7 +81,15 @@ export async function dbWrite<T>(
   const { data, error } = await operation;
 
   if (error) throw new Error(explainDbError(error));
-  if (data === null) throw new Error(fallbackMessage);
+
+  // data === null with no error is a write that reported success and returned nothing.
+  // Passing the caller's fallback through verbatim would render an empty error box if
+  // that fallback is itself empty, which is a blank screen with no explanation -- the
+  // same silent failure this module exists to remove. So an empty fallback falls back
+  // to a sentence instead.
+  if (data === null) {
+    throw new Error(fallbackMessage || 'تم الحفظ لكن لم يتم إرجاع البيانات. حدّث الصفحة وحاول مرة أخرى.');
+  }
 
   return data;
 }
