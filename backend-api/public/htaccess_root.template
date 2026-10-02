@@ -96,5 +96,21 @@
     Header always unset X-Powered-By
 </IfModule>
 
-Options -Indexes -ExecCGI
-AddDefaultCharset UTF-8
+# ---------------------------------------------------------------------------
+# Directory listing.
+#
+# "Options -Indexes -ExecCGI" is what produced the "Something Went Wrong" page on
+# this host. The -Indexes flag is not accepted inside .htaccess by LiteSpeed, and
+# several shared hosts treat it as a hard 500 rather than ignoring it. mod_autoindex
+# is optional on most builds, so it is switched off through IfModule and skipped
+# where the module is absent.
+# ---------------------------------------------------------------------------
+<IfModule mod_autoindex.c>
+    Options -Indexes
+</IfModule>
+
+# UTF-8. Kept inside IfModule so a build without mod_mime does not turn the whole
+# file into a 500.
+<IfModule mod_mime.c>
+    AddDefaultCharset UTF-8
+</IfModule>

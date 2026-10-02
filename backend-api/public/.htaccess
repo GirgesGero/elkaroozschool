@@ -29,8 +29,16 @@
     Header always unset X-Powered-By
 </IfModule>
 
-# Security: Disable Directory Browsing and Script Execution in public assets
-Options -Indexes -ExecCGI
+# Disable directory browsing.
+#
+# "Options -Indexes -ExecCGI" is rejected inside .htaccess on this host (LiteSpeed),
+# which is what produced the "Something Went Wrong" page. mod_autoindex is optional
+# on most builds, so the directive is applied only where the module exists.
+<IfModule mod_autoindex.c>
+    Options -Indexes
+</IfModule>
 
 # Prevent MIME Sniffing & enforce UTF-8
-AddDefaultCharset UTF-8
+<IfModule mod_mime.c>
+    AddDefaultCharset UTF-8
+</IfModule>

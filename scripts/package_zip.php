@@ -23,12 +23,17 @@
 
 $root   = dirname(__DIR__);
 $beRoot = $root . '/backend-api';
-$outFile = getenv('LOCALAPPDATA') . '/ElKarooz-API-public_html.zip';
-// If the canonical path is held open by another process, fall back to a unique
-// name. A FIXED fallback name is not enough: once that one is locked too, every
-// later run fails identically. A PID-suffixed name cannot already be in use.
+$finalFile = getenv('LOCALAPPDATA') . '/ElKarooz-API-public_html.zip';
+// The build always writes to a temporary name and renames it into place only after
+// ZipArchive::close() has flushed, so a failed or interrupted run can never leave a
+// half-written archive sitting at the path a deployer would pick up.
+//
+// If the canonical path is held open by another process, the fallback is the canonical
+// path plus a PID, not a fixed name: once a fixed one is locked too, every later run
+// fails identically. A PID-suffixed name cannot already be in use.
+$outFile = $finalFile;
 if (file_exists($outFile) && !@unlink($outFile)) {
-    $outFile = sprintf('%s.%d.build', $outFile, getmypid());
+    $outFile = sprintf('%s.%d.build', $finalFile, getmypid());
     @unlink($outFile);
     echo "  [WARN] the previous archive is held open by another process;\n";
     echo "         building to " . basename($outFile) . " instead.\n";
@@ -65,7 +70,21 @@ foreach ($internalDirs as $d) {
 // 2. Refuse to package secrets.
 // ---------------------------------------------------------------------------
 echo "\n=== 2. Secret scan ===\n";
-$denyAllHtaccess = "Require all denied\n";
+// Apache 2.4 syntax alone is not enough. On Apache 2.2 and on LiteSpeed (which is
+// what this host runs) a bare "Require all denied" is either ignored or rejected, so
+// the guarded directory ends up web-reachable and the source is served as text.
+// Both dialects are emitted, each behind the IfModule that matches its own server,
+// which is the standard portable form.
+$denyAllHtaccess = <<<'HTACCESS'
+<IfModule mod_authz_core.c>
+    Require all denied
+</IfModule>
+<IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+</IfModule>
+HTACCESS;
+$denyAllHtaccess .= "\n";
 $forbidden = [];
 $iterator = new RecursiveIteratorIterator(
     new RecursiveDirectoryIterator($beRoot, FilesystemIterator::SKIP_DOTS)
@@ -168,6 +187,25 @@ for ($attempt = 1; $attempt <= 5; $attempt++) {
 if (!$closed) {
     fwrite(STDERR, "\nFATAL: could not finalize the archive at $outFile.\n");
     exit(1);
+}
+
+// Move the finished archive onto the canonical path. ZipArchive::close() writes to
+// the name the archive was opened with, so this has to be an explicit rename rather
+// than something close() does for us. Without it the build reports success while
+// leaving the PREVIOUS archive at the deploy path, and a stale package gets uploaded.
+if ($outFile !== $finalFile) {
+    $moved = false;
+    for ($attempt = 1; $attempt <= 5; $attempt++) {
+        if (@rename($outFile, $finalFile)) { $moved = true; break; }
+        usleep(300_000);
+    }
+    if (!$moved) {
+        fwrite(STDERR, "\nFATAL: built " . basename($outFile) .
+            " but could not move it onto " . basename($finalFile) . ".\n");
+        fwrite(STDERR, "        Upload the .build file instead, or close whatever is\n");
+        fwrite(STDERR, "        holding " . basename($finalFile) . " and rebuild.\n");
+        exit(1);
+    }
 }
 
 // ---------------------------------------------------------------------------
