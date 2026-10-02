@@ -553,8 +553,17 @@ PHP — فاللي شفته في الـscreenshot الأول («Something Went W
 السبعة ملفات بلا loading state كلها **static** (`about`, `providers`, `theme`, `settings`) أو stubs
 (`favorites`, `research`) أو مُغلّف (`GroupSelector`) — مش صفحات بتجيب data. مش فجوة حقيقية.
 
-**الفجوة الحقيقية المتبقية في 9.3:** مفيش **component tests** — مفيش render لـReact tree ولا assertions على
-سلوك ظاهر. كل الـ61 اختبار pure. دي فجوة معروفة وموثّقة، مش ادّعاء بتغطية.
+**الفجوة في component tests — اتقفلت جزئياً (2026-10-02):** أُضيف `tests/GroupSelector.test.tsx` بـ11 حالة
+بـ`@testing-library/react` على `jsdom`: تسمية الـtrigger بتتبع الاختيار، الـdropdown بيفتح ويقفل، الخلفية
+بتقفل من غير ما تختار، صف "جميع الفرق" بيظهر بس لما الـcaller يطلبه، والصف المختار عليه علامة.
+
+**إثبات إن الـsuite بتمسك السلوك:** كسرت الـtrigger so-it-ignores-`selectedGroupId` → فشل testين → رجّعت الأصل → 72/72.
+
+**فجوتان اتقفلتا أثناء العمل:** `vitest.config.ts` كان `include: tests/**/*.test.ts` — **أي `.tsx` مكنش بيتجمع أصلاً**،
+فكان ممكن أكتب suite كاملة وأتفلها من غير ما تشتغل. و`jsx: 'automatic'` كان ناقص فينفعش أي component test.
+وكمان `cleanup` مش شغّال تلقائياً تحت plain vitest.
+
+**الباقي:** صفر component tests على الـ10 صفحات الـadmin (Supabase-bound) — دي محتاجة mocks لـclient، وشغل منفصل.
 
 #### ❌ لم يُنفَّذ (يحتاج production أو جهاز)
 
@@ -593,22 +602,22 @@ PHP — فاللي شفته في الـscreenshot الأول («Something Went W
 
 | السويت | النتيجة |
 |---|---|
-| `frontend` — vitest | **61 / 61** |
+| `frontend` — vitest | **72 / 72** |
 | `scripts/verify_rate_limit_atomicity.php` | **4 / 4** |
 | `scripts/verify_client_ip.php` | **7 / 7** |
 | `scripts/verify_archive_attacks.php` | **8 / 8** |
 | `scripts/package_zip.php` | **34 / 34** |
-| **المجموع** | **114 assertion، صفر فشل** |
+| **المجموع** | **125 assertion، صفر فشل** |
 
 مضاف للـCI: frontend (tsc + vitest + next build) + backend (4 سكربتات PHP).
-61 commit محلي، شجرة نضيفة، صفر push لـGitHub.
+5 ملفات اختبار (منها `.tsx`)، 62 commit محلي، شجرة نضيفة، صفر push لـGitHub.
 
 ### مراحل مُقفَلة
 
 | # | المرحلة | الدليل |
 |---|---|---|
 | 1 | الـRLS + الكتابة | 14 جدول / 26 policy · `REVOKE FROM PUBLIC` على 8 RPCs · `daily_verses` read-only |
-| 4 | اختبارات الواجهة + CI | 61 اختبار · 4 ملفات · CI من وظيفتين |
+| 4 | اختبارات الواجهة + CI | 72 اختبار · 5 ملفات · CI من وظيفتين · أول component test |
 | 5 | أخطاء + تصلّب | بلا تسريب `getMessage()` · `ClientIp` · rate limiter ذرّي · `.user.ini` |
 | 8 | اختبارات الاستغلال | **7/7 على production داخل rollback** + **8/8 محلياً** |
 | 9 | جزئي | manifest + service worker مُصلحان ومُختبَران · 4 أيقونات PWA |
@@ -687,7 +696,7 @@ PHP — فاللي شفته في الـscreenshot الأول («Something Went W
 | B13 | **PWA manifest كان يمنع التثبيت** → مُقفل 2026-10-02 | — |
 | B14 | **stored XSS في service worker** → مُقفل 2026-10-02 | — |
 | B15 | ~~8.7-8.10 غير مُنفَّذة~~ → **مُقفل 2026-10-02**؛ ثغرة bomb حقيقية اتكتشف واتصلحت | — |
-| B16 | مفيش component tests ولا render لـReact tree | تغطية UI |
+| B16 | ~~مفيش component tests~~ → **مُقفل جزئياً** (GroupSelector). الـ10 صفحات الـadmin لسه بلا render test | تغطية الـadmin |
 | B17 | استخراج الأرشيف كان بلا حدود → **مُقفل** بـ`ArchiveExtractor` | — |
 
 ---
