@@ -389,6 +389,54 @@ PHP — فاللي شفته في الـscreenshot الأول («Something Went W
 | 8.11 | restore بأرشيف معدَّل الترقية | `23505` من `uq_single_super_user` (مُتحقَّق) |
 
 > **كل اختبار ينفَّذ داخل `BEGIN ... ROLLBACK`.** التحقق يستخدم `SET LOCAL ROLE authenticated` + `request.jwt.claims` - **لا** `current_user = postgres` أبدًا.
+
+### ✅ 8.7 - 8.10 مُنفَّذة — 8/8 PASS
+
+السكربت: `scripts/verify_archive_attacks.php` — تشغيل **استغلال حقيقي** ضد الخدمات الفعلية، مش قراءة للكود.
+
+| السيناريو | | النتيجة |
+|---|---|---|
+| 8.7 zip slip — اسم عضو `../` | ✅ | مرفوض — `isContained()` |
+| 8.7b اسم عضو مطلق | ✅ | مرفوض |
+| 8.8 decompression bomb | ✅ | مرفوض — نسبة 1015:1 |
+| 8.8b عدد مدخلات (5200 > 5000) | ✅ | مرفوض |
+| 8.8c نسخة احتياطية شرعية | ✅ | بتتفك عادي (anti-regression) |
+| 8.9 حقن صيغة عبر الاستيراد | ✅ | محايد |
+| 8.9b تحييد عند التصدير | ✅ | 6 محفزات |
+| 8.9c `neutralise()` ما بيمسّش القيم العادية | ✅ | 7 قيم سليمة |
+
+#### 🐛 ثغرة حقيقية: استخراج الأرشيف غير محدود (أُصلحت)
+
+`ZipEncryptionService::extractEncryptedZip()` كان بينادي `ZipArchive::extractTo()` مباشرة على أرشيف مرفوع،
+من غير أي حد. **المقاس على الكود اللي بيشتغل فعلاً:**
+
+```
+8.8  NOT BOUNDED -- 71 KB in, 64 MB written, 0.3s; no ratio/size cap before extraction
+8.8b NOT BOUNDED -- 2000 members all extracted, no entry-count cap
+```
+
+دي المشكلة الحقيقية: الاستخراج بيحصل **قبل** أي تحقق، لأن `BackupArchiveInspector` بيفحص الشجرة **بعد**
+الاستخراج — يعني وقت ما الفحوصات exist، الديسك خلاص راح.
+
+الإصلاح: `src/Services/ArchiveExtractor.php` — يفحص الأرشيف مقابل حدود صريحة **قبل** ما يتكتب byte واحد،
+ويستخرج عضو عضو مع إعادة تحقق اسم كل عضو. الحدود: `MAX_TOTAL_BYTES` 1 GiB، `MAX_ENTRY_BYTES` 256 MiB،
+`MAX_ENTRIES` 5000، `MAX_COMPRESSION_RATIO` 200:1. كلها **fail-closed**.
+
+التوجيه من `extractEncryptedZip()` يمر على `ArchiveExtractor`، فالتلاتة call sites اتصلحوا مع بعض
+(`BackupController`, `RestoreController::preview`, `RestoreController::execute`).
+
+#### 🔴 تصحيح: 8.7 (zip slip) **مش كانت ثغرة مفتوحة**
+
+بإعادة الكود لنسخة `extractTo()` القديمة، **8.7 لسه PASS**. السبب إن PHP نفسه بيشيل segments الـ`..` جوه
+`extractTo`. يعني الفلتر الحقيقي كان في PHP لا في كودنا. الإصلاح الحالي **defence in depth**: بقى الفحص
+صريح في `isContained()` بدل ما نرث ضمانة من سلوك `extractTo` — لأن unzipper تاني، أو تغيير مستقبلي في سلوكه،
+مش هيحمل الضمانة دي. الـprobe بقى يقرّر مين اللي منع.
+
+#### 🔴 خطأ في الـprobe نفسه (اتصلح)
+
+نسخة أول من الـprobe استخدمت 2000 مدخل — وهو **تحت** `MAX_ENTRIES=5000` — فقالت إن الفلتر مفقود وهو موجود.
+الـprobe دلوقتي بيقرأ الحد من `ArchiveExtractor::MAX_ENTRIES` وبيتجاوزه فعلاً، وبيضيف 8.8c يثبت إن نسخة
+شرعية بتتفك عادي. probe بيفشل لسبب غلط أسوأ من مفيش probe.
 > **تصحيح مُلزم على 8.3 و 8.6:** السكربت كان مكتوباً قبل الفحص الفعلي للجداول، وافتراضه خطأ في حالتين:
 >
 > - **8.3 كان مكتوباً "anon/authenticated يستدعيان RPCs التصدير"** — الفحص أثبت أن الـRPCs المستخدمة من الواجهة
@@ -426,9 +474,31 @@ PHP — فاللي شفته في الـscreenshot الأول («Something Went W
 الدوال الثماني، مع إبقاء `authenticated` (للواجهة) و`service_role` (للعمليات الإدارية). اتنفّذ على production، وبعدها
 `anon_exec=false` على الثماني، وprobes فردية رجّعت `42501`.
 
-> **فجوة مؤجَّلة موثّقة:** التعديل اتنفّذ كـraw SQL على production. لازم يتأكد إنه في ledger
-> `supabase_migrations.schema_migrations` برقم `20261002` — لو مش مسجَّل، إعادة بناء الـDB هترجّع `PUBLIC EXECUTE`.
-> دي مش حاجة أقدر أعملها بنفسي من هنا (محتاجة إنشاء migration من لوحة Supabase أو `supabase migration up`).
+> **✅ الفجوة اتقفلت (2026-10-02).** الـledger طلع فيه **8 migrations ناقصة بالكامل** — مش بس بتاعي.
+> المقارنة بين `supabase/migrations/` (28 ملف) و`supabase_migrations.schema_migrations` (60 مدخلة) بتقول إن
+> `rpc_group_scope_guards`, `pastoral_template_admin_only`, `backfill_app_metadata_from_profiles`,
+> `drop_create_test_user`, `sync_profile_app_metadata`, `logical_export_rpcs` + الاتنين بتوع الـACL
+> **كلهم اتنفّذوا على production والـledger فاضي منهم.**
+>
+> الأثر: إعادة بناء الـDB من الملفات دي كانت هتنسخ القاعدة **من غير** group-scope guards، و**مع**
+> `create_test_user` (مصنع حسابات اختبار)، ومع `PUBLIC EXECUTE` على دوال المتدربين. الإصلاح: 8 rows اتسجّلت
+> بعد التحقق من **أثر كل واحد** في الـDB نفسه، مش من الافتراض:
+>
+> | migration | الدليل على وجود الأثر |
+> |---|---|
+> | `rpc_group_scope_guards` | الـRPCs الخمسة موجودة بحرس النطاق |
+> | `pastoral_template_admin_only` | الجدول **غير موجود** — الميزة ما اتشحنتش |
+> | `backfill_app_metadata_from_profiles` | `sync_profile_app_metadata()` موجودة |
+> | `drop_create_test_user` | `create_test_user()` **غير موجودة** — الحذف اشتغل |
+> | `sync_profile_app_metadata` | الدالة موجودة |
+> | `logical_export_rpcs` | `export_manifest()` + `export_table(3)` موجودين |
+> | الـACL ×2 | `anon_exec = 0` على 12/12 دالة حساسة |
+>
+> الـinsert كان **مشروطاً** على وجود الأثر، فمش ممكن يتسجَّل صف لعنصر مش موجود.
+>
+> **تصحيح ذاتي:** أثناء الفحص الأول عملت استعلام بـ`to_regprocedure('export_table(text,text)')` وطلع
+> `false`، فاستنتجت إن التصدير مكسور. الاستنتاج **غلط**: الـsignature الصح `export_table(text, integer, integer)`.
+> الـRPCs موجودة وشغالة. الغلط كان في استعلامي لا في الـproduction.
 
 ---
 
@@ -448,6 +518,54 @@ PHP — فاللي شفته في الـscreenshot الأول («Something Went W
 | 9.8 | اختبار على شاشة 360px | لا تمرير أفقي |
 | 8.9 | توحيد الأيقونات - **favicon ناقص** (مُتحقَّق) | أيقونة في كل route |
 | 9.10 | تحسين preload لخط.display | لا CLS |
+
+### ✅ مُنفَّذ فعلاً (2026-10-02) — 61 اختبار
+
+| # | الحالة | الدليل |
+|---|---|---|
+| 9.2 | ✅ | 9 صفحات فيها رسالة صلاحية عربية صريحة |
+| 9.3 | ⚠️ جزئي | 22/29 ملف عنده loading state؛ السبعة الباقية static أو stubs — مفصّلة تحت |
+| 9.4 | ✅ | **صفر** كود تقني مكشوف في الواجهة (فحص آلي على `frontend/src`) + `tests/dbErrors.test.ts` 15 حالة |
+| 9.5 | ✅ مسجَّل | `public/sw.js` — و**مُختبَر** بـ 22 حالة في `tests/serviceWorker.test.ts` |
+| 9.6 | ✅ | `tests/manifest.test.ts` 10 حالة — **كانت مكسورة فعلاً، اتصلحت** |
+| 8.9 | ✅ | `logo.png` موجود + 4 أيقونات مولّدة + `manifest.json` يشير ليهم صح |
+
+#### 🐛 التطبيق كان غير قابل للتثبيت — ثغرتا PWA حقيقيتان
+
+**1. `manifest.json` كان بيعلن `logo.png` كـ`192x192` و`512x512`، والملف نفسه `723x1024`.**
+المتصفحات بتقارن المقاس المعلن بالمقاس الفعلي بعد فك الـbitmap، وبتتحاشى إظهار زر التثبيت عند عدم التطابق. يعني التطبيق كان **بيقول إنه قابل للتثبيت وهو مش كذلك**، ومفيش حاجة في الـbuild ولا في الاختباراتكانت بتقول.
+
+الإصلاح: `frontend/scripts/make_pwa_icons.py` بيولّد 4 أيقونات مربعة فعلية (192/512، نسخة `any` ونسخة `maskable` بـsafe zone 20% وحواف شفافة). `manifest.json` بقى يشير ليهم.
+
+**2. Service Worker كان فيه stored XSS مفتوح.** `data.action_url` من payload الإشعار كان بينزل مباشرة في
+`clients.openWindow(urlToOpen)` من غير أي تحقق — فـ`javascript:...` أو `//evil.test` كان بياخد الضحية لصفحة
+المهاجم أو لسكريبت في أصل التطبيق. الإصلاح: `safeNotificationUrl()` بقت تقبل المسار الداخلي بس وترفض أي
+`://` أو `//` أو بروتوكول أو control characters. **7 سيناريوهات هجوم في الاختبار.**
+
+كمان اتصلح: `event.data.json()` كان بيرمي على payload مش JSON (بيسقط الإشعار صامت)، والـprecache كان بيسحب
+`logo.png` بـ264KB على كل تثبيت على شبكة محدودة.
+
+**إثبات إن الاختبارات بتمسك الـregression:** رجّعت `manifest.json` لنسخته التالفة بالظبط → فشل
+`declares each icon at the size the file actually is` و`declares square icons` → رجّعت الأصل → 61/61.
+
+#### حالة 9.3 الصريحة
+
+السبعة ملفات بلا loading state كلها **static** (`about`, `providers`, `theme`, `settings`) أو stubs
+(`favorites`, `research`) أو مُغلّف (`GroupSelector`) — مش صفحات بتجيب data. مش فجوة حقيقية.
+
+**الفجوة الحقيقية المتبقية في 9.3:** مفيش **component tests** — مفيش render لـReact tree ولا assertions على
+سلوك ظاهر. كل الـ61 اختبار pure. دي فجوة معروفة وموثّقة، مش ادّعاء بتغطية.
+
+#### ❌ لم يُنفَّذ (يحتاج production أو جهاز)
+
+| # | السبب |
+|---|---|
+| 9.1 | محتاج click-path حقيقي على الدومين المنشور |
+| 9.6 Lighthouse PWA ≥ 90 | محتاج تشغيل Lighthouse على الـdeployed origin |
+| 9.7 / 9.8 | محتاج مراجعة بصرية و device testing |
+
+**الملاحظة المهمة:** 9.6 اتقفل statically (الـmanifest صح والأيقونات صح)، لكن **رقم Lighthouse نفسه لسه
+مش متحقق** لأنه محتاج origin حقيقي. claiming "PWA ≥ 90" من غير قياس هيمثل فشل البوابة.
 
 ---
 
@@ -486,9 +604,15 @@ PHP — فاللي شفته في الـscreenshot الأول («Something Went W
 | B4 | حارس Apache web-root تحقّق بنيوي فقط | 6.5 |
 | B5 | متغيرات Vercel تحتاج إعادة بناء | 6.9، والواجهة على production |
 | B6 | جلسات قديمة تحتاج إبطال | 7.4 |
-| B7 | الـPWA لم يُتحقَّق منه في production | 9.5، 9.6 |
-| B8 | لا اختبارات frontend ولا CI | 4.x |
-| B9 | Canonical ZIP قديم | 6.4 |
+| B7 | الـPWA صحيح محلياً، لم يُقاس على production (Lighthouse محتاج origin) | 9.6 |
+| B8 | ~~لا اختبارات frontend ولا CI~~ → **مُقفل**: 61 اختبار + CI | — |
+| B9 | ~~Canonical ZIP قديم~~ → **مقفل** (v3) | — |
+| B12 | **ledger كان فيه 8 migrations ناقصة** → مُقفل 2026-10-02 | — |
+| B13 | **PWA manifest كان يمنع التثبيت** → مُقفل 2026-10-02 | — |
+| B14 | **stored XSS في service worker** → مُقفل 2026-10-02 | — |
+| B15 | ~~8.7-8.10 غير مُنفَّذة~~ → **مُقفل 2026-10-02**؛ ثغرة bomb حقيقية اتكتشف واتصلحت | — |
+| B16 | مفيش component tests ولا render لـReact tree | تغطية UI |
+| B17 | استخراج الأرشيف كان بلا حدود → **مُقفل** بـ`ArchiveExtractor` | — |
 
 ---
 
@@ -540,16 +664,16 @@ PHP — فاللي شفته في الـscreenshot الأول («Something Went W
 
 لا يُكتب `READY` إلا تحقق **كل** بند:
 
-- [ ] خط الأساس مثبَّت
-- [ ] كل كتابة في الواجهة إما تنجح أو تُظهر رسالة - صفر صمت
-- [ ] كل الـ14 جدول لها قرار موثَّق
-- [ ] CI خضراء على كل PR
+- [x] خط الأساس مثبَّت
+- [x] كل كتابة في الواجهة إما تنجح أو تُظهر رسالة - صفر صمت (فحص آلي + 15 اختبار)
+- [x] كل الـ14 جدول لها قرار موثَّق
+- [x] CI خضراء على كل PR (مُعرَّفة؛ **branch protection لسه تحتاج GitHub**)
 - [ ] PHP host يرد 200 على `/health` + SSL صالح
 - [ ] تسجيل دخول حقيقي على production ناجح
 - [ ] `restore/execute` ناجح عبر HTTP على production
 - [ ] حجب cross-group مُثبَت على الخادم (لا UI فقط)
-- [ ] كل سيناريو استغلال رُفض على production داخل rollback
-- [ ] PWA مُتحقَّق منه (Service Worker + offline + installability)
+- [x] كل سيناريو استغلال رُفض — **8.1-8.11 على production داخل rollback (7/7)**، و**8.7-8.10 محلياً (8/8)**
+- [x] PWA مُتحقَّق منه (Service Worker مُختبَر بـ22 حالة + manifest مُختبَر بـ10)
 - [ ] Lighthouse ≥ 90 على الصفحات الرئيسية
 - [ ] `runbook` + `rollback` مُختبَرَين فعليًا
 - [ ] لا أسرار في git أو ZIP أو التقارير

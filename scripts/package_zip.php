@@ -65,6 +65,12 @@ check('backend-api/public/.htaccess exists', is_file($beRoot . '/public/.htacces
 check('backend-api/public/.user.ini exists (remediation 5.2)',
       is_file($beRoot . '/public/.user.ini'));
 
+// ArchiveExtractor is the class that bounds archive extraction. ZipEncryptionService
+// delegates to it, so if it were left out of the package the service would fatal on an
+// uploaded backup -- a failure only an operator would discover, and only on restore.
+check('backend-api/src/Services/ArchiveExtractor.php is present (remediation 8.8)',
+      is_file($beRoot . '/src/Services/ArchiveExtractor.php'));
+
 $rootTemplate = $beRoot . '/public/htaccess_root.template';
 check('root guard template exists', is_file($rootTemplate));
 
@@ -284,7 +290,11 @@ check('every class index.php requires is present in the archive',
 check('.user.ini is packaged at the archive root',
       in_array('.user.ini', $names, true));
 
-check('DatabaseExportService is packaged with the BackupController that uses it',
+check('ArchiveExtractor.php is packaged (remediation 8.8)',
+      in_array('src/Services/ArchiveExtractor.php', $names, true)
+      || in_array('Services/ArchiveExtractor.php', $names, true));
+
+check('the package ships DatabaseExportService with the BackupController that uses it',
       in_array('src/Services/DatabaseExportService.php', $names, true)
       && in_array('src/Controllers/BackupController.php', $names, true));
 check('the packaged index.php requires DatabaseExportService',

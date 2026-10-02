@@ -69,3 +69,13 @@ jobs:
       # the build, not wait for the next upload to a live host.
       - name: Deploy package builds and passes its assertions
         run: php scripts/package_zip.php
+
+      # Real exploits against the restore and import paths, run as attacks rather than
+      # assertions about the source: a zip slip, a decompression bomb, a member-count
+      # bomb, and spreadsheet formula injection. A guard that exists but does not hold
+      # fails this job.
+      #
+      # The bomb needs headroom over PHP's 128M default because the probe builds the
+      # archive on disk but the service extracts it in memory.
+      - name: Archive and spreadsheet attacks are blocked
+        run: php -d memory_limit=512M scripts/verify_archive_attacks.php

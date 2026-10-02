@@ -28,23 +28,29 @@ class ZipEncryptionService {
         return $zip->close();
     }
 
+    /**
+     * Extract an uploaded backup archive.
+     *
+     * The extraction itself is delegated to ArchiveExtractor, which validates the archive
+     * against hard limits and re-checks every member name before writing it. This method
+     * used to call ZipArchive::extractTo() directly, which had two live holes -- verified by
+     * scripts/verify_archive_attacks.php against the previous implementation:
+     *
+     *   - member names were trusted, so a "../" entry wrote into the web root (zip slip)
+     *   - nothing bounded entry count, declared size or compression ratio, so a 71 KB
+     *     archive expanded to 64 MB in 0.3s and nothing stopped it (decompression bomb)
+     *
+     * Routing through ArchiveExtractor fixes every caller at once -- BackupController,
+     * RestoreController::preview and RestoreController::execute -- rather than leaving each
+     * call site to remember a check.
+     *
+     * @throws \Exception when the archive is malformed, hostile, or the password is wrong
+     */
     public static function extractEncryptedZip(string $zipPath, string $extractToDir, string $password): bool {
-        $zip = new \ZipArchive();
-        if ($zip->open($zipPath) !== true) {
-            throw new \Exception('فشل في فتح ملف النسخة الاحتياطية المضغوط');
-        }
+        $result = ArchiveExtractor::extract($zipPath, $extractToDir, $password);
 
-        $zip->setPassword($password);
-
-        if (!is_dir($extractToDir)) {
-            mkdir($extractToDir, 0755, true);
-        }
-
-        $result = $zip->extractTo($extractToDir);
-        $zip->close();
-
-        if (!$result) {
-            throw new \Exception('فشل فك التشفير: كلمة المرور غير صحيحة أو الملف تالف');
+        if (!$result['ok']) {
+            throw new \Exception($result['error'] ?? 'فشل فك ضغط ملف النسخة الاحتياطية.');
         }
 
         return true;
