@@ -256,6 +256,67 @@ Middleware: 86.4 kB
 | 6.8 | ضبط CORS بين `elkaroozschool-seven.vercel.app` والـPHP | طلب حقيقي ينجح |
 | 6.9 | إعادة بناء Vercel بمتغيرات البيئة | vars على **كل** البيئات، لا Production فقط |
 
+> ### نتيجة فحص 6.2 (2026-10-02) — الرفع تم، لكن الدومين ده مش الاستضافة
+
+فحص فعلي بعد الرفع، لا استنتاج:
+
+| القياس | النتيجة |
+|---|---|
+| DNS `elkaroozschool.is-best.net` | `185.27.134.59` |
+| TCP 80/443 | متصلين |
+| TLS | ✅ **نجح** — TLSv1.3، الشهادة صالحة (SAN يشمل wildcard `*.is-best.net`) |
+| HTTP | `200 OK` — لكن بايمحتوى JS مش `/health` |
+| `Server:` | **`openresty`** — مش Apache/LiteSpeed |
+| جسم الرد | صفحة challenge: `<script src="/aes.js">` + `slowAES.decrypt` |
+| `/nonexistent-zzz-12345` | **نفس صفحة challenge بالظبط** |
+| subdomain وهمي (`zzq7x9k3nonexistent`) | فشل DNS ✅ |
+| `api.elkarooz-school.com` | **فشل DNS** — النطاق مش مُفعَّل |
+
+### الدليل الحاسم: مفيش PHP على الدومين ده
+
+المسارات الأربعة دي رجّعت نفس صفحة challenge بالبايت، مع اختلاف 3 بايتات بس في الحجم
+(نفس الـpadding):
+
+| المسار | النتيجة |
+|---|---|
+| `/health` | 200 · challenge · 859 bytes |
+| `/index.php` | 200 · challenge · 862 bytes |
+| `/config/supabase.php` | 200 · challenge · 872 bytes |
+| `/nonexistent-zzz-12345` | 200 · challenge · 874 bytes |
+
+**مسار مش موجود رجّع 200 بدل 404.** ده مستحيل لو فيه تطبيق PHP شغال — أي تطبيق
+بيرد 404 على الأقل. وبما إن `/config/supabase.php` رجّع نفس الرد، فمفيش
+ملف اتقري أصلاً.
+
+الـchallenge ده بوابة حماية بتاع **مزوّد الاستضافة** (openresty + AES)، بتحوّل
+المتصفح لـJS cookie قبل ما يوصل الطلب لأصل الـbackend. مش LiteSpeed ولا Apache ولا
+PHP — فاللي شفته في الـscreenshot الأول («Something Went Wrong») كان من طبقة
+أخرى تماماً عن اللي اتصلّح في v2/v3.
+
+### يعني إيه عملياً
+
+- ✅ **v3 اترفع** — بس مش على دومين استضافة PHP.
+- ❌ **مفيش استضافة PHP متوصلة بـ`is-best.net`.** محتاجة subdomain أو نطاق
+  متسجل في لوحة cPanel/ISPConfig عند المزوّد نفسه، مع **PHP-FPM مفعّل** و
+  `.htaccess` متقرأ (AllowOverride All).
+- الـTLS اتحسّن عن الجلسة السابقة (كان بيقفل renegotiation، دلوقتي handshake
+  سليم) — بس ده تحسّن البوابة مش التطبيق.
+
+### الخطوة المطلوبة من المستخدم
+
+1. تأكيد إن الاستضافة **PHP** فيها، مش static hosting بس.
+2. معرفة الـsubdomain أو النطاق الفعلي اللي اتربطت بيه (اللي راجع في لوحة
+   الاستضافة، مش اللي في التوثيق).
+3. التأكد إن `PHP-FPM` مفعّل للاستضافة دي، و`Open Basedir` يسمح بـ`public_html`.
+4. رفع v3 على `public_html` بتاع **الاستضافة**، مش على نطاق البوابة.
+
+### ❌ لم يُغلق
+
+بند 6.2 **ما زال مفتوحاً** — مفيش `200` على `/health` من تطبيق PHP حقيقي بعد.
+وبنود 6.5 (حراس 403)، 6.6 (login)، 6.7 (restore عبر HTTP)، 6.8 (CORS)، 6.9
+(Vercel) كلها معلّقة على نفس السبب. المرحلة 7 (مصفوفة الأدوار على production)
+مش قابلة للإثبات قبله.
+
 > **قاعدة لا تُكسر:** نجاح اختبار SQL على production **ليس بديلاً** عن اختبار PHP/Apache/Auth المنشور. كل بند من بنود B7 المفتوحة يُغلق بطلب HTTP حقيقي فقط.
 
 ---
