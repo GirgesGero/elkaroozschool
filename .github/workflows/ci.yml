@@ -89,3 +89,6 @@ jobs:
       # history and in every existing clone: rotate it in Supabase, then purge.
       - name: No credential is committed
         run: python scripts/verify_no_credential_leaks.py
+
+        - name: Check that no exception text reaches an HTTP response
+          run: python scripts/verify_no_error_leaks.py

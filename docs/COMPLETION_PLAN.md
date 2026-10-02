@@ -679,6 +679,77 @@ cryptographically بعد كده، فمفيش ضعف — الـtoken المزوّ
 | **2** قياس الأداء | 🔓 **مفتوحة** — محتاج traffic |
 | **10** توثيق | 🔓 **مفتوحة** — غير محجوبة |
 
+---
+
+## 🔴 v7 — فحص الحزمة بايت-ببايت، وبوج تسريب paths اتقفل (2026-10-03)
+
+طلب المستخدم التحقق من الحزمة قبل الرفع. عملت الفحص على **بايتات الـZIP نفسها**،
+مش على المصدر — لأن الحزمة هي اللي هترفع، وممكن تكون أقدم من المصدر.
+
+**البنية:** 50 entry · CRC سليم · `index.php` في الجذر · مفيش path traversal ·
+`index.php` index نضيف · `.htaccess` على `config/ src/ vendor/ storage/` ·
+**43/43 ملف PHP نظيف على `php -l`**.
+
+**الأسرار:** صفر. لا JWT، لا `*.supabase.co`، لا مفتاح، لا `password` inline.
+كل الاعتمادات من `getenv()` **بلا fallback** —лей если ناقص، السيرفر يموت بـ
+`500 CONFIG_MISSING` بدل ما يقلع بـguessable secret.
+
+### 🐛 بوج حقيقي كان فاضي من فحص الـsecrets: استثناءات بيسلّم paths للعميل
+
+الـ`catch (\Exception $e)` في أربع controllers كان بيعمل
+`Response::error($e->getMessage(), ...)`. أغلب الـmessages نصوص عربية ثابتة —
+بس **ثلاث services بتحطّ حالة السيرفر جوه نص الاستثناء**:
+
+| من أين | نص الاستثناء |
+|---|---|
+| `AtomicRestoreService` | `'فشل نسخ الملف: ' . $src` — **المسار الكامل** |
+| `AppRoot` | `'... Checked upward from ' . __DIR__ .` |
+| `DatabaseRestoreService` | `'جدول ' . $table . ' جدول داخلي'` |
+
+**الاستغلال:** `POST /restore/preview` محتاجة `admin` بس. لكن «admin-only» مش
+دفاع: **admin token لو اتسرّب مرة واحدة**، رسالة الخطأ دي بتحوّل لـ**خريطة filesystem
+للسيرفر** — اسم مجلد الـstaging، الـapp root، وهل المسار اللي خمّنه موجود فعلاً.
+وده reconnaissance مباشر.
+
+**الإصلاح:** `refuse()` في كل controller — تفاصيل الـexception تروح `error_log()`
+تحت **error_id**، والعميل ياخد **كود مستقر + رقم** يقابله في اللوج.
+
+**إثبات-by-mutation:** نفس الطلب بتوكن admin **صالح التوقيع**:
+
+```
+v7   → RESTORE_PREVIEW_FAILED · «فشلت العملية… رقم الخطأ: a3f9c2e1»
+قديم → RESTORE_PREVIEW_FAILED · «تعذر فتح ملف النسخة الاحتياطية.»   ← كان بيسلّم الرسالة
+```
+
+### ✅ إثبات إن إصلاح الـ`Authorization` شغّال فعلاً (مش بس موجود في الكود)
+
+بنيت سيرفر بيحاكي shared host: الـheader موجود على الـwire بس `$_SERVER` بيحمله
+تحت `REDIRECT_HTTP_AUTHORIZATION` بس — بالظبط حالة LiteSpeed.
+
+```
+v7 (3-key fallback)                → 401 INVALID_TOKEN   ← وصل وتوقيعه اتفحص
+MUTATED (القراءة القديمة بمفتاح)     → 401 UNAUTHORIZED    ← «التوكن غير موجود»
+```
+
+### الفحوص السلوكية على v7 (١٩/١٩)
+
+| الفحص | النتيجة |
+|---|---|
+| fail-closed: كل متغير ناقص لوحده | `500 CONFIG_MISSING` × 4 · **صفر قيمة مسرّبة** |
+| 12 route بتوكن مزوّر | `401 INVALID_TOKEN` × 12 |
+| CORS | `elkarooz-school.com` ✅ · `evil.example` ❌ · `localhost:3000` ❌ |
+| rate limiting | `backup/create` = 5/5د · الـbudget بيبرد بالوقت |
+
+**الفرق عن v6:** 4 controllers اتغيّروا. **عن v5:** `.htaccess` + الـ4.
+الحزمة المرجعية الآن: **`ElKarooz-API-public_html-v7.zip`** (85,102 bytes).
+
+### ملاحظة على ٤ تأكيدات كانت غلط في الفحص
+
+طلبت `404` لمسارات الـ`.htaccess` بيمنعها بـ`403` عمداً · بلّشت الـconnection
+drop كـfailure وهو **أقوى** نتيجة · حسبت `429` كـ«token accepted» بينما الـlimiter
+بيشتغل قبل المصادقة · توقعت حد `backup/create` = 3 وهو **5**. كلهم اتصلحوا بعد
+التشغيل، والأرقام في الجدول أعلاه من التشغيل الحقيقي مش من توقّعي.
+
 ## 📊 الحالة الفعلية — 2026-10-02
 
 الأرقام دي مقيسة من تشغيل السكربتات نفسها، مش من جداول الخطة. أي بند ما كتشغّلتهاش
@@ -695,6 +766,8 @@ cryptographically بعد كده، فمفيش ضعف — الـtoken المزوّ
 | `scripts/package_zip.php` | **34 / 34** |
 | `scripts/verify_no_credential_leaks.py` | **4 / 4** |
 | `scripts/verify_live_host.py` (على الـorigin الحقيقي) | **14 / 14** |
+| `scripts/verify_no_error_leaks.py` | **1 / 1** (33 ملف PHP) |
+| فحص الحزمة على البايتات (v7) | **43 / 43** |
 | **المجموع** | **167 assertion، صفر فشل** |
 
 مضاف للـCI: frontend (tsc + vitest + next build) + backend (4 سكربتات PHP).

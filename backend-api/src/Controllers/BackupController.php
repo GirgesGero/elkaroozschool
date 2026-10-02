@@ -202,7 +202,7 @@ class BackupController {
             if (file_exists($targetZipPath)) {
                 @unlink($targetZipPath);
             }
-            Response::error($e->getMessage(), 'BACKUP_FAILED', 500);
+            $this->refuse($e, 'BACKUP_FAILED', 500);
         } finally {
             // The staging tree holds unencrypted copies of every user file.
             FsHelper::removeDirectoryQuietly($tempStagingDir);
@@ -282,7 +282,7 @@ class BackupController {
                 ], 'الملف نسخة احتياطية صالحة');
             } catch (\Exception $e) {
                 // A wrong password surfaces here as a decryption failure.
-                Response::error($e->getMessage(), 'DECRYPTION_FAILED', 400);
+                $this->refuse($e, 'DECRYPTION_FAILED', 400);
             } finally {
                 FsHelper::removeDirectoryQuietly($extractDir);
             }
@@ -429,4 +429,40 @@ class BackupController {
                 ? 'تم حذف النسخة الاحتياطية'
                 : 'تم تحديث السجل؛ ملف النسخة لم يُعثر عليه على القرص');
         }
+    
+
+    /**
+     * Refuse a failure without describing it.
+     *
+     * The upstream services throw messages that interpolate real server state --
+     * AtomicRestoreService reports 'فشل نسخ الملف: ' . $src, AppRoot reports the
+     * directory it walked up from, DatabaseRestoreService names archive members.
+     * Returning those to the caller hands whoever holds the token a map of the
+     * filesystem layout, the staging directory name, and whether a guessed path
+     * exists. Being admin-only is not a defence: an admin token that leaks once
+     * turns a restore error into reconnaissance for whoever holds it.
+     *
+     * The operator still needs to know WHAT failed, so the failure class is kept and
+     * the detail goes to the log under a correlation id the caller can quote.
+     *
+     * @param string $opaqueCode the stable, caller-safe failure class
+     */
+    private function refuse(\Exception $e, string $opaqueCode, int $status): void
+    {
+        $errorId = substr(bin2hex(random_bytes(4)), 0, 8);
+        error_log(sprintf(
+            '[EL KAROOZ] %s [%s] %s in %s:%d',
+            $opaqueCode,
+            $errorId,
+            $e->getMessage(),
+            $e->getFile(),
+            $e->getLine()
+        ));
+        Response::error(
+            'فشلت العملية. لم يتم تعديل النظام. رقم الخطأ: ' . $errorId,
+            $opaqueCode,
+            $status,
+            ['error_id' => $errorId]
+        );
     }
+}

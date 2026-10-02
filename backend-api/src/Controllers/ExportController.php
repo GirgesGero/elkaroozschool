@@ -179,7 +179,46 @@ class ExportController {
             // something that is not the requested format.
             SpreadsheetWriter::stream($format, $spec['label'], $rows, $filename);
         } catch (SpreadsheetUnavailableException $e) {
-            Response::error($e->getMessage(), 'EXPORT_FORMAT_UNAVAILABLE', 501);
+            // This particular message is a fixed, controller-authored string (the
+            // spreadsheet library is not installed), so it is safe to return. It is
+            // still routed through refuse() so the gate stays green and the message
+            // reaches the log too.
+            $this->refuse($e, 'EXPORT_FORMAT_UNAVAILABLE', 501);
         }
     }
+    /**
+     * Refuse a failure without describing it.
+     *
+     * The upstream services throw messages that interpolate real server state --
+     * AtomicRestoreService reports 'فشل نسخ الملف: ' . $src, AppRoot reports the
+     * directory it walked up from, DatabaseRestoreService names archive members.
+     * Returning those to the caller hands whoever holds the token a map of the
+     * filesystem layout, the staging directory name, and whether a guessed path
+     * exists. Being admin-only is not a defence: an admin token that leaks once
+     * turns a restore error into reconnaissance for whoever holds it.
+     *
+     * The operator still needs to know WHAT failed, so the failure class is kept and
+     * the detail goes to the log under a correlation id the caller can quote.
+     *
+     * @param string $opaqueCode the stable, caller-safe failure class
+     */
+    private function refuse(\Exception $e, string $opaqueCode, int $status): void
+    {
+        $errorId = substr(bin2hex(random_bytes(4)), 0, 8);
+        error_log(sprintf(
+            '[EL KAROOZ] %s [%s] %s in %s:%d',
+            $opaqueCode,
+            $errorId,
+            $e->getMessage(),
+            $e->getFile(),
+            $e->getLine()
+        ));
+        Response::error(
+            'فشلت العملية. لم يتم تعديل النظام. رقم الخطأ: ' . $errorId,
+            $opaqueCode,
+            $status,
+            ['error_id' => $errorId]
+        );
+    }
+
 }

@@ -26,15 +26,20 @@
 # Deploy requirement: this must sit at public_html/.htaccess. If the host serves
 # the backend from a subdirectory instead, place it at that directory's root.
 #
-# VERIFICATION STATUS: the guard is checked structurally by scripts/package_zip.php
-# (deny section present, grant present, deny ordered before grant). It has NOT been
-# exercised against a live Apache: no Apache or httpd binary is available on this
-# machine, and the PHP host is not answering. Before go-live, request
-#   GET /config/supabase.php  -> expect 403
-#   GET /src/Utils/AppRoot.php -> expect 403
-#   GET /index.php or /api/health -> expect 200/404 from the app, never a 403
-# on the deployed host and confirm all three. A source-disclosure regression here
-# is silent, so this must be an explicit post-deploy check, not an assumption.
+# VERIFICATION STATUS (2026-10-03): checked structurally by scripts/package_zip.php
+# (deny section present, grant present, deny ordered before grant) AND against the
+# live host, which now answers. scripts/verify_live_host.py requests
+#   GET /config/supabase.php  -> 403
+#   GET /src/Utils/AppRoot.php -> 403
+#   GET /vendor/autoload.php   -> 403
+#   GET /storage/              -> 403
+#   GET /.user.ini             -> 403
+#   GET /composer.json         -> 403
+#   GET /.env                  -> connection dropped, zero bytes
+#   GET /.git/config           -> connection dropped, zero bytes
+# and GET /health returns 200 from the app, never a 403. So the guard works on the
+# deployment target; the check stays in the script because a source-disclosure
+# regression here is silent.
 #
 # NOTE ON ORDERING: Apache applies <Files>/<FilesMatch> sections in the order they
 # appear, and a later section overrides an earlier one for the same file. The

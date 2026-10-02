@@ -72,7 +72,7 @@ class RestoreController {
                 'default_truncate_mode' => 'MERGE',
             ], 'معاينة النسخة الاحتياطية جاهزة للتأكيد');
         } catch (\Exception $e) {
-            Response::error($e->getMessage(), 'RESTORE_PREVIEW_FAILED', 400);
+            $this->refuse($e, 'RESTORE_PREVIEW_FAILED', 400);
         } finally {
             // The decrypted plaintext must not outlive the request. The previous
             // implementation unlinked one file then rmdir'd a directory still full of
@@ -153,7 +153,7 @@ class RestoreController {
                 'storage',
                 null,
                 null,
-                ['mode' => $mode, 'error' => $e->getMessage(), 'rolled_back' => true]
+                ['mode' => $mode, 'rolled_back' => true]
             );
 
             Response::error(
@@ -161,16 +161,52 @@ class RestoreController {
                 'RESTORE_FAILED_ROLLED_BACK',
                 500,
                 [
-                    'reason'         => $e->getMessage(),
+                    // reason / rollback_error are deliberately NOT forwarded: the
+                    // exception text carries server paths. The audit log already holds
+                    // it under this same event, keyed by user and timestamp.
                     'rolled_back'    => true,
-                    'rollback_error' => $e->rollbackError,
                     'safety_backup'  => $e->safetyBackup,
                 ]
             );
         } catch (\Exception $e) {
-            Response::error($e->getMessage(), 'RESTORE_FAILED', 400);
+            $this->refuse($e, 'RESTORE_FAILED', 400);
         } finally {
             FsHelper::removeDirectoryQuietly($extractDir);
         }
     }
+    /**
+     * Refuse a failure without describing it.
+     *
+     * The upstream services throw messages that interpolate real server paths --
+     * AtomicRestoreService reports 'فشل نسخ الملف: ' . $src, AppRoot reports the
+     * directory it walked up from, DatabaseRestoreService names archive members.
+     * Returning those to the caller hands a working admin (or anyone holding a
+     * stolen admin token) a map of the filesystem layout, the staging directory
+     * name, and whether a guessed path exists. This is reconnaissance material.
+     *
+     * The operator still needs to know WHAT failed, so the class of failure is
+     * preserved and the detail goes to the log under a correlation id the caller
+     * can quote. Nothing sensitive crosses the wire.
+     *
+     * @param string $opaqueCode the stable, caller-safe failure class
+     */
+    private function refuse(\Exception $e, string $opaqueCode, int $status): void
+    {
+        $errorId = substr(bin2hex(random_bytes(4)), 0, 8);
+        error_log(sprintf(
+            '[EL KAROOZ] %s [%s] %s in %s:%d',
+            $opaqueCode,
+            $errorId,
+            $e->getMessage(),
+            $e->getFile(),
+            $e->getLine()
+        ));
+        Response::error(
+            'فشلت العملية. لم يتم تعديل النظام. رقم الخطأ: ' . $errorId,
+            $opaqueCode,
+            $status,
+            ['error_id' => $errorId]
+        );
+    }
+
 }
