@@ -1,0 +1,51 @@
+[
+  {
+    "name": "Bible Structure: Testaments Available Publicly",
+    "category": "Bible Engine",
+    "expected": "HTTP 200 with 2 Testaments (OT, NT)",
+    "actual": "HTTP 200 (Count: 2)",
+    "passed": true
+  },
+  {
+    "name": "Bible Structure: Canonical Books Available Publicly",
+    "category": "Bible Engine",
+    "expected": "HTTP 200 with Books list",
+    "actual": "HTTP 200 (Count: 18)",
+    "passed": true
+  },
+  {
+    "name": "Bible Text: Chapter 1 Verses & Word Breakdown loaded",
+    "category": "Bible Engine",
+    "expected": "HTTP 200 with 6 words in Gen 1:1",
+    "actual": "HTTP 200 (Verse 1 Words: 6)",
+    "passed": true
+  },
+  {
+    "name": "Commentaries: Separate Commentaries for Fr. Tadros Malaty & Fr. Antonios Fekry",
+    "category": "Bible Engine",
+    "expected": "HTTP 200 with >= 2 distinct commentaries verbatim",
+    "actual": "HTTP 200 (Count: 2)",
+    "passed": true
+  },
+  {
+    "name": "Interactive Word Commentary: Contextual Meaning & St. Takla Dictionary linked",
+    "category": "Bible Engine",
+    "expected": "Word details return contextual explanation + dictionary entry",
+    "actual": "HTTP 200 (Word Coms: 1, Dict: 1)",
+    "passed": true
+  },
+  {
+    "name": "Bible Search: Fast Normalized Search finds Verse in Genesis",
+    "category": "Bible Engine",
+    "expected": "HTTP 200 returning Genesis 1:1",
+    "actual": "HTTP 200 (Found: 1 results)",
+    "passed": true
+  },
+  {
+    "name": "Security: Unauthorized verse creation blocked by RLS",
+    "category": "Bible Engine",
+    "expected": "HTTP 401 / 403 Forbidden",
+    "actual": "HTTP 401",
+    "passed": true
+  }
+]

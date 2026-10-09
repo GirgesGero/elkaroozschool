@@ -1,0 +1,72 @@
+[
+  {
+    "name": "Backup: Admin Create Encrypted Backup Record",
+    "category": "Phase 9 Ops",
+    "expected": "HTTP 201 Created",
+    "actual": "HTTP 201",
+    "passed": true
+  },
+  {
+    "name": "Security: Trainee / Non-Admin Denied Backup Creation",
+    "category": "Phase 9 Ops",
+    "expected": "HTTP 401 / 403 Forbidden",
+    "actual": "HTTP 403",
+    "passed": true
+  },
+  {
+    "name": "Password Security: No Password Stored in Database or Manifest",
+    "category": "Phase 9 Ops",
+    "expected": "No password column exists in backup_records",
+    "actual": "Columns: ['id', 'filename', 'file_size_bytes', 'storage_type', 'storage_path', 'status', 'checksum_sha256', 'created_by', 'created_at', 'deleted_at', 'deleted_by']",
+    "passed": true
+  },
+  {
+    "name": "Bulk Import: Dry-Run Mode Preview (0 DB writes)",
+    "category": "Phase 9 Ops",
+    "expected": "status == 'DRY RUN ONLY' with new_accounts == 2",
+    "actual": "HTTP 200 (Status: DRY RUN ONLY, New: 2)",
+    "passed": true
+  },
+  {
+    "name": "Bulk Import: All-or-Nothing Enforcement (1 Error -> 0 Imported)",
+    "category": "Phase 9 Ops",
+    "expected": "success == False and status == 'FAILED' with 0 imported",
+    "actual": "HTTP 200 (Success: False, Errors Count: 1)",
+    "passed": true
+  },
+  {
+    "name": "Bulk Import: Transactional Import & Active Accounts Created",
+    "category": "Phase 9 Ops",
+    "expected": "success == True and new_accounts == 2",
+    "actual": "HTTP 200 (New Accounts: 2)",
+    "passed": true
+  },
+  {
+    "name": "Bulk Import: Existing Account Data Updated Seamlessly",
+    "category": "Phase 9 Ops",
+    "expected": "success == True and updated_accounts == 1",
+    "actual": "HTTP 200 (Updated Accounts: 1)",
+    "passed": true
+  },
+  {
+    "name": "Restore Safety: Pre-Restore Safety Backup & Rollback Point",
+    "category": "Phase 9 Ops",
+    "expected": "HTTP 200 and logged in audit_logs",
+    "actual": "HTTP 200",
+    "passed": true
+  },
+  {
+    "name": "Normal Export: Scoped Trainee Export by Group & Role",
+    "category": "Phase 9 Ops",
+    "expected": "HTTP 200 with trainees list",
+    "actual": "HTTP 200 (Exported Rows: 37)",
+    "passed": true
+  },
+  {
+    "name": "Audit Integrity: Immutable Audit Log (0 records deleted on unauthorized attempt)",
+    "category": "Phase 9 Ops",
+    "expected": "Audit records count remains unchanged after trainee deletion attempt",
+    "actual": "Before: 44, After: 44 (HTTP 204)",
+    "passed": true
+  }
+]

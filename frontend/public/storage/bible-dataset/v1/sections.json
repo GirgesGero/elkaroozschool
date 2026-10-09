@@ -1,0 +1,362 @@
+[
+  {
+    "id": 1,
+    "category_id": 1,
+    "code": "sec-01",
+    "title": "01 الكتاب المقدس",
+    "icon": "📕",
+    "doc_count": 9398,
+    "description": "",
+    "display_order": 1
+  },
+  {
+    "id": 37,
+    "category_id": 1,
+    "code": "sec-holy-bible-complete",
+    "title": "الكتاب المقدس الكامل",
+    "icon": "📖",
+    "doc_count": 1316,
+    "description": "النص الكامل والمعتمد لكافة أسفار العهدين القديم والجديد (73 سفراً) والأسفار القانونية الثانية بالتشكيل الدقيق وفق التقسيم الكنسي الأرثوذكسي",
+    "display_order": 1
+  },
+  {
+    "id": 5,
+    "category_id": 1,
+    "code": "sec-05",
+    "title": "05 شبهات الكتاب المقدس",
+    "icon": "❓",
+    "doc_count": 1052,
+    "description": "",
+    "display_order": 5
+  },
+  {
+    "id": 6,
+    "category_id": 1,
+    "code": "sec-06",
+    "title": "06 مسابقات الكتاب المقدس",
+    "icon": "🏆",
+    "doc_count": 75,
+    "description": "",
+    "display_order": 6
+  },
+  {
+    "id": 12,
+    "category_id": 1,
+    "code": "sec-12",
+    "title": "12 كتب أبوكريفا",
+    "icon": "📜",
+    "doc_count": 1068,
+    "description": "",
+    "display_order": 12
+  },
+  {
+    "id": 13,
+    "category_id": 1,
+    "code": "sec-13",
+    "title": "أسئلة مسيحية",
+    "icon": "📜",
+    "doc_count": 618,
+    "description": "",
+    "display_order": 13
+  },
+  {
+    "id": 16,
+    "category_id": 1,
+    "code": "sec-16",
+    "title": "علم الأخرويات",
+    "icon": "📜",
+    "doc_count": 82,
+    "description": "",
+    "display_order": 16
+  },
+  {
+    "id": 17,
+    "category_id": 1,
+    "code": "sec-17",
+    "title": "علم الإنسان",
+    "icon": "📜",
+    "doc_count": 418,
+    "description": "",
+    "display_order": 17
+  },
+  {
+    "id": 19,
+    "category_id": 1,
+    "code": "sec-19",
+    "title": "علم الخلاص",
+    "icon": "📜",
+    "doc_count": 110,
+    "description": "",
+    "display_order": 19
+  },
+  {
+    "id": 20,
+    "category_id": 1,
+    "code": "sec-20",
+    "title": "علم الكتاب المقدس",
+    "icon": "📕",
+    "doc_count": 296,
+    "description": "",
+    "display_order": 20
+  },
+  {
+    "id": 21,
+    "category_id": 1,
+    "code": "sec-21",
+    "title": "علم الكنيسة",
+    "icon": "⛪",
+    "doc_count": 84,
+    "description": "",
+    "display_order": 21
+  },
+  {
+    "id": 22,
+    "category_id": 1,
+    "code": "sec-22",
+    "title": "علم الله",
+    "icon": "📜",
+    "doc_count": 142,
+    "description": "",
+    "display_order": 22
+  },
+  {
+    "id": 23,
+    "category_id": 1,
+    "code": "sec-23",
+    "title": "علم المسيح",
+    "icon": "📜",
+    "doc_count": 934,
+    "description": "",
+    "display_order": 23
+  },
+  {
+    "id": 24,
+    "category_id": 1,
+    "code": "sec-24",
+    "title": "علم الملائكة",
+    "icon": "📜",
+    "doc_count": 86,
+    "description": "",
+    "display_order": 24
+  },
+  {
+    "id": 34,
+    "category_id": 1,
+    "code": "sec-34",
+    "title": "لغة قبطية",
+    "icon": "🔤",
+    "doc_count": 158,
+    "description": "",
+    "display_order": 34
+  },
+  {
+    "id": 35,
+    "category_id": 1,
+    "code": "sec-35",
+    "title": "مناهج التربية الكنسية",
+    "icon": "📜",
+    "doc_count": 193,
+    "description": "",
+    "display_order": 35
+  },
+  {
+    "id": 2,
+    "category_id": 2,
+    "code": "sec-02",
+    "title": "02 تفسير الكتاب المقدس",
+    "icon": "📖",
+    "doc_count": 5605,
+    "description": "",
+    "display_order": 2
+  },
+  {
+    "id": 9,
+    "category_id": 2,
+    "code": "sec-09",
+    "title": "09 مريم العذراء",
+    "icon": "🕊",
+    "doc_count": 445,
+    "description": "",
+    "display_order": 9
+  },
+  {
+    "id": 15,
+    "category_id": 2,
+    "code": "sec-15",
+    "title": "علم الأباء",
+    "icon": "📜",
+    "doc_count": 1375,
+    "description": "",
+    "display_order": 15
+  },
+  {
+    "id": 3,
+    "category_id": 3,
+    "code": "sec-03",
+    "title": "03 قاموس الكتاب المقدس",
+    "icon": "📚",
+    "doc_count": 15873,
+    "description": "",
+    "display_order": 3
+  },
+  {
+    "id": 4,
+    "category_id": 3,
+    "code": "sec-04",
+    "title": "04 أطلس الكتاب المقدس",
+    "icon": "🗺",
+    "doc_count": 24,
+    "description": "",
+    "display_order": 4
+  },
+  {
+    "id": 7,
+    "category_id": 3,
+    "code": "sec-07",
+    "title": "07 شخصيات الكتاب المقدس",
+    "icon": "👥",
+    "doc_count": 320,
+    "description": "",
+    "display_order": 7
+  },
+  {
+    "id": 8,
+    "category_id": 3,
+    "code": "sec-08",
+    "title": "08 شخصيات الكنيسة",
+    "icon": "👥",
+    "doc_count": 2087,
+    "description": "",
+    "display_order": 8
+  },
+  {
+    "id": 18,
+    "category_id": 3,
+    "code": "sec-18",
+    "title": "علم التاريخ",
+    "icon": "🏛",
+    "doc_count": 800,
+    "description": "",
+    "display_order": 18
+  },
+  {
+    "id": 36,
+    "category_id": 4,
+    "code": "sec-agpeya",
+    "title": "الأجبية - كتاب صلوات السواعي",
+    "icon": "🙏",
+    "doc_count": 21,
+    "description": "الصلوات السبع النهارية والليلية للكنيسة القبطية الأرثوذكسية بالنص الكامل والتحاليل والصلوات الفردية",
+    "display_order": 1
+  },
+  {
+    "id": 10,
+    "category_id": 4,
+    "code": "sec-10",
+    "title": "10 صلوات الكنيسة القبطية",
+    "icon": "🙏",
+    "doc_count": 2692,
+    "description": "",
+    "display_order": 10
+  },
+  {
+    "id": 11,
+    "category_id": 4,
+    "code": "sec-11",
+    "title": "11 بدع وهرطقات",
+    "icon": "📜",
+    "doc_count": 390,
+    "description": "",
+    "display_order": 11
+  },
+  {
+    "id": 25,
+    "category_id": 4,
+    "code": "sec-25",
+    "title": "لاهوت أدبى",
+    "icon": "✝",
+    "doc_count": 15,
+    "description": "",
+    "display_order": 25
+  },
+  {
+    "id": 26,
+    "category_id": 4,
+    "code": "sec-26",
+    "title": "لاهوت دستورى",
+    "icon": "✝",
+    "doc_count": 256,
+    "description": "",
+    "display_order": 26
+  },
+  {
+    "id": 27,
+    "category_id": 4,
+    "code": "sec-27",
+    "title": "لاهوت دفاعى",
+    "icon": "✝",
+    "doc_count": 244,
+    "description": "",
+    "display_order": 27
+  },
+  {
+    "id": 28,
+    "category_id": 4,
+    "code": "sec-28",
+    "title": "لاهوت رعوى",
+    "icon": "✝",
+    "doc_count": 5,
+    "description": "",
+    "display_order": 28
+  },
+  {
+    "id": 29,
+    "category_id": 4,
+    "code": "sec-29",
+    "title": "لاهوت روحى",
+    "icon": "✝",
+    "doc_count": 424,
+    "description": "",
+    "display_order": 29
+  },
+  {
+    "id": 30,
+    "category_id": 4,
+    "code": "sec-30",
+    "title": "لاهوت طقسى",
+    "icon": "✝",
+    "doc_count": 572,
+    "description": "",
+    "display_order": 30
+  },
+  {
+    "id": 31,
+    "category_id": 4,
+    "code": "sec-31",
+    "title": "لاهوت عقيدى",
+    "icon": "✝",
+    "doc_count": 197,
+    "description": "",
+    "display_order": 31
+  },
+  {
+    "id": 32,
+    "category_id": 4,
+    "code": "sec-32",
+    "title": "لاهوت مقارن",
+    "icon": "✝",
+    "doc_count": 413,
+    "description": "",
+    "display_order": 32
+  },
+  {
+    "id": 33,
+    "category_id": 4,
+    "code": "sec-33",
+    "title": "لاهوت نظرى",
+    "icon": "✝",
+    "doc_count": 22,
+    "description": "",
+    "display_order": 33
+  }
+]

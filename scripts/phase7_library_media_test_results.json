@@ -1,0 +1,86 @@
+[
+  {
+    "name": "Categories: Admin creates new Category",
+    "category": "Library & Media",
+    "expected": "HTTP 201 Created",
+    "actual": "HTTP 201 (ID: e9fe2440-629f-49c8-9219-27b91bcab3a8)",
+    "passed": true
+  },
+  {
+    "name": "Categories: Trainee category creation blocked by RLS",
+    "category": "Library & Media",
+    "expected": "HTTP 403 Forbidden",
+    "actual": "HTTP 403",
+    "passed": true
+  },
+  {
+    "name": "Books: Admin adds Book to Global Library",
+    "category": "Library & Media",
+    "expected": "HTTP 201 Created",
+    "actual": "HTTP 201 (ID: 046cfabf-8082-4dff-92fb-4b701e67c234)",
+    "passed": true
+  },
+  {
+    "name": "Books: Global Access (Visible to Trainee G1 and Trainee G2 alike)",
+    "category": "Library & Media",
+    "expected": "Both Trainee G1 and G2 can access the same Book",
+    "actual": "G1 Count: 1, G2 Count: 1",
+    "passed": true
+  },
+  {
+    "name": "Research: Admin adds Research to Global Library",
+    "category": "Library & Media",
+    "expected": "HTTP 201 Created",
+    "actual": "HTTP 201 (ID: 4ba67f1e-3529-4921-a7aa-ad45fff68827)",
+    "passed": true
+  },
+  {
+    "name": "Favorites: Trainee 1 adds Book to Favorites",
+    "category": "Library & Media",
+    "expected": "HTTP 201 Created",
+    "actual": "HTTP 201",
+    "passed": true
+  },
+  {
+    "name": "Favorites: Duplicate favorite blocked by uq_user_fav",
+    "category": "Library & Media",
+    "expected": "HTTP 409 Conflict",
+    "actual": "HTTP 409",
+    "passed": true
+  },
+  {
+    "name": "Favorites: Personal Isolation (Trainee 2 cannot see Trainee 1 favorites)",
+    "category": "Library & Media",
+    "expected": "0 items returned for Trainee 2",
+    "actual": "Trainee 2 Favorites Count: 0",
+    "passed": true
+  },
+  {
+    "name": "Gallery: Group Scope Isolation (Trainee G1 sees G1 album, Trainee G2 blocked)",
+    "category": "Library & Media",
+    "expected": "G1 sees 1 album, G2 sees 0 albums",
+    "actual": "G1: 1, G2: 0",
+    "passed": true
+  },
+  {
+    "name": "MP3: Group Scope Isolation (Trainee G1 sees G1 MP3, Trainee G2 blocked)",
+    "category": "Library & Media",
+    "expected": "G1 sees 1 track, G2 sees 0 tracks",
+    "actual": "G1: 1, G2: 0",
+    "passed": true
+  },
+  {
+    "name": "Soft Delete: Deleted book is hidden from active library",
+    "category": "Library & Media",
+    "expected": "0 items returned",
+    "actual": "Active books count: 0",
+    "passed": true
+  },
+  {
+    "name": "Restore: Restored book reappears in active library",
+    "category": "Library & Media",
+    "expected": "1 item returned",
+    "actual": "Restored count: 1",
+    "passed": true
+  }
+]

@@ -1,0 +1,30 @@
+{
+  "dataset_version": "v1.0.0",
+  "schema_version": "2.0.0",
+  "generated_at": "2026-10-07T14:35:00.000000+00:00",
+  "source_database": {
+    "file": "bible_encyclopedia.sqlite",
+    "purged_sections": [
+      "sec-14 (المسيحية والإسلام)"
+    ],
+    "purged_articles_count": 1326
+  },
+  "statistics": {
+    "article_count": 47923,
+    "category_count": 4,
+    "section_count": 36,
+    "chunk_count": 455,
+    "search_shard_count": 64,
+    "image_count": 15,
+    "unique_title_terms": 21216
+  },
+  "storage": {
+    "total_files": 1135,
+    "articles_raw_bytes": 449825792,
+    "articles_gz_bytes": 113754138,
+    "search_shards_raw_bytes": 143316950,
+    "search_shards_gz_bytes": 50521257,
+    "sections_index_files": 36
+  },
+  "checksums_file": "checksums.sha256"
+}

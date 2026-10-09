@@ -1,0 +1,37 @@
+[
+  {
+    "name": "Attendance: Secretariat G1 Opens Friday Session",
+    "category": "Academic & Attendance",
+    "expected": "HTTP 201 Created",
+    "actual": "HTTP 409 (ID: None)",
+    "passed": false
+  },
+  {
+    "name": "Attendance Engine: get_trainee_attendance_summary RPC calculation",
+    "category": "Academic & Attendance",
+    "expected": "JSON object with percentage & appreciation_grade",
+    "actual": "Stats: {'late_count': 0, 'percentage': 33.33, 'absent_count': 1, 'present_count': 1, 'total_sessions': 3, 'appreciation_grade': 'ضعيف'}",
+    "passed": true
+  },
+  {
+    "name": "Curriculum: Staff uploads Curriculum for Term 1",
+    "category": "Academic & Attendance",
+    "expected": "HTTP 201 Created",
+    "actual": "HTTP 201",
+    "passed": true
+  },
+  {
+    "name": "Trainee Management: Secretariat suspends Trainee",
+    "category": "Academic & Attendance",
+    "expected": "HTTP 200/204 OK",
+    "actual": "HTTP 204",
+    "passed": true
+  },
+  {
+    "name": "Trainee Management: Secretariat reactivates Trainee",
+    "category": "Academic & Attendance",
+    "expected": "HTTP 200/204 OK",
+    "actual": "HTTP 204",
+    "passed": true
+  }
+]

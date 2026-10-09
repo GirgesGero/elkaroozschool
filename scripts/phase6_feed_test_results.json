@@ -1,0 +1,114 @@
+[
+  {
+    "name": "Posting Permission: Admin can create Feed Post",
+    "category": "Social Feed",
+    "expected": "HTTP 201 Created",
+    "actual": "HTTP 201",
+    "passed": true
+  },
+  {
+    "name": "Posting Permission: Servant can create Feed Post",
+    "category": "Social Feed",
+    "expected": "HTTP 201 Created",
+    "actual": "HTTP 201 (ID: 70601137-bb47-44d9-809c-b243e305b2fa)",
+    "passed": true
+  },
+  {
+    "name": "Posting Permission: Secretariat can create Feed Post",
+    "category": "Social Feed",
+    "expected": "HTTP 201 Created",
+    "actual": "HTTP 201",
+    "passed": true
+  },
+  {
+    "name": "Posting Permission: Trainee post creation blocked by RLS",
+    "category": "Social Feed",
+    "expected": "HTTP 403 Forbidden (RLS Violation)",
+    "actual": "HTTP 403",
+    "passed": true
+  },
+  {
+    "name": "Posting Permission: Public visitor post creation blocked",
+    "category": "Social Feed",
+    "expected": "HTTP 401 / 403",
+    "actual": "HTTP 401",
+    "passed": true
+  },
+  {
+    "name": "Media: Multiple Images attached to Post (0..N Images)",
+    "category": "Social Feed",
+    "expected": "HTTP 201 for 2 images",
+    "actual": "HTTP 201 (Count: 2)",
+    "passed": true
+  },
+  {
+    "name": "Reactions: Trainee 1 reacts 'LIKE'",
+    "category": "Social Feed",
+    "expected": "HTTP 200 with action = ADDED",
+    "actual": "HTTP 200 ({'action': 'ADDED', 'success': True, 'current_reaction': 'LIKE'})",
+    "passed": true
+  },
+  {
+    "name": "Reactions: Trainee 1 changes reaction to 'LOVE'",
+    "category": "Social Feed",
+    "expected": "HTTP 200 with action = CHANGED",
+    "actual": "HTTP 200 ({'action': 'CHANGED', 'success': True, 'current_reaction': 'LOVE'})",
+    "passed": true
+  },
+  {
+    "name": "Reactions: View Reactors list returns names and reaction types",
+    "category": "Social Feed",
+    "expected": "HTTP 200 with 2 reactors",
+    "actual": "HTTP 200 (Count: 2)",
+    "passed": true
+  },
+  {
+    "name": "Comments: Trainee can create Comment on Post",
+    "category": "Social Feed",
+    "expected": "HTTP 201 Created",
+    "actual": "HTTP 201 (Comment ID: f9f63212-55d2-4d1b-a2f7-f418596f7d05)",
+    "passed": true
+  },
+  {
+    "name": "Comments: Author can soft-delete own Comment",
+    "category": "Social Feed",
+    "expected": "HTTP 200 with success = True",
+    "actual": "HTTP 200 ({'message': 'تم حذف التعليق بنجاح', 'success': True})",
+    "passed": true
+  },
+  {
+    "name": "Ownership: Other Servant cannot edit post",
+    "category": "Social Feed",
+    "expected": "Post content remains unchanged",
+    "actual": "Protected: True",
+    "passed": true
+  },
+  {
+    "name": "Soft Delete: Post author soft-deletes own post",
+    "category": "Social Feed",
+    "expected": "HTTP 200 with success = True",
+    "actual": "HTTP 200 ({'message': 'تم حذف المنشور بنجاح (حذف مؤقت)', 'success': True})",
+    "passed": true
+  },
+  {
+    "name": "Feed Visibility: Soft-deleted post disappears from active Feed",
+    "category": "Social Feed",
+    "expected": "0 items returned",
+    "actual": "Active feed items: 0",
+    "passed": true
+  },
+  {
+    "name": "Restore: Admin restores soft-deleted post",
+    "category": "Social Feed",
+    "expected": "HTTP 200 with success = True",
+    "actual": "HTTP 200 ({'message': 'تم استعادة المنشور بنجاح', 'success': True})",
+    "passed": true
+  },
+  {
+    "name": "Restore Security: Trainee restore attempt blocked",
+    "category": "Social Feed",
+    "expected": "Error: صلاحية الاستعادة مقتصرة على المسؤول والسوبر يوزر",
+    "actual": "HTTP 400",
+    "passed": true
+  }
+]

@@ -1,0 +1,747 @@
+{
+  "generated_at": "2026-10-05T07:40:33.010646Z",
+  "environment": "STAGING_REHEARSAL",
+  "total_verified_media_records": 81,
+  "counts_by_resource_type": {
+    "BOOK_FILE": 5,
+    "BOOK_COVER": 5,
+    "RESEARCH_FILE": 5,
+    "CURRICULUM": 8,
+    "MP3_TRACK": 5,
+    "GALLERY_ITEM": 5,
+    "POST_IMAGE": 10,
+    "BACKUP_ARCHIVE": 10,
+    "IMPORT_FILE": 28
+  },
+  "migration_items": [
+    {
+      "resource_type": "BOOK_FILE",
+      "source_table": "books",
+      "record_id": "f123987b-cc2c-4db5-91be-05e9dd8858c0",
+      "source_path_or_url": "https://storage.elkarooz-school.internal/books/intro_nt.pdf",
+      "group_id": null,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "BOOK_COVER",
+      "source_table": "books",
+      "record_id": "f123987b-cc2c-4db5-91be-05e9dd8858c0",
+      "source_path_or_url": "https://images.unsplash.com/photo-1544717305-2782549b5136",
+      "group_id": null,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "BOOK_FILE",
+      "source_table": "books",
+      "record_id": "10d21b5d-e156-4fee-903f-33085ef5e006",
+      "source_path_or_url": "https://storage.elkarooz-school.internal/books/intro_nt.pdf",
+      "group_id": null,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "BOOK_COVER",
+      "source_table": "books",
+      "record_id": "10d21b5d-e156-4fee-903f-33085ef5e006",
+      "source_path_or_url": "https://images.unsplash.com/photo-1544717305-2782549b5136",
+      "group_id": null,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "BOOK_FILE",
+      "source_table": "books",
+      "record_id": "ad7c4abd-30e3-4411-9e9b-dff551c04f24",
+      "source_path_or_url": "https://storage.elkarooz-school.internal/books/intro_nt.pdf",
+      "group_id": null,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "BOOK_COVER",
+      "source_table": "books",
+      "record_id": "ad7c4abd-30e3-4411-9e9b-dff551c04f24",
+      "source_path_or_url": "https://images.unsplash.com/photo-1544717305-2782549b5136",
+      "group_id": null,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "BOOK_FILE",
+      "source_table": "books",
+      "record_id": "f671b31a-544d-4cd1-a6fb-284c507b8aa7",
+      "source_path_or_url": "https://storage.elkarooz-school.internal/books/intro_nt.pdf",
+      "group_id": null,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "BOOK_COVER",
+      "source_table": "books",
+      "record_id": "f671b31a-544d-4cd1-a6fb-284c507b8aa7",
+      "source_path_or_url": "https://images.unsplash.com/photo-1544717305-2782549b5136",
+      "group_id": null,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "BOOK_FILE",
+      "source_table": "books",
+      "record_id": "046cfabf-8082-4dff-92fb-4b701e67c234",
+      "source_path_or_url": "https://storage.elkarooz-school.internal/books/intro_nt.pdf",
+      "group_id": null,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "BOOK_COVER",
+      "source_table": "books",
+      "record_id": "046cfabf-8082-4dff-92fb-4b701e67c234",
+      "source_path_or_url": "https://images.unsplash.com/photo-1544717305-2782549b5136",
+      "group_id": null,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "RESEARCH_FILE",
+      "source_table": "researches",
+      "record_id": "6c28be49-838e-49ed-a508-987a3157180c",
+      "source_path_or_url": "https://storage.elkarooz-school.internal/research/paul_theology.pdf",
+      "group_id": null,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "RESEARCH_FILE",
+      "source_table": "researches",
+      "record_id": "bec53671-bb11-45dc-8341-0e61a32ac4e2",
+      "source_path_or_url": "https://storage.elkarooz-school.internal/research/paul_theology.pdf",
+      "group_id": null,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "RESEARCH_FILE",
+      "source_table": "researches",
+      "record_id": "56ebb05c-d8aa-408a-b47e-ed313ad3a44d",
+      "source_path_or_url": "https://storage.elkarooz-school.internal/research/paul_theology.pdf",
+      "group_id": null,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "RESEARCH_FILE",
+      "source_table": "researches",
+      "record_id": "ec58d50a-aa3a-40e9-a155-bfd94ea5f40c",
+      "source_path_or_url": "https://storage.elkarooz-school.internal/research/paul_theology.pdf",
+      "group_id": null,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "RESEARCH_FILE",
+      "source_table": "researches",
+      "record_id": "4ba67f1e-3529-4921-a7aa-ad45fff68827",
+      "source_path_or_url": "https://storage.elkarooz-school.internal/research/paul_theology.pdf",
+      "group_id": null,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "CURRICULUM",
+      "source_table": "curriculums",
+      "record_id": "28a4435c-c7dd-4786-87b8-bddbe3bba72d",
+      "source_path_or_url": "https://storage.elkarooz-school.com/academic/group_1/curriculum/matthew.pdf",
+      "group_id": 1,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "CURRICULUM",
+      "source_table": "curriculums",
+      "record_id": "6bc26e12-2d38-4366-818b-977b8705ed8c",
+      "source_path_or_url": "https://storage.elkarooz-school.com/academic/group_1/curriculum/matthew.pdf",
+      "group_id": 1,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "CURRICULUM",
+      "source_table": "curriculums",
+      "record_id": "d441ab4f-48a1-475d-ae79-1a6d1a841fcf",
+      "source_path_or_url": "https://storage.elkarooz-school.com/academic/group_1/curriculum/matthew.pdf",
+      "group_id": 1,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "CURRICULUM",
+      "source_table": "curriculums",
+      "record_id": "7d4d1bfc-e60b-439d-9629-67a82056492e",
+      "source_path_or_url": "https://storage.elkarooz-school.com/academic/group_1/curriculum/matthew.pdf",
+      "group_id": 1,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "CURRICULUM",
+      "source_table": "curriculums",
+      "record_id": "273231d0-837d-4800-ac5f-493d1adf427e",
+      "source_path_or_url": "https://storage.elkarooz-school.com/academic/group_1/curriculum/matthew.pdf",
+      "group_id": 1,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "CURRICULUM",
+      "source_table": "curriculums",
+      "record_id": "45884eca-dc6d-4ef5-a081-e9da934023d1",
+      "source_path_or_url": "https://storage.elkarooz-school.com/academic/group_1/curriculum/matthew.pdf",
+      "group_id": 1,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "CURRICULUM",
+      "source_table": "curriculums",
+      "record_id": "b707b2ef-265f-438e-8282-2d255fb90efe",
+      "source_path_or_url": "https://storage.elkarooz-school.com/academic/group_1/curriculum/matthew.pdf",
+      "group_id": 1,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "CURRICULUM",
+      "source_table": "curriculums",
+      "record_id": "1cc26c36-5334-4e4e-9a43-b701d4701220",
+      "source_path_or_url": "https://storage.elkarooz-school.com/academic/group_1/curriculum/matthew.pdf",
+      "group_id": 1,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "MP3_TRACK",
+      "source_table": "mp3_tracks",
+      "record_id": "0a950cfc-f73f-4568-bae2-b2bd153c7b76",
+      "source_path_or_url": "https://storage.elkarooz-school.internal/mp3/group1_liturgy.mp3",
+      "group_id": 1,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "MP3_TRACK",
+      "source_table": "mp3_tracks",
+      "record_id": "8cce991f-ba7f-4242-98fe-f7d103bd803a",
+      "source_path_or_url": "https://storage.elkarooz-school.internal/mp3/group1_liturgy.mp3",
+      "group_id": 1,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "MP3_TRACK",
+      "source_table": "mp3_tracks",
+      "record_id": "ed45f8e8-d4b8-427b-9911-f8e4b95fa17e",
+      "source_path_or_url": "https://storage.elkarooz-school.internal/mp3/group1_liturgy.mp3",
+      "group_id": 1,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "MP3_TRACK",
+      "source_table": "mp3_tracks",
+      "record_id": "941a0b40-de76-4069-90ff-541512feadbb",
+      "source_path_or_url": "https://storage.elkarooz-school.internal/mp3/group1_liturgy.mp3",
+      "group_id": 1,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "MP3_TRACK",
+      "source_table": "mp3_tracks",
+      "record_id": "a20384ee-472a-40d6-8c43-4e4a64181179",
+      "source_path_or_url": "https://storage.elkarooz-school.internal/mp3/group1_liturgy.mp3",
+      "group_id": 1,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "GALLERY_ITEM",
+      "source_table": "gallery_items",
+      "record_id": "37fe775d-6b05-4765-80ca-864213610727",
+      "source_path_or_url": "https://images.unsplash.com/photo-1544717305-2782549b5136",
+      "group_id": 1,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "GALLERY_ITEM",
+      "source_table": "gallery_items",
+      "record_id": "a18a6076-6733-4624-81b3-319c3e9c780a",
+      "source_path_or_url": "https://images.unsplash.com/photo-1544717305-2782549b5136",
+      "group_id": 1,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "GALLERY_ITEM",
+      "source_table": "gallery_items",
+      "record_id": "ebc45f9d-7f00-4060-8c80-2e4b9e935c57",
+      "source_path_or_url": "https://images.unsplash.com/photo-1544717305-2782549b5136",
+      "group_id": 1,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "GALLERY_ITEM",
+      "source_table": "gallery_items",
+      "record_id": "4190dfb8-9600-4a9a-8d38-880418e67878",
+      "source_path_or_url": "https://images.unsplash.com/photo-1544717305-2782549b5136",
+      "group_id": 1,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "GALLERY_ITEM",
+      "source_table": "gallery_items",
+      "record_id": "41782b9a-ed71-4b52-b106-6491f9a1dec7",
+      "source_path_or_url": "https://images.unsplash.com/photo-1544717305-2782549b5136",
+      "group_id": 1,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "POST_IMAGE",
+      "source_table": "post_images",
+      "record_id": "330a2636-cbfb-42a9-9ec8-082911293230",
+      "source_path_or_url": "https://images.unsplash.com/photo-1544717305-2782549b5136",
+      "group_id": null,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "POST_IMAGE",
+      "source_table": "post_images",
+      "record_id": "e0f05e86-74c1-432b-80cf-54f6625e3960",
+      "source_path_or_url": "https://images.unsplash.com/photo-1512820790803-83ca734da794",
+      "group_id": null,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "POST_IMAGE",
+      "source_table": "post_images",
+      "record_id": "aea0f28d-8396-41ee-bb60-1c208d4b3a68",
+      "source_path_or_url": "https://images.unsplash.com/photo-1544717305-2782549b5136",
+      "group_id": null,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "POST_IMAGE",
+      "source_table": "post_images",
+      "record_id": "f6b1c41d-9516-4e92-b7fe-7b6dc166931e",
+      "source_path_or_url": "https://images.unsplash.com/photo-1512820790803-83ca734da794",
+      "group_id": null,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "POST_IMAGE",
+      "source_table": "post_images",
+      "record_id": "de31a538-e892-4223-9bc0-ea18077a3a81",
+      "source_path_or_url": "https://images.unsplash.com/photo-1544717305-2782549b5136",
+      "group_id": null,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "POST_IMAGE",
+      "source_table": "post_images",
+      "record_id": "32227c14-4619-4ade-867c-64e058799c32",
+      "source_path_or_url": "https://images.unsplash.com/photo-1512820790803-83ca734da794",
+      "group_id": null,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "POST_IMAGE",
+      "source_table": "post_images",
+      "record_id": "d8ea860d-5c40-49d2-bd1b-d837521fa288",
+      "source_path_or_url": "https://images.unsplash.com/photo-1544717305-2782549b5136",
+      "group_id": null,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "POST_IMAGE",
+      "source_table": "post_images",
+      "record_id": "57641cce-994f-4e2b-b565-f51e22638e7e",
+      "source_path_or_url": "https://images.unsplash.com/photo-1512820790803-83ca734da794",
+      "group_id": null,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "POST_IMAGE",
+      "source_table": "post_images",
+      "record_id": "3b497625-e7e8-41d3-a357-d3aae4905f5a",
+      "source_path_or_url": "https://images.unsplash.com/photo-1544717305-2782549b5136",
+      "group_id": null,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "POST_IMAGE",
+      "source_table": "post_images",
+      "record_id": "ee54a047-19ef-4498-9ad5-60cc044ca945",
+      "source_path_or_url": "https://images.unsplash.com/photo-1512820790803-83ca734da794",
+      "group_id": null,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "BACKUP_ARCHIVE",
+      "source_table": "backup_records",
+      "record_id": "2dfd28d7-9478-4db2-8ee1-c108841501e9",
+      "source_path_or_url": "backups/backup_phase9_1790409591.zip",
+      "group_id": null,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "BACKUP_ARCHIVE",
+      "source_table": "backup_records",
+      "record_id": "2de22f08-2203-4e2a-a29c-b64ffc1acb8f",
+      "source_path_or_url": "backups/backup_phase9_1790409847.zip",
+      "group_id": null,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "BACKUP_ARCHIVE",
+      "source_table": "backup_records",
+      "record_id": "aae94e3b-e739-4f12-bbf6-87966c752f7b",
+      "source_path_or_url": "backups/backup_phase9_1790410196.zip",
+      "group_id": null,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "BACKUP_ARCHIVE",
+      "source_table": "backup_records",
+      "record_id": "96209857-7749-48d8-92d1-4807d2656277",
+      "source_path_or_url": "backups/backup_phase9_1790410354.zip",
+      "group_id": null,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "BACKUP_ARCHIVE",
+      "source_table": "backup_records",
+      "record_id": "80e62b1f-f821-4544-b4bc-4b795343096e",
+      "source_path_or_url": "backups/backup_phase9_1790410623.zip",
+      "group_id": null,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "BACKUP_ARCHIVE",
+      "source_table": "backup_records",
+      "record_id": "28f94ca9-9d39-4ec0-bba5-a4808efe8ff6",
+      "source_path_or_url": "backups/backup_phase9_1790410869.zip",
+      "group_id": null,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "BACKUP_ARCHIVE",
+      "source_table": "backup_records",
+      "record_id": "0be577b8-a990-4195-b7a4-b3c021b49ea1",
+      "source_path_or_url": "backups/backup_phase9_1790423799.zip",
+      "group_id": null,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "BACKUP_ARCHIVE",
+      "source_table": "backup_records",
+      "record_id": "32360218-e58b-420a-83dd-79d9f174cff7",
+      "source_path_or_url": "backups/backup_phase9_1790436264.zip",
+      "group_id": null,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "BACKUP_ARCHIVE",
+      "source_table": "backup_records",
+      "record_id": "a2642f9c-f5a1-4a6d-b6b1-d9fb9478c144",
+      "source_path_or_url": "backups/backup_phase9_1790552996.zip",
+      "group_id": null,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "BACKUP_ARCHIVE",
+      "source_table": "backup_records",
+      "record_id": "95db34f9-92fd-42f1-b1bf-db83a753d7f7",
+      "source_path_or_url": "backups/backup_phase9_1790607279.zip",
+      "group_id": null,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "IMPORT_FILE",
+      "source_table": "import_history",
+      "record_id": "3dffaf52-5d11-4862-923c-d8dfcd3fb822",
+      "source_path_or_url": "imports/batch_dry_run.csv",
+      "group_id": null,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "IMPORT_FILE",
+      "source_table": "import_history",
+      "record_id": "5575739f-9e44-4c8b-ae1a-dd582c19db71",
+      "source_path_or_url": "imports/batch_err.csv",
+      "group_id": null,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "IMPORT_FILE",
+      "source_table": "import_history",
+      "record_id": "8b092110-9a9e-4c99-a7fb-23d4e139f39f",
+      "source_path_or_url": "imports/batch_dry_run.csv",
+      "group_id": null,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "IMPORT_FILE",
+      "source_table": "import_history",
+      "record_id": "4552664d-abd7-4bb1-9d06-ca64034180bf",
+      "source_path_or_url": "imports/batch_err.csv",
+      "group_id": null,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "IMPORT_FILE",
+      "source_table": "import_history",
+      "record_id": "0845d14e-a444-4465-8d96-606cd933cad8",
+      "source_path_or_url": "imports/batch_dry_run.csv",
+      "group_id": null,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "IMPORT_FILE",
+      "source_table": "import_history",
+      "record_id": "d65b7b8e-ef21-4d36-a84b-f5db3040a853",
+      "source_path_or_url": "imports/batch_err.csv",
+      "group_id": null,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "IMPORT_FILE",
+      "source_table": "import_history",
+      "record_id": "e2f4bd4d-d062-4b9b-a1ee-40364ae12398",
+      "source_path_or_url": "imports/batch_real.csv",
+      "group_id": null,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "IMPORT_FILE",
+      "source_table": "import_history",
+      "record_id": "a8998998-025e-4651-96da-e0782d271586",
+      "source_path_or_url": "imports/batch_update.csv",
+      "group_id": null,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "IMPORT_FILE",
+      "source_table": "import_history",
+      "record_id": "cd025b2b-973b-4aed-9ded-a13543ca6de0",
+      "source_path_or_url": "imports/batch_dry_run.csv",
+      "group_id": null,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "IMPORT_FILE",
+      "source_table": "import_history",
+      "record_id": "8d8eb869-4cd2-4446-bccd-a2893ac3f859",
+      "source_path_or_url": "imports/batch_err.csv",
+      "group_id": null,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "IMPORT_FILE",
+      "source_table": "import_history",
+      "record_id": "14835778-d36e-4eef-8e6f-1f9d42776ac7",
+      "source_path_or_url": "imports/batch_real.csv",
+      "group_id": null,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "IMPORT_FILE",
+      "source_table": "import_history",
+      "record_id": "4ec8a149-ba2b-4a36-b6fd-e54b9c105c3f",
+      "source_path_or_url": "imports/batch_update.csv",
+      "group_id": null,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "IMPORT_FILE",
+      "source_table": "import_history",
+      "record_id": "4ea6a167-37bc-46d7-b67a-eb69b32f9727",
+      "source_path_or_url": "imports/batch_dry_run_1790410875.csv",
+      "group_id": null,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "IMPORT_FILE",
+      "source_table": "import_history",
+      "record_id": "44e7e3bd-2ee4-40ce-8203-e76af8e72ade",
+      "source_path_or_url": "imports/batch_err_1790410875.csv",
+      "group_id": null,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "IMPORT_FILE",
+      "source_table": "import_history",
+      "record_id": "24089388-dae1-4505-a172-8e92d82d584f",
+      "source_path_or_url": "imports/batch_real_1790410875.csv",
+      "group_id": null,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "IMPORT_FILE",
+      "source_table": "import_history",
+      "record_id": "d4cef2c2-bb73-47d2-95ae-5684c8e36d81",
+      "source_path_or_url": "imports/batch_update_1790410875.csv",
+      "group_id": null,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "IMPORT_FILE",
+      "source_table": "import_history",
+      "record_id": "73b85608-e92e-4018-a4dc-d5e3a6cf3a5f",
+      "source_path_or_url": "imports/batch_dry_run_1790423800.csv",
+      "group_id": null,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "IMPORT_FILE",
+      "source_table": "import_history",
+      "record_id": "e4538d83-e20f-4ee9-9b55-80a318e991fd",
+      "source_path_or_url": "imports/batch_err_1790423800.csv",
+      "group_id": null,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "IMPORT_FILE",
+      "source_table": "import_history",
+      "record_id": "68ad69b1-3fb1-472e-959a-0c5c5e9cfa7b",
+      "source_path_or_url": "imports/batch_real_1790423800.csv",
+      "group_id": null,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "IMPORT_FILE",
+      "source_table": "import_history",
+      "record_id": "beff8507-d0f0-432d-a0bb-56342b1036b4",
+      "source_path_or_url": "imports/batch_update_1790423800.csv",
+      "group_id": null,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "IMPORT_FILE",
+      "source_table": "import_history",
+      "record_id": "9404fdc1-8be7-42b4-8bad-1f1f0eb602d5",
+      "source_path_or_url": "imports/batch_dry_run_1790436265.csv",
+      "group_id": null,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "IMPORT_FILE",
+      "source_table": "import_history",
+      "record_id": "25fa34b7-fa89-4c90-b8ad-ac73d27cb34c",
+      "source_path_or_url": "imports/batch_err_1790436265.csv",
+      "group_id": null,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "IMPORT_FILE",
+      "source_table": "import_history",
+      "record_id": "aa5bd602-6966-4c1a-ae5b-0eaec49069a8",
+      "source_path_or_url": "imports/batch_real_1790436265.csv",
+      "group_id": null,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "IMPORT_FILE",
+      "source_table": "import_history",
+      "record_id": "e1330f71-6c94-46b6-ade3-167dc83bb24f",
+      "source_path_or_url": "imports/batch_update_1790436265.csv",
+      "group_id": null,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "IMPORT_FILE",
+      "source_table": "import_history",
+      "record_id": "74b16c8b-c6e9-40e9-94d6-71a84fb7db5a",
+      "source_path_or_url": "imports/batch_dry_run_1790607280.csv",
+      "group_id": null,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "IMPORT_FILE",
+      "source_table": "import_history",
+      "record_id": "8117dd7d-abff-4828-8536-da1141160106",
+      "source_path_or_url": "imports/batch_err_1790607280.csv",
+      "group_id": null,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "IMPORT_FILE",
+      "source_table": "import_history",
+      "record_id": "a6de4571-714e-4e17-8e4a-a4ba208891da",
+      "source_path_or_url": "imports/batch_real_1790607280.csv",
+      "group_id": null,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    },
+    {
+      "resource_type": "IMPORT_FILE",
+      "source_table": "import_history",
+      "record_id": "2c4de1ec-3f25-4afd-88c0-3b417be3ab01",
+      "source_path_or_url": "imports/batch_update_1790607280.csv",
+      "group_id": null,
+      "target_storage_provider": "GOOGLE_DRIVE",
+      "status": "MIGRATION_READY"
+    }
+  ]
+}

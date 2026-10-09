@@ -1,0 +1,166 @@
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ---------------- THEME 1: CLASSIC FACEBOOK LIGHT (DEFAULT) ---------------- */
+:root, .theme-light {
+  --font-cairo: 'Cairo', Tajawal, sans-serif;
+  --bg-canvas: #F0F2F5;
+  --bg-nav: #FFFFFF;
+  --bg-card: #FFFFFF;
+  --bg-card-hover: #F7F8FA;
+  --border-card: #E4E6EB;
+  --border-subtle: #ECEFF3;
+  --bg-input: #F0F2F5;
+  --bg-active-tab: #FDF3F4;
+  --text-active-tab: #7B0017;
+  --text-primary: #050505;
+  --text-secondary: #65676B;
+  --text-muted: #8A8D91;
+  --brand-primary: #7B0017;
+  --brand-primary-hover: #600012;
+  --brand-primary-text: #FFFFFF;
+  --brand-gold: #C5A059;
+  --brand-navy: #0B1B3D;
+  --btn-secondary-bg: #E4E6EB;
+  --btn-secondary-text: #050505;
+  --btn-secondary-hover: #D8DADF;
+  --watermark-opacity: 0.04;
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.08);
+  --shadow-card-elevated: 0 4px 16px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+/* ---------------- THEME 2: MODERN FACEBOOK DARK ---------------- */
+.theme-dark {
+  --bg-canvas: #18191A;
+  --bg-nav: #242526;
+  --bg-card: #242526;
+  --bg-card-hover: #3A3B3C;
+  --border-card: #393A3B;
+  --border-subtle: #2F3031;
+  --bg-input: #3A3B3C;
+  --bg-active-tab: #38171E;
+  --text-active-tab: #FA383E;
+  --text-primary: #E4E6EB;
+  --text-secondary: #B0B3B8;
+  --text-muted: #8A8D91;
+  --brand-primary: #9E1B32;
+  --brand-primary-hover: #7B0017;
+  --brand-primary-text: #FFFFFF;
+  --brand-gold: #D4AF37;
+  --brand-navy: #1E2D4A;
+  --btn-secondary-bg: #3A3B3C;
+  --btn-secondary-text: #E4E6EB;
+  --btn-secondary-hover: #4E4F50;
+  --watermark-opacity: 0.06;
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-card-elevated: 0 4px 20px rgba(0, 0, 0, 0.45);
+}
+
+/* ---------------- THEME 3: COPTIC LUXURY NAVY & GOLD ---------------- */
+.theme-luxury {
+  --bg-canvas: #070B14;
+  --bg-nav: #0B1324;
+  --bg-card: #0E182D;
+  --bg-card-hover: #16233F;
+  --border-card: #253556;
+  --border-subtle: #1A2844;
+  --bg-input: #131F37;
+  --bg-active-tab: #1F2D4B;
+  --text-active-tab: #D4AF37;
+  --text-primary: #F5F7FA;
+  --text-secondary: #9EABCA;
+  --text-muted: #607196;
+  --brand-primary: #D4AF37;
+  --brand-primary-hover: #B89428;
+  --brand-primary-text: #070B14;
+  --brand-gold: #E5C158;
+  --brand-navy: #0B1324;
+  --btn-secondary-bg: #182744;
+  --btn-secondary-text: #D4AF37;
+  --btn-secondary-hover: #223459;
+  --watermark-opacity: 0.09;
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.5), 0 0 12px rgba(212, 175, 55, 0.05);
+  --shadow-card-elevated: 0 8px 30px rgba(0, 0, 0, 0.6), 0 0 20px rgba(212, 175, 55, 0.1);
+}
+
+body {
+  font-family: var(--font-cairo);
+  direction: rtl;
+  text-align: right;
+  background-color: var(--bg-canvas);
+  color: var(--text-primary);
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+/* App surface elements */
+.app-card {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-card);
+  box-shadow: var(--shadow-card);
+  border-radius: 12px;
+}
+
+.app-card-elevated {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-card);
+  box-shadow: var(--shadow-card-elevated);
+  border-radius: 16px;
+}
+
+.app-input {
+  background-color: var(--bg-input);
+  border: 1px solid var(--border-card);
+  color: var(--text-primary);
+}
+
+.app-input:focus {
+  border-color: var(--brand-primary);
+  outline: none;
+}
+
+.app-btn-primary {
+  background-color: var(--brand-primary);
+  color: var(--brand-primary-text);
+  font-weight: 700;
+  border-radius: 10px;
+  transition: all 0.15s ease;
+}
+
+.app-btn-primary:hover {
+  background-color: var(--brand-primary-hover);
+}
+
+.app-btn-secondary {
+  background-color: var(--btn-secondary-bg);
+  color: var(--btn-secondary-text);
+  font-weight: 600;
+  border-radius: 10px;
+  transition: all 0.15s ease;
+}
+
+.app-btn-secondary:hover {
+  background-color: var(--btn-secondary-hover);
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-canvas);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-card);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}

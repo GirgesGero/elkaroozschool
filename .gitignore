@@ -1,0 +1,44 @@
+# Node.js & Next.js
+node_modules/
+**/node_modules/
+.next/
+**/.next/
+out/
+**/out/
+build/
+dist/
+*.tsbuildinfo
+**/*.tsbuildinfo
+
+# Environment files
+.env
+.env.*
+*.env
+*.env.*
+!.env.example
+!backend-api/.env.example
+
+# Python
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+
+# Logs & Cache
+*.log
+**/*.log
+.turbo/
+.DS_Store
+Thumbs.db
+.vercel
+**/.vercel
+
+# Build artifacts & Deployment Packages
+*.zip
+*.tar.gz
+deploy-packages/
+backend-api/storage/
+!backend-api/storage/.htaccess
+!backend-api/storage/index.html
