@@ -220,53 +220,77 @@ export default function BiblePage() {
     loadTestamentsAndBooks();
   }, []);
 
-  // 2. Load Chapter Verses with Word Breakdown
+  // 2. Load Chapter Verses with Word Breakdown (Only in Reader view mode)
   useEffect(() => {
-    if (!selectedBookId || !selectedChapter) return;
+    if (viewMode !== 'reader' || !selectedBookId || !selectedChapter) return;
 
     async function loadChapter() {
       setLoadingVerses(true);
-      const supabase = createClient();
+      try {
+        const supabase = createClient();
+        const { data: vList, error } = await supabase.rpc('get_chapter_verses_with_words', {
+          p_book_id: selectedBookId,
+          p_chapter_number: selectedChapter,
+        });
 
-      const { data: vList } = await supabase.rpc('get_chapter_verses_with_words', {
-        p_book_id: selectedBookId,
-        p_chapter_number: selectedChapter,
-      });
-
-      setVerses((vList as BibleVerse[]) || []);
-      setLoadingVerses(false);
+        if (!error && vList) {
+          setVerses((vList as BibleVerse[]) || []);
+        } else {
+          setVerses([]);
+        }
+      } catch (err) {
+        setVerses([]);
+      } finally {
+        setLoadingVerses(false);
+      }
     }
 
     loadChapter();
-  }, [selectedBookId, selectedChapter]);
+  }, [viewMode, selectedBookId, selectedChapter]);
 
   // 3. Handle Word Click -> Fetch Contextual Commentary + Dictionary
   const handleWordClick = async (word: VerseWord) => {
     setSelectedWordId(word.id);
     setLoadingWordDetails(true);
-    const supabase = createClient();
+    try {
+      const supabase = createClient();
+      const { data: details, error } = await supabase.rpc('get_word_details', {
+        p_word_id: word.id,
+      });
 
-    const { data: details } = await supabase.rpc('get_word_details', {
-      p_word_id: word.id,
-    });
-
-    setWordDetails((details as WordDetailData) || null);
-    setLoadingWordDetails(false);
+      if (!error && details) {
+        setWordDetails((details as WordDetailData) || null);
+      } else {
+        setWordDetails(null);
+      }
+    } catch (err) {
+      setWordDetails(null);
+    } finally {
+      setLoadingWordDetails(false);
+    }
   };
 
   // 4. Handle Verse Commentary Click
   const handleVerseCommentaryClick = async (verse: BibleVerse) => {
     setSelectedVerseForCommentary(verse);
     setLoadingCommentary(true);
-    const supabase = createClient();
+    try {
+      const supabase = createClient();
+      const { data: comList, error } = await supabase
+        .from('bible_commentaries')
+        .select('*, source:bible_sources(author_name, source_name)')
+        .eq('verse_id', verse.id);
 
-    const { data: comList } = await supabase
-      .from('bible_commentaries')
-      .select('*, source:bible_sources(author_name, source_name)')
-      .eq('verse_id', verse.id);
-
-    setVerseCommentaries((comList as VerseCommentary[]) || []);
-    setLoadingCommentary(false);
+      if (!error && comList) {
+        setVerseCommentaries((comList as VerseCommentary[]) || []);
+      } else {
+        setVerseCommentaries([]);
+      }
+    } catch (err) {
+      setVerseCommentaries([]);
+    } finally {
+      setLoadingCommentary(false);
+    }
   };
 
   // 5. Handle Global Bible Search
