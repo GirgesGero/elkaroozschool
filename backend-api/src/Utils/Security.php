@@ -39,9 +39,9 @@ class Security {
         $path = str_replace(chr(0), '', $path);
         do {
             $prev = $path;
-            $path = str_replace(['../', '..\', './', '.\', '..'], '', $path);
+            $path = str_replace(['../', '..\\', './', '.\\', '..'], '', $path);
         } while ($path !== $prev);
-        return ltrim($path, '/\');
+        return ltrim($path, '/\\');
     }
 
     public static function constantTimeCompare(string $known, string $user): bool {

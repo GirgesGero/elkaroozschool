@@ -1,56 +1,26 @@
 // frontend/src/lib/api/bible.ts
-// Bible Encyclopedia v1.0 (Distributed Static Architecture) — Frontend API Client
+// Bible Encyclopedia — frontend API client
+//
+// IMPORTANT: this used to be an HTTP client for the PHP `/api/bible/*` routes.
+// The encyclopedia now lives entirely inside the frontend as gzipped static
+// files under /storage/bible-dataset/v1, so every function below reads the
+// dataset directly in the browser. The exported signatures are UNCHANGED, which
+// is what lets every existing page/component switch over with zero edits.
+//
+// If a remote API is ever needed again, restore a `bibleApiFetch`-style body
+// inside each function — nothing else depends on where the bytes come from.
 
-function getApiBase(): string {
-  if (typeof window !== 'undefined') {
-    return '/api';
-  }
-  return process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_PHP_API_URL || 'http://localhost:3000/api';
-}
+import {
+  getManifest as _getManifest,
+  getCategoriesAndSections as _getCategoriesAndSections,
+  getSections as _getSections,
+  getSectionArticles as _getSectionArticles,
+  getArticle as _getArticle,
+  searchBible as _searchBible,
+  getStats as _getStats,
+} from '@/lib/bible/browser-encyclopedia';
 
-/**
- * Build Bible API endpoint URL
- */
-function buildBibleUrl(endpoint: string, params?: Record<string, string | number | undefined>): string {
-  const base = getApiBase();
-  const searchParams = new URLSearchParams();
-  if (params) {
-    Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined && value !== null && value !== '') {
-        searchParams.set(key, String(value));
-      }
-    });
-  }
-  const qs = searchParams.toString();
-  return `${base}/bible/${endpoint}${qs ? `?${qs}` : ''}`;
-}
-
-/**
- * Base fetcher for Bible API with standardized error handling
- */
-async function bibleApiFetch<T>(endpoint: string, params?: Record<string, string | number | undefined>): Promise<T> {
-  const url = buildBibleUrl(endpoint, params);
-  const response = await fetch(url, {
-    method: 'GET',
-    headers: { 'Content-Type': 'application/json' },
-  });
-
-  if (!response.ok) {
-    if (response.status === 404) {
-      throw new Error('المحتوى المطلوب غير موجود في الموسوعة');
-    }
-    throw new Error(`فشل الاتصال بالخادم (${response.status})`);
-  }
-
-  const json = await response.json();
-  const isSuccessful = json.success === true || json.status === 'success';
-
-  if (!isSuccessful) {
-    throw new Error(json.error?.message || json.message || 'حدث خطأ أثناء جلب البيانات');
-  }
-
-  return json.data as T;
-}
+const NOT_FOUND = 'المحتوى المطلوب غير موجود في الموسوعة';
 
 export interface BibleCategory {
   id: number;
@@ -154,6 +124,15 @@ export interface BibleSearchResponse {
   limit: number;
   total_pages?: number;
   offset?: number;
+  /**
+   * Tokens the reader typed that had no exact match and were widened by
+   * prefix expansion, e.g. "المسيحا" -> ["المسيح", "المسيحي", ...].
+   *
+   * Present so the UI can say "approximate results" instead of presenting a
+   * fuzzy hit list as if the reader's exact words were found. Absent when every
+   * token matched exactly.
+   */
+  prefix_expanded?: string[];
   results: BibleSearchResult[];
   items?: BibleSearchResult[];
 }
@@ -195,38 +174,36 @@ export type ArticleLookup =
  * Fetch all categories with their sections grouped.
  */
 export async function getBibleCategories(): Promise<BibleCategory[]> {
-  return bibleApiFetch<BibleCategory[]>('sections', { grouped: '1' });
+  return _getCategoriesAndSections();
 }
 
 /**
  * Fetch sections, optionally filtered by category code.
  */
 export async function getBibleSections(categoryCode?: string): Promise<BibleSection[]> {
-  const params = categoryCode ? { category: categoryCode } : undefined;
-  return bibleApiFetch<BibleSection[]>('sections', params);
+  return _getSections(categoryCode);
 }
 
 /**
- * Fetch paginated articles list for a specific section (Fast metadata index).
+ * Fetch paginated articles list for a specific section (static per-section index).
  */
 export async function getBibleSectionArticles(
   sectionId: number,
   page: number = 1,
   limit: number = 20
 ): Promise<BibleSectionArticlesResponse> {
-  return bibleApiFetch<BibleSectionArticlesResponse>('section-articles', {
-    id: sectionId,
-    page,
-    limit,
-  });
+  return _getSectionArticles(sectionId, page, limit);
 }
 
 /**
  * Fetch a single article by ID, slug, path, or book+chapter.
+ *
+ * Still rejects on "not found" rather than resolving to null, because the
+ * reader page treats a rejection as its error state.
  */
 export async function getBibleArticle(lookup: ArticleLookup): Promise<BibleArticle> {
-  const params: Record<string, string | number> = {};
-  
+  const params: Parameters<typeof _getArticle>[0] = {};
+
   if ('id' in lookup) {
     params.id = lookup.id;
   } else if ('slug' in lookup) {
@@ -238,15 +215,16 @@ export async function getBibleArticle(lookup: ArticleLookup): Promise<BibleArtic
     params.ch = lookup.chapter;
   }
 
-  const raw = await bibleApiFetch<BibleArticle | { article: BibleArticle }>('article', params);
-  if (raw && typeof raw === 'object' && 'article' in raw) {
-    return (raw as { article: BibleArticle }).article;
-  }
-  return raw as BibleArticle;
+  const art = await _getArticle(params);
+  if (!art) throw new Error(NOT_FOUND);
+  return art;
 }
 
 /**
- * Full-text search across 49,249 articles using Sharded Hash Index.
+ * Full-text search across the encyclopedia using the local sharded hash index.
+ *
+ * Reads the title index plus one gzip shard per query token, so a query costs a
+ * few hundred KB and zero server round-trips.
  */
 export async function searchBibleEncyclopedia(
   query: string,
@@ -258,37 +236,53 @@ export async function searchBibleEncyclopedia(
     offset?: number;
   }
 ): Promise<BibleSearchResponse> {
-  const params: Record<string, string | number | undefined> = { q: query };
-  if (options?.scope) params.scope = options.scope;
-  if (options?.sectionId) params.section = options.sectionId;
-  if (options?.limit) params.limit = options.limit;
-  if (options?.page) params.page = options.page;
-  if (options?.offset) params.offset = options.offset;
-
-  const raw = await bibleApiFetch<any>('search', params);
-  const items = raw.items || raw.results || [];
+  const raw = await _searchBible(query, {
+    scope: options?.scope,
+    sectionId: options?.sectionId,
+    limit: options?.limit,
+    page: options?.page,
+  });
 
   return {
-    query: raw.query || query,
-    total: raw.total || 0,
-    page: raw.page || 1,
-    limit: raw.limit || options?.limit || 20,
-    total_pages: raw.total_pages || 1,
-    results: items,
-    items,
+    query: raw.query,
+    normalized_query: raw.normalized_query,
+    scope: raw.scope,
+    total: raw.total,
+    page: raw.page,
+    limit: raw.limit,
+    total_pages: raw.total_pages,
+    offset: (raw.page - 1) * raw.limit,
+    prefix_expanded: raw.prefix_expanded,
+    results: raw.results,
+    // Legacy alias: callers read `results || items`.
+    items: raw.results,
   };
 }
 
 /**
  * Get encyclopedia statistics and daily verse.
+ *
+ * `reference` is duplicated as `ref` because the UI reads `daily_verse.ref`.
  */
 export async function getBibleStats(): Promise<BibleStats> {
-  return bibleApiFetch<BibleStats>('stats');
+  const s = await _getStats();
+  return {
+    total_articles: s.total_articles,
+    total_sections: s.total_sections,
+    total_categories: s.total_categories,
+    dataset_version: s.dataset_version,
+    daily_verse: {
+      text: s.daily_verse?.text ?? '',
+      ref: s.daily_verse?.reference,
+      reference: s.daily_verse?.reference,
+      theme: s.daily_verse?.theme,
+    },
+  };
 }
 
 /**
  * Get dataset manifest and metadata.
  */
 export async function getBibleManifest(): Promise<Record<string, any>> {
-  return bibleApiFetch<Record<string, any>>('manifest');
+  return _getManifest();
 }

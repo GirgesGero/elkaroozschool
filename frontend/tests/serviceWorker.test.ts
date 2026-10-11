@@ -22,14 +22,45 @@ interface Handler {
   (event: unknown): void;
 }
 
+interface WorkerConfig {
+  /** Origin the worker believes it is running on. */
+  origin?: string;
+  /** Pre-existing entries in the dataset cache, keyed by request URL. */
+  cached?: Set<string>;
+  /** What the network returns when the cache misses. */
+  network?: { status: number; type: string };
+}
+
 /** Evaluate the worker with stubbed globals and return its registered handlers. */
-function loadWorker(): { handlers: Map<string, Handler>; calls: Record<string, unknown[]> } {
+function loadWorker(config: WorkerConfig = {}): {
+  handlers: Map<string, Handler>;
+  calls: Record<string, unknown[]>;
+} {
   const handlers = new Map<string, Handler>();
   const calls: Record<string, unknown[]> = {};
+  const origin = config.origin ?? 'https://same-origin.example';
+  const store = config.cached ?? new Set<string>();
 
   const registration = {
     showNotification: (title: string, options: unknown) => {
       calls.notifications = [...(calls.notifications ?? []), { title, options }];
+      return Promise.resolve();
+    },
+  };
+
+  const networkResponse = {
+    status: config.network?.status ?? 200,
+    type: config.network?.type ?? 'basic',
+    clone: () => networkResponse,
+  };
+
+  const cache = {
+    addAll: () => Promise.resolve(),
+    match: (req: { url: string }) =>
+      Promise.resolve(store.has(req.url) ? { __cached: true, req } : undefined),
+    put: (req: { url: string }, res: unknown) => {
+      store.add(req.url);
+      calls.put = [...(calls.put ?? []), { url: req.url, res }];
       return Promise.resolve();
     },
   };
@@ -39,8 +70,12 @@ function loadWorker(): { handlers: Map<string, Handler>; calls: Record<string, u
     skipWaiting: () => {},
     clients: { claim: () => {}, matchAll: () => Promise.resolve([]) },
     registration,
+    location: { origin },
     caches: {
-      open: () => Promise.resolve({ addAll: () => Promise.resolve() }),
+      open: (name: string) => {
+        calls.opened = [...(calls.opened ?? []), name];
+        return Promise.resolve(cache);
+      },
       keys: () => Promise.resolve([]),
       delete: () => Promise.resolve(true),
     },
@@ -53,6 +88,7 @@ function loadWorker(): { handlers: Map<string, Handler>; calls: Record<string, u
     URL,
     Promise,
     console,
+    fetch: () => Promise.resolve(networkResponse),
   };
   sandbox.globalThis = sandbox;
 
@@ -60,6 +96,50 @@ function loadWorker(): { handlers: Map<string, Handler>; calls: Record<string, u
   vm.runInContext(source, sandbox);
 
   return { handlers, calls };
+}
+
+interface FetchOutcome {
+  /** Did the worker claim this request at all? */
+  intercepted: boolean;
+  /** Where the response came from. Absent when not intercepted. */
+  servedFrom?: 'cache' | 'network';
+  /** Which cache name was opened. */
+  cacheName?: string;
+  /** Did the worker write this response into the cache? */
+  cached: boolean;
+}
+
+/**
+ * Fire the fetch handler at a URL and report what it did.
+ *
+ * Returns `intercepted: false` when the worker declined the request, which is
+ * the required behaviour for everything outside the dataset -- the browser then
+ * fetches from the network exactly as it would with no worker at all.
+ */
+async function runFetch(url: string, config: WorkerConfig = {}): Promise<FetchOutcome> {
+  const { handlers, calls } = loadWorker(config);
+  const onFetch = handlers.get('fetch');
+  expect(onFetch, 'no fetch handler registered').toBeTruthy();
+
+  let claimed: Promise<unknown> | undefined;
+  onFetch!({
+    request: { method: 'GET', url },
+    respondWith: (p: Promise<unknown>) => {
+      claimed = p;
+    },
+  });
+
+  if (!claimed) return { intercepted: false, cached: false };
+
+  const response = (await claimed) as { __cached?: boolean };
+  const put = (calls.put ?? []) as { url: string }[];
+
+  return {
+    intercepted: true,
+    servedFrom: response?.__cached ? 'cache' : 'network',
+    cacheName: (calls.opened ?? [])[0] as string | undefined,
+    cached: put.some((p) => p.url === url),
+  };
 }
 
 /** Fire the push handler with a payload and read back what was displayed. */
@@ -92,11 +172,55 @@ describe('service worker registration', () => {
     expect(handlers.has('notificationclick')).toBe(true);
   });
 
-  it('does not intercept network requests', () => {
-    // A cache strategy over an authenticated app leaks one user's rendered pages to
-    // the next person on a shared device. Its absence is a security property.
+  it('has a fetch handler scoped to the encyclopedia dataset only', async () => {
+    // The dataset under /storage/bible-dataset/ is immutable public data, so
+    // cache-first there is safe and is what keeps 173 MB off Vercel's bandwidth.
+    // Everything else must stay network-only: a cache strategy over an
+    // authenticated app leaks one user's rendered pages to the next person on a
+    // shared device. The scoping is the security property -- assert it.
     const { handlers } = loadWorker();
-    expect(handlers.has('fetch')).toBe(false);
+    expect(handlers.has('fetch')).toBe(true);
+
+    const cross = await runFetch('https://evil.example.com/storage/bible-dataset/v1/x.gz');
+    expect(cross.intercepted).toBe(false); // cross-origin must never be cached
+
+    const appPage = await runFetch('https://same-origin.example/attendance');
+    expect(appPage.intercepted).toBe(false); // authenticated surface untouched
+
+    const apiCall = await runFetch('https://same-origin.example/api/health');
+    expect(apiCall.intercepted).toBe(false);
+
+    const dataset = await runFetch(
+      'https://same-origin.example/storage/bible-dataset/v1/manifest.json'
+    );
+    expect(dataset.intercepted).toBe(true); // the one path that IS cached
+  });
+
+  it('serves the dataset cache-first, so repeat reads cost no Vercel bandwidth', async () => {
+    const url = 'https://same-origin.example/storage/bible-dataset/v1/manifest.json';
+
+    const cold = await runFetch(url);
+    expect(cold.servedFrom).toBe('network');
+    expect(cold.cacheName).toBe('elkarooz-bible-v1');
+    expect(cold.cached).toBe(true);
+
+    // The reader has it now, so the second read never leaves the device.
+    const warm = await runFetch(url, { cached: new Set([url]) });
+    expect(warm.servedFrom).toBe('cache');
+    expect(warm.cached).toBe(false);
+  });
+
+  it('never caches an error or opaque response', async () => {
+    // A failed request written into the cache becomes a permanent miss: the
+    // reader would be stuck with a broken file until the whole cache is cleared.
+    const url = 'https://same-origin.example/storage/bible-dataset/v1/missing.gz';
+
+    const failed = await runFetch(url, { network: { status: 404, type: 'basic' } });
+    expect(failed.servedFrom).toBe('network');
+    expect(failed.cached).toBe(false);
+
+    const opaque = await runFetch(url, { network: { status: 200, type: 'opaque' } });
+    expect(opaque.cached).toBe(false);
   });
 });
 

@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { Search, X, Loader2, BookOpen, Sparkles } from 'lucide-react';
-import { searchBibleEncyclopedia, type BibleSearchResult } from '@/lib/api/bible';
+import { searchBibleEncyclopedia, getBibleStats, type BibleSearchResult } from '@/lib/api/bible';
 
 interface BibleSearchModalProps {
   isOpen: boolean;
@@ -17,6 +17,8 @@ interface SearchState {
   total: number;
   loading: boolean;
   searched: boolean;
+  /** Tokens the backend widened by prefix expansion, e.g. "المسي" -> المسيح. */
+  expandedTokens?: string[];
 }
 
 export default function BibleSearchModal({ isOpen, onClose, onSelectArticle, sectionId }: BibleSearchModalProps) {
@@ -27,6 +29,24 @@ export default function BibleSearchModal({ isOpen, onClose, onSelectArticle, sec
     loading: false,
     searched: false,
   });
+  // Read the real count from the dataset instead of a hardcoded figure that
+  // drifts the moment the encyclopedia is rebuilt.
+  const [articleCount, setArticleCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!isOpen || articleCount !== null) return;
+    let cancelled = false;
+    getBibleStats()
+      .then((s) => {
+        if (!cancelled) setArticleCount(s.total_articles ?? null);
+      })
+      .catch(() => {
+        /* header count is cosmetic -- never block search on it */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, articleCount]);
 
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -62,6 +82,9 @@ export default function BibleSearchModal({ isOpen, onClose, onSelectArticle, sec
         results: response.results || response.items || [],
         total: response.total || 0,
         loading: false,
+        // Surfaced so the results list can tell the reader these are
+        // approximations, not exact hits for the word they typed.
+        expandedTokens: response.prefix_expanded,
       }));
     } catch (error) {
       console.error('Search error:', error);
@@ -70,6 +93,7 @@ export default function BibleSearchModal({ isOpen, onClose, onSelectArticle, sec
         results: [],
         total: 0,
         loading: false,
+        expandedTokens: undefined,
       }));
     }
   };
@@ -98,7 +122,7 @@ export default function BibleSearchModal({ isOpen, onClose, onSelectArticle, sec
 
   if (!isOpen) return null;
 
-  const { query, results, total, loading, searched } = searchState;
+  const { query, results, total, loading, searched, expandedTokens } = searchState;
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center p-4 bg-slate-950/80 backdrop-blur-md overflow-y-auto" dir="rtl">
@@ -114,7 +138,11 @@ export default function BibleSearchModal({ isOpen, onClose, onSelectArticle, sec
                 <span>البحث في الموسوعة</span>
                 <Sparkles className="w-3.5 h-3.5 text-[#c29938]" />
               </h3>
-              <p className="text-xs text-slate-400 mt-0.5">البحث الفوري في 49,249 مقال ووثيقة</p>
+              <p className="text-xs text-slate-400 mt-0.5">
+                {articleCount === null
+                  ? 'البحث الفوري في الموسوعة'
+                  : `البحث الفوري في ${articleCount.toLocaleString('ar-EG')} مقال ووثيقة`}
+              </p>
             </div>
           </div>
           <button
@@ -161,6 +189,11 @@ export default function BibleSearchModal({ isOpen, onClose, onSelectArticle, sec
               <div className="px-3 py-2 text-xs text-slate-400">
                 تم العثور على <span className="text-[#c29938] font-bold">{total.toLocaleString()}</span> نتيجة
               </div>
+              {expandedTokens && expandedTokens.length > 0 && (
+                <div className="mx-3 mb-2 px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/25 text-[11px] text-amber-300/90 leading-relaxed">
+                  لم يُعثر على &ldquo;{expandedTokens.join('، ')}&rdquo; ككلمة كاملة — هذه نتائج تقريبية لكلمات مشابهة.
+                </div>
+              )}
               {results.map((result) => (
                 <button
                   key={result.id}

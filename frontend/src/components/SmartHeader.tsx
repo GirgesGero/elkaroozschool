@@ -7,19 +7,17 @@ import { useRouter, usePathname } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useAppTheme, type AppTheme } from '@/context/ThemeContext';
 import NotificationCenter from '@/components/NotificationCenter';
+import { useScrollChrome } from '@/hooks/useScrollChrome';
+import NavDrawer from '@/components/NavDrawer';
+import { PRIMARY_NAV, isNavActive as navIsActive } from '@/lib/navigation';
 import {
   Search,
-  Settings,
   Sun,
   Moon,
   Crown,
   Sparkles,
   LogOut,
-  User,
-  BookOpen,
-  Users,
-  Flame,
-  Music,
+  LayoutGrid,
   ChevronDown,
 } from 'lucide-react';
 import type { Profile } from '@/types/database';
@@ -34,40 +32,10 @@ export default function SmartHeader({ profile, onOpenSearch, onOpenProfile }: Sm
   const router = useRouter();
   const pathname = usePathname();
   const { theme, setTheme, toggleTheme } = useAppTheme();
-  const [isVisible, setIsVisible] = useState(true);
-  const [lastScrollY, setLastScrollY] = useState(0);
+  const isVisible = useScrollChrome();
   const [showThemeMenu, setShowThemeMenu] = useState(false);
   const themeMenuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    let ticking = false;
-
-    const handleScroll = () => {
-      if (!ticking) {
-        window.requestAnimationFrame(() => {
-          const currentScrollY = window.scrollY;
-
-          // Always show when near the top
-          if (currentScrollY < 40) {
-            setIsVisible(true);
-          } else if (currentScrollY > lastScrollY && currentScrollY > 80) {
-            // Scrolling down -> hide header
-            setIsVisible(false);
-          } else if (currentScrollY < lastScrollY - 15) {
-            // Scrolling up significantly -> reveal header
-            setIsVisible(true);
-          }
-
-          setLastScrollY(currentScrollY);
-          ticking = false;
-        });
-        ticking = true;
-      }
-    };
-
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [lastScrollY]);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   // Click outside to close theme menu
   useEffect(() => {
@@ -86,10 +54,8 @@ export default function SmartHeader({ profile, onOpenSearch, onOpenProfile }: Sm
     router.push('/login');
   };
 
-  const isNavActive = (path: string) => {
-    if (path === '/') return pathname === '/';
-    return pathname.startsWith(path);
-  };
+  const isAdminOrSuper =
+    profile?.role_id === 'admin' || profile?.role_id === 'super_user';
 
   return (
     <header
@@ -128,81 +94,28 @@ export default function SmartHeader({ profile, onOpenSearch, onOpenProfile }: Sm
           </button>
         </div>
 
-        {/* Center Section: Primary Navigation Shortcuts (Desktop Only) */}
-        <nav className="hidden lg:flex items-center gap-1 h-full">
-          <Link
-            href="/"
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
-              isNavActive('/')
-                ? 'text-[#c29938] bg-[#c29938]/15 border border-[#c29938]/40 font-black shadow-sm'
-                : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
-            }`}
-          >
-            <span>الحائط العام</span>
-          </Link>
-          <Link
-            href="/groups"
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
-              isNavActive('/groups')
-                ? 'text-[#c29938] bg-[#c29938]/15 border border-[#c29938]/40 font-black shadow-sm'
-                : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
-            }`}
-          >
-            <span>الفرق</span>
-          </Link>
-          <Link
-            href="/curriculum"
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
-              isNavActive('/curriculum')
-                ? 'text-[#c29938] bg-[#c29938]/15 border border-[#c29938]/40 font-black shadow-sm'
-                : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
-            }`}
-          >
-            <span>المحاضرات</span>
-          </Link>
-          <Link
-            href="/marathon"
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
-              isNavActive('/marathon')
-                ? 'text-[#c29938] bg-[#c29938]/15 border border-[#c29938]/40 font-black shadow-sm'
-                : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
-            }`}
-          >
-            <span>الماراثون</span>
-          </Link>
-          <Link
-            href="/bible"
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
-              isNavActive('/bible')
-                ? 'text-[#c29938] bg-[#c29938]/15 border border-[#c29938]/40 font-black shadow-sm'
-                : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
-            }`}
-          >
-            <span>الكتاب المقدس</span>
-          </Link>
-          <Link
-            href="/books"
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
-              isNavActive('/books')
-                ? 'text-[#c29938] bg-[#c29938]/15 border border-[#c29938]/40 font-black shadow-sm'
-                : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
-            }`}
-          >
-            <span>المكتبة</span>
-          </Link>
-
-          {/* Desktop Direct Settings Navigation Link */}
-          <Link
-            href="/settings"
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
-              isNavActive('/settings')
-                ? 'text-[#c29938] bg-[#c29938]/20 border border-[#c29938] font-black shadow-md shadow-[#c29938]/20'
-                : 'text-slate-300 hover:text-[#c29938] hover:bg-slate-800/60'
-            }`}
-          >
-            <Settings className="w-3.5 h-3.5 text-[#c29938]" />
-            <span>الإعدادات</span>
-          </Link>
+        {/* Center: the five primary destinations, icons only (Desktop) */}
+        <nav className="hidden lg:flex items-center gap-0.5 h-full" aria-label="التنقل الرئيسي">
+          {PRIMARY_NAV.map((item) => {
+            const active = navIsActive(item, pathname);
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                aria-label={item.label}
+                title={item.label}
+                aria-current={active ? 'page' : undefined}
+                className={`grid h-9 w-9 place-items-center rounded-xl transition-all ${
+                  active
+                    ? 'bg-[#c29938]/15 text-[#c29938] border border-[#c29938]/40'
+                    : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60 border border-transparent'
+                }`}
+              >
+                <Icon className={`h-[18px] w-[18px] ${active ? 'stroke-[2.4]' : ''}`} />
+              </Link>
+            );
+          })}
         </nav>
 
         {/* Left Section: Mobile Search, Settings/Theme Icon, Notification Bell, User Profile Capsule & Logout */}
@@ -308,19 +221,16 @@ export default function SmartHeader({ profile, onOpenSearch, onOpenProfile }: Sm
             )}
           </div>
 
-          {/* Prominent Settings Link Button */}
-          <Link
-            href="/settings"
-            className={`p-2 rounded-xl border transition-all flex items-center gap-1.5 ${
-              pathname === '/settings'
-                ? 'bg-[#c29938] text-slate-950 font-black border-[#c29938] shadow-md shadow-[#c29938]/30'
-                : 'bg-slate-900/80 hover:bg-slate-800/90 text-slate-300 hover:text-[#c29938] border-slate-800'
-            }`}
-            title="لوحة الإعدادات وتخصيص المظهر"
+          {/* Overflow: opens the side drawer where settings and the rest live */}
+          <button
+            onClick={() => setDrawerOpen(true)}
+            aria-label="كل الأقسام"
+            title="كل الأقسام"
+            aria-expanded={drawerOpen}
+            className="grid h-9 w-9 place-items-center rounded-xl border border-slate-800 bg-slate-900/80 text-slate-300 transition-colors hover:border-[#c29938]/40 hover:text-[#c29938]"
           >
-            <Settings className="w-4 h-4" />
-            <span className="hidden xl:inline text-xs font-bold">الإعدادات</span>
-          </Link>
+            <LayoutGrid className="h-4 w-4" />
+          </button>
 
           {/* Notification Center Popover */}
           <NotificationCenter />
@@ -354,6 +264,13 @@ export default function SmartHeader({ profile, onOpenSearch, onOpenProfile }: Sm
           </button>
         </div>
       </div>
+
+      <NavDrawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        canAdmin={!!isAdminOrSuper}
+        onOpenProfile={() => profile && onOpenProfile(profile.id, profile.role_id)}
+      />
     </header>
   );
 }

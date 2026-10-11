@@ -9,8 +9,17 @@
     RewriteCond %{REQUEST_METHOD} ^(TRACE|TRACK|CONNECT|DEBUG) [NC]
     RewriteRule ^.*$ - [F]
 
-    # Block direct HTTP access to internal source directories
-    RewriteRule ^(src|config|vendor)/ - [F,L]
+    # Block direct HTTP access to internal source directories.
+        # The trailing (?:/|$) matters: without it a path like /config/app.php
+        # would not be matched by ^(src|config|vendor)/.
+        RewriteRule ^(?:src|config|vendor)(?:/|$) - [F,L]
+
+        # Defense in depth: no PHP file may be reached by any path except the front
+        # controller. The rules above only exist inside <IfModule mod_rewrite.c>,
+        # so on a host with mod_rewrite disabled Apache would happily execute
+        # /src/Utils/*.php directly.
+        RewriteCond %{REQUEST_URI} !^/index\.php$
+        RewriteRule \.php$ - [F,L]
 
     # Block sensitive files and extensions
     RewriteRule ^(\.env|\.git|\.htaccess|\.sql|\.bak|\.log|\.ini|\.sh)$ - [F,L]

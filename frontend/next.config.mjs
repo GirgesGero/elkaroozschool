@@ -34,6 +34,25 @@ const nextConfig = {
   async headers() {
     return [
       {
+        // The encyclopedia dataset is immutable once generated, so it can be
+        // cached forever. NOTE the split by extension: only `.gz` may claim
+        // `application/gzip`. The plain `.json` files (manifest, categories,
+        // sections) are fetched with response.json(), and stamping them as gzip
+        // under nosniff would mislabel them.
+        source: '/storage/bible-dataset/:file*.gz',
+        headers: [
+          { key: 'Content-Type', value: 'application/gzip' },
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+        ],
+      },
+      {
+        source: '/storage/bible-dataset/:file*.json',
+        headers: [
+          { key: 'Content-Type', value: 'application/json; charset=utf-8' },
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+        ],
+      },
+      {
         source: '/(.*)',
         headers: [
           {

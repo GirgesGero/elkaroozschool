@@ -1,12 +1,26 @@
 // Service Worker for EL KAROOZ School PWA
 //
-// There is deliberately no fetch handler here. A cache-first strategy over an
-// authenticated app serves one user's rendered pages to the next person on a shared
-// device, and a network-first strategy adds latency to every navigation for no offline
-// benefit, because the app's content is all live database reads. So this worker does
-// one thing -- install the shell and display push notifications -- and leaves the
-// network alone.
-const CACHE_NAME = 'elkarooz-cache-v1';
+// PRECISION REQUIRED: this worker has exactly two jobs.
+//
+// 1. The encyclopedia dataset under /storage/bible-dataset/ is immutable,
+//    versioned, public data served as static .gz. It is served cache-first and
+//    served to the Cache Storage API. That is what keeps 173 MB of Bible
+//    content off Vercel's bandwidth: after the first visit a reader fetches
+//    nothing from the CDN at all, and the whole encyclopedia works offline.
+//
+// 2. Everything else in the app is a live authenticated database read. It
+//    deliberately has NO fetch handler. A cache-first strategy there would
+//    serve one user's rendered pages to the next person on a shared device,
+//    and network-first would add latency for no offline benefit. So the
+//    authenticated surface is left alone -- this worker never intercepts it.
+//
+// The scoping is enforced by an explicit path prefix test, not by a broad
+// matcher, so a new authenticated route cannot accidentally fall into the
+// dataset cache.
+const CACHE_NAME = 'elkarooz-shell-v2';
+const DATASET_CACHE = 'elkarooz-bible-v1';
+const DATASET_PREFIX = '/storage/bible-dataset/';
+
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',
@@ -15,6 +29,10 @@ const STATIC_ASSETS = [
   // the largest asset the install actually needs.
   '/icons/icon-512x512.png'
 ];
+
+function isDatasetRequest(url) {
+  return url.origin === self.location.origin && url.pathname.startsWith(DATASET_PREFIX);
+}
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -30,7 +48,9 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((keys) => {
       return Promise.all(
         keys.map((key) => {
-          if (key !== CACHE_NAME) {
+          // Keep the dataset cache across versions -- it is versioned by path,
+          // so an old one is never stale. Everything else is rebuilt.
+          if (key !== CACHE_NAME && key !== DATASET_CACHE) {
             return caches.delete(key);
           }
         })
@@ -38,6 +58,41 @@ self.addEventListener('activate', (event) => {
     })
   );
   self.clients.claim();
+});
+
+/**
+ * Encyclopedia dataset: cache-first, then fill the cache in the background.
+ *
+ * Cache-first is safe here because these files never change under a given path
+ * (the dataset version is part of the path). It is what makes repeat browsing
+ * free of Vercel bandwidth charges.
+ */
+self.addEventListener('fetch', (event) => {
+  const req = event.request;
+  if (req.method !== 'GET') return;
+
+  let url;
+  try {
+    url = new URL(req.url);
+  } catch (err) {
+    return;
+  }
+  if (!isDatasetRequest(url)) return; // everything else: untouched
+
+  event.respondWith(
+    caches.open(DATASET_CACHE).then(async (cache) => {
+      const hit = await cache.match(req);
+      if (hit) return hit;
+
+      const res = await fetch(req);
+      // Opaque/error responses must not be written to the cache, or a failed
+      // request would be pinned as a permanent miss forever.
+      if (res && res.status === 200 && res.type !== 'opaque') {
+        cache.put(req, res.clone());
+      }
+      return res;
+    })
+  );
 });
 
 // Push Notification Handler
