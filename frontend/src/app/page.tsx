@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import SmartHeader from '@/components/SmartHeader';
@@ -26,6 +25,7 @@ import {
   MessageCircle,
 } from 'lucide-react';
 import type { Profile } from '@/types/database';
+import Avatar from '../components/Avatar';
 
 export default function FeedPage() {
   const router = useRouter();
@@ -63,15 +63,14 @@ export default function FeedPage() {
 
       // Fetch Posts with reactions & author
       const { data: postsData } = await supabase
-        .from('posts')
-        .select(`
-          *,
-          author:profiles(id, full_name, avatar_url, role_id),
-          reactions(user_id, type),
-          comments(*, author:profiles(id, full_name, avatar_url))
-        `)
-        .order('created_at', { ascending: false })
-        .limit(25);
+              .from('feed_posts')
+              .select(`
+                *,
+                author:profiles!feed_posts_author_id_fkey(id, full_name, avatar_url, role_id),
+                post_comments(*, author:profiles!post_comments_author_id_fkey(id, full_name, avatar_url))
+              `)
+              .order('created_at', { ascending: false })
+              .limit(25);
 
       if (postsData) {
         const formatted = postsData.map((p) => {
@@ -138,13 +137,15 @@ export default function FeedPage() {
           <aside className="hidden lg:block lg:col-span-3 space-y-4 sticky top-20 h-fit">
             {profile && (
               <div className="p-4 rounded-3xl bg-canvas border border-line/80 shadow-xl text-center">
-                <div className="relative w-16 h-16 mx-auto rounded-full bg-gradient-to-tr from-gold to-warning p-0.5 shadow-lg overflow-hidden mb-2">
-                  <div className="w-full h-full rounded-full bg-nav flex items-center justify-center font-black text-xl text-gold overflow-hidden">
-                    {profile.avatar_url ? (
-                      <Image src={profile.avatar_url} alt={profile.full_name} fill sizes="64px" className="object-cover" />
-                    ) : (
-                      profile.full_name.charAt(0)
-                    )}
+                <div className="relative w-16 h-16 mx-auto rounded-full bg-gradient-to-tr from-gold to-warning p-0.5 shadow-lg mb-2">
+                  <div className="w-full h-full rounded-full bg-nav flex items-center justify-center overflow-hidden">
+                    <Avatar
+                      src={profile.avatar_url}
+                      name={profile.full_name}
+                      size={64}
+                      rounded="rounded-full"
+                      className="w-full h-full"
+                    />
                   </div>
                 </div>
                 <h3 className="font-black text-sm text-content">{profile.full_name}</h3>

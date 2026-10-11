@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
 import { useAppTheme, AppTheme, AppAccent } from '@/context/ThemeContext';
 import SmartHeader from '@/components/SmartHeader';
@@ -36,6 +35,7 @@ import {
   Layers,
 } from 'lucide-react';
 import type { Profile } from '@/types/database';
+import Avatar from '../../components/Avatar';
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -263,33 +263,57 @@ export default function SettingsPage() {
 
         {/* 2. User Identity Summary Card */}
         {profile && (
-          <section className="p-5 rounded-3xl bg-canvas border border-line shadow-xl flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-3.5">
-              <div className="w-14 h-14 rounded-full bg-gradient-to-tr from-gold via-amber-400 to-warning p-0.5 shadow-lg overflow-hidden shrink-0">
-                <div className="w-full h-full rounded-full bg-nav flex items-center justify-center font-black text-lg text-gold overflow-hidden">
-                  {profile.avatar_url ? (
-                    <Image src={profile.avatar_url} alt={profile.full_name} width={56} height={56} className="object-cover" />
-                  ) : (
-                    profile.full_name.charAt(0)
-                  )}
-                </div>
-              </div>
-              <div>
-                <h3 className="font-black text-base text-content">{profile.full_name}</h3>
-                <div className="flex items-center gap-2 text-xs text-content-muted mt-0.5">
-                  <span className="text-gold font-bold">{getRoleName(profile.role_id)}</span>
-                  <span>•</span>
-                  <span>{getGroupName(profile.group_id)}</span>
-                </div>
-              </div>
-            </div>
+          <section className="relative overflow-hidden rounded-3xl border border-line bg-canvas shadow-xl">
+            {/* Coptic gold hairline + ambient wash, matching the rest of the theme */}
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-l from-transparent via-gold to-transparent" />
+            <div className="pointer-events-none absolute -top-24 -left-16 h-56 w-56 rounded-full bg-gold/10 blur-3xl" />
 
-            <button
-              onClick={() => setSelectedProfileId(profile.id)}
-              className="w-full sm:w-auto px-4 py-2 rounded-2xl bg-canvas hover:bg-gold hover:text-content border border-line text-xs font-bold text-content-secondary transition-all"
-            >
-              تعديل الصورة والبيانات الشخصية
-            </button>
+            <div className="relative flex flex-col items-center gap-5 p-6 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex w-full flex-col items-center gap-4 sm:w-auto sm:flex-row">
+                {/* Ring + soft halo. The Avatar component handles the image,
+                    the missing-avatar initial, and any broken remote URL. */}
+                <div className="relative shrink-0">
+                  <div className="absolute inset-0 -m-1.5 rounded-full bg-gold/20 blur-lg" />
+                  <div className="relative w-20 h-20 rounded-full bg-gradient-to-tr from-gold via-amber-400 to-warning p-[3px] shadow-lg">
+                    <div className="w-full h-full rounded-full bg-nav flex items-center justify-center overflow-hidden">
+                      <Avatar
+                        src={profile.avatar_url}
+                        name={profile.full_name}
+                        size={74}
+                        rounded="rounded-full"
+                        className="w-full h-full"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="text-center sm:text-start">
+                  <h3 className="font-black text-xl leading-tight text-content">
+                    {profile.full_name}
+                  </h3>
+                  {profile.username && (
+                    <p className="mt-0.5 text-xs text-content-muted" dir="ltr">
+                      @{profile.username}
+                    </p>
+                  )}
+                  <div className="mt-2 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+                    <span className="rounded-full bg-gold/15 px-2.5 py-1 text-[11px] font-bold text-gold ring-1 ring-gold/30">
+                      {getRoleName(profile.role_id)}
+                    </span>
+                    <span className="rounded-full bg-info/10 px-2.5 py-1 text-[11px] font-bold text-info ring-1 ring-info/25">
+                      {getGroupName(profile.group_id)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setSelectedProfileId(profile.id)}
+                className="inline-flex min-h-[44px] w-full shrink-0 items-center justify-center gap-2 rounded-2xl bg-gold px-5 py-2.5 text-xs font-black text-brand-on transition-all hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold sm:w-auto"
+              >
+                تعديل الصورة والبيانات الشخصية
+              </button>
+            </div>
           </section>
         )}
 

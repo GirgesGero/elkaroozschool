@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
 import MediaCollage from './MediaCollage';
 import { DeepLinkService, ShareService } from '@/lib/mobile';
@@ -17,6 +16,7 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import type { ReactionType, Profile } from '@/types/database';
+import Avatar from '../components/Avatar';
 
 export interface PostWithAuthor {
   id: string;
@@ -147,7 +147,7 @@ export default function FeedPostCard({
     setIsDeleting(true);
     const supabase = createClient();
     try {
-      await supabase.from('posts').delete().eq('id', post.id);
+      await supabase.from('feed_posts').delete().eq('id', post.id);
       if (onPostDeleted) onPostDeleted(post.id);
     } catch (err) {
       console.error('Delete error:', err);
@@ -180,7 +180,7 @@ export default function FeedPostCard({
             className="relative w-11 h-11 rounded-full bg-gradient-to-tr from-gold to-warning text-content flex items-center justify-center font-black text-sm shadow-md overflow-hidden ring-2 ring-gold/40 hover:scale-105 transition-transform shrink-0"
           >
             {post.author?.avatar_url ? (
-              <Image src={post.author.avatar_url} alt={post.author.full_name} fill sizes="44px" className="object-cover" />
+              <Avatar src={post.author.avatar_url} name={post.author.full_name} size={44} />
             ) : (
               post.author?.full_name?.charAt(0) || 'ك'
             )}
@@ -352,7 +352,7 @@ export default function FeedPostCard({
               <div key={c.id} className="flex items-start gap-2.5 bg-canvas p-3 rounded-2xl border border-line/60">
                 <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-gold to-warning text-content flex items-center justify-center font-bold text-[10px] shrink-0 overflow-hidden">
                   {c.author?.avatar_url ? (
-                    <Image src={c.author.avatar_url} alt={c.author.full_name} width={28} height={28} className="object-cover" />
+                    <Avatar src={c.author.avatar_url} name={c.author.full_name} size={28} />
                   ) : (
                     c.author?.full_name?.charAt(0) || 'م'
                   )}

@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import Image from 'next/image';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { explainDbError } from '@/lib/errors/db';
@@ -52,6 +51,7 @@ import {
   UserPlus,
 } from 'lucide-react';
 import type { Profile, AttendanceStatus } from '@/types/database';
+import Avatar from '../../../components/Avatar';
 
 interface PageProps {
   params?: { id?: string };
@@ -159,9 +159,15 @@ export default function GroupDetailsPage({ params }: PageProps) {
     }
 
     // 6. Curriculums
+    //
+    // `lectures(*)` cannot be embedded here: curriculums and lectures have no
+    // foreign key between them (PostgREST answered PGRST200). They only share
+    // term_id/group_id, which is not a relationship it can follow, and joining
+    // on term_id would attach the same lecture to every curriculum in a term.
+    // Lectures are already loaded separately for this group further down.
     const { data: currList } = await supabase
       .from('curriculums')
-      .select('*, lectures(*)')
+      .select('*')
       .eq('group_id', gId)
       .is('deleted_at', null);
     if (currList) setCurriculums(currList);
@@ -840,7 +846,7 @@ export default function GroupDetailsPage({ params }: PageProps) {
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-xl bg-nav text-gold flex items-center justify-center font-bold">
                               {t.avatar_url ? (
-                                <Image src={t.avatar_url} alt={t.full_name} width={40} height={40} className="rounded-xl object-cover" />
+                                <Avatar src={t.avatar_url} name={t.full_name} size={40} />
                               ) : (
                                 <User className="w-5 h-5" />
                               )}
@@ -908,7 +914,7 @@ export default function GroupDetailsPage({ params }: PageProps) {
                           <div className="flex items-center gap-3">
                             <div className="w-12 h-12 rounded-xl bg-nav border border-line flex items-center justify-center text-gold shrink-0">
                               {s.avatar_url ? (
-                                <Image src={s.avatar_url} alt={s.full_name} width={48} height={48} className="rounded-xl object-cover" />
+                                <Avatar src={s.avatar_url} name={s.full_name} size={48} />
                               ) : (
                                 <User className="w-6 h-6" />
                               )}
@@ -1125,7 +1131,7 @@ export default function GroupDetailsPage({ params }: PageProps) {
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-xl bg-nav text-gold flex items-center justify-center font-bold shrink-0">
                             {t.avatar_url ? (
-                              <Image src={t.avatar_url} alt={t.full_name} width={40} height={40} className="rounded-xl object-cover" />
+                              <Avatar src={t.avatar_url} name={t.full_name} size={40} />
                             ) : (
                               <User className="w-5 h-5" />
                             )}
@@ -1323,7 +1329,7 @@ export default function GroupDetailsPage({ params }: PageProps) {
                         >
                           <div className="w-10 h-10 rounded-xl bg-nav text-gold flex items-center justify-center font-bold shrink-0">
                             {t.avatar_url ? (
-                              <Image src={t.avatar_url} alt={t.full_name} width={40} height={40} className="rounded-xl object-cover" />
+                              <Avatar src={t.avatar_url} name={t.full_name} size={40} />
                             ) : (
                               <User className="w-5 h-5" />
                             )}

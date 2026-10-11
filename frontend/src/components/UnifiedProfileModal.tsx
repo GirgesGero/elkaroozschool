@@ -1,8 +1,12 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
+import {
+  prepareAvatar,
+  AvatarTooLargeError,
+  AVATAR_MAX_EDGE,
+} from '@/lib/avatar/prepareAvatar';
 import {
   X,
   Phone,
@@ -24,8 +28,10 @@ import {
   Loader2,
   Check,
   Upload,
+  AlertCircle,
 } from 'lucide-react';
 import type { Profile } from '@/types/database';
+import Avatar from '../components/Avatar';
 
 interface UnifiedProfileModalProps {
   profileId: string | null;
@@ -151,47 +157,77 @@ export default function UnifiedProfileModal({
     setIsUploadingAvatar(true);
     const supabase = createClient();
 
+    const nextUrl = newUrl.trim() || null;
+
     try {
       const { error } = await supabase
         .from('profiles')
-        .update({ avatar_url: newUrl.trim() || null })
+        .update({ avatar_url: nextUrl })
         .eq('id', profile.id);
 
-      if (!error) {
-        const updated = { ...profile, avatar_url: newUrl.trim() || null };
-        setProfile(updated);
-        setIsChangingAvatar(false);
-        setAvatarSuccessMsg(true);
-        setTimeout(() => setAvatarSuccessMsg(false), 3000);
-        if (onProfileUpdated) onProfileUpdated(updated);
-      }
+      // A silently-swallowed PostgREST error is what made the old picker look
+      // broken: the row never updated but the drawer reported success.
+      if (error) throw error;
+
+      const updated = { ...profile, avatar_url: nextUrl };
+      setProfile(updated);
+      setAvatarUrlInput(nextUrl || '');
+      setIsChangingAvatar(false);
+      setAvatarSuccessMsg(true);
+      setTimeout(() => setAvatarSuccessMsg(false), 3000);
+      if (onProfileUpdated) onProfileUpdated(updated);
     } catch (err) {
       console.error('Avatar update error:', err);
+      setAvatarErrorMsg(
+        err instanceof Error && err.message
+          ? `تعذّر حفظ الصورة: ${err.message}`
+          : 'تعذّر حفظ الصورة، حاول مرة أخرى.',
+      );
+      setTimeout(() => setAvatarErrorMsg(null), 5000);
     } finally {
       setIsUploadingAvatar(false);
     }
   };
 
-  // Handle File Upload from Local Device (Data URI or Storage)
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  // Handle File Upload from Local Device.
+  //
+  // The file is downscaled and re-encoded before it reaches the database: a
+  // raw phone photo would land in `profiles.avatar_url` as megabytes of base64
+  // in a text column, which then failed to render (next/image rejects data:
+  // URLs). See lib/avatar/prepareAvatar.
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const input = e.target;
+    const file = input.files?.[0];
     if (!file) return;
 
-    if (file.size > 3 * 1024 * 1024) {
-      setAvatarErrorMsg('حجم الصورة كبير جداً، الحد الأقصى 3 ميجابايت.');
+    if (!file.type.startsWith('image/')) {
+      setAvatarErrorMsg('اختر ملف صورة صالح.');
       setTimeout(() => setAvatarErrorMsg(null), 4000);
+      input.value = '';
       return;
     }
 
     setAvatarErrorMsg(null);
-    const reader = new FileReader();
-    reader.onload = async (evt) => {
-      const result = evt.target?.result as string;
-      if (result) {
-        await handleSaveAvatarUrl(result);
-      }
-    };
-    reader.readAsDataURL(file);
+    setIsUploadingAvatar(true);
+
+    try {
+      const prepared = await prepareAvatar(file);
+      await handleSaveAvatarUrl(prepared.dataUrl);
+      setAvatarSuccessMsg(true);
+    } catch (err) {
+      const message =
+        err instanceof AvatarTooLargeError
+          ? err.message
+          : err instanceof Error
+            ? err.message
+            : 'تعذّر رفع الصورة، جرّب صورة أخرى.';
+      setAvatarErrorMsg(message);
+      setTimeout(() => setAvatarErrorMsg(null), 4000);
+    } finally {
+      setIsUploadingAvatar(false);
+      // Let the same file be picked again after a failed attempt.
+      input.value = '';
+    }
   };
 
   // Handle Profile Info Update
@@ -276,7 +312,7 @@ export default function UnifiedProfileModal({
             <div className="relative w-22 h-22 sm:w-26 sm:h-26 rounded-full bg-gradient-to-tr from-gold via-amber-400 to-warning p-1 shadow-2xl ring-4 ring-canvas">
               <div className="w-full h-full rounded-full bg-nav flex items-center justify-center text-content font-black text-3xl overflow-hidden relative shadow-inner">
                 {profile?.avatar_url ? (
-                  <Image src={profile.avatar_url} alt={profile.full_name} fill sizes="104px" className="object-cover" />
+                  <Avatar src={profile.avatar_url} name={profile.full_name} size={104} />
                 ) : (
                   profile?.full_name?.charAt(0) || 'ك'
                 )}
@@ -300,44 +336,85 @@ export default function UnifiedProfileModal({
         {/* Change Avatar Interactive Drawer */}
         {isChangingAvatar && (
           <div className="bg-canvas border-b border-gold/30 p-4 animate-slide-down">
-            <span className="text-xs font-black text-gold block mb-2">تحديث الصورة الشخصية</span>
-            <div className="flex flex-col sm:flex-row items-center gap-2">
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isUploadingAvatar}
-                className="w-full sm:w-auto px-4 py-2 rounded-xl bg-nav hover:bg-input text-content text-xs font-bold border border-line flex items-center justify-center gap-2 transition-all shadow-md"
-              >
-                <Upload className="w-4 h-4 text-gold" />
-                <span>اختر صورة من الجهاز</span>
-              </button>
+            <div className="mb-3 flex items-center gap-3">
+              {/* Live preview: what the pick actually produced. */}
+              <div className="w-14 h-14 shrink-0 rounded-full bg-gradient-to-tr from-gold via-amber-400 to-warning p-[2px]">
+                <div className="w-full h-full rounded-full bg-nav flex items-center justify-center overflow-hidden">
+                  <Avatar
+                    src={avatarUrlInput || profile?.avatar_url}
+                    name={profile?.full_name}
+                    size={52}
+                    rounded="rounded-full"
+                    className="w-full h-full"
+                  />
+                </div>
+              </div>
+              <div>
+                <span className="block text-xs font-black text-gold">تحديث الصورة الشخصية</span>
+                <span className="block text-[11px] leading-snug text-content-muted">
+                  تُصغَّر الصورة تلقائيًا إلى {AVATAR_MAX_EDGE} بكسل ويُضغط حجمها قبل الحفظ
+                </span>
+              </div>
+            </div>
 
-              <div className="flex-1 w-full flex items-center gap-1.5">
+            <div className="flex flex-col gap-2.5">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploadingAvatar}
+                  className="inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-2xl bg-gold px-5 py-2.5 text-xs font-black text-brand-on transition-all hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold disabled:opacity-60 sm:w-auto"
+                >
+                  {isUploadingAvatar ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Upload className="w-4 h-4" />
+                  )}
+                  <span>{isUploadingAvatar ? 'جارٍ الضغط والرفع...' : 'اختر صورة من الجهاز'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setIsChangingAvatar(false)}
+                  className="inline-flex min-h-[44px] w-full items-center justify-center rounded-2xl border border-line bg-nav px-4 py-2.5 text-xs font-bold text-content-secondary transition-all hover:text-content sm:w-auto"
+                >
+                  إلغاء
+                </button>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-bold text-content-muted">أو رابط مباشر</span>
+                <span className="h-px flex-1 bg-line" />
+              </div>
+
+              <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center">
                 <input
                   type="url"
                   value={avatarUrlInput}
                   onChange={(e) => setAvatarUrlInput(e.target.value)}
-                  placeholder="أو الصق رابط صورة مباشر (https://...)"
-                  className="flex-1 bg-canvas border border-line rounded-xl px-3 py-2 text-xs text-content placeholder-content-muted focus:outline-none focus:border-gold"
+                  placeholder="https://..."
+                  dir="ltr"
+                  className="min-h-[44px] flex-1 rounded-2xl border border-line bg-nav px-3 py-2 text-xs text-content placeholder-content-muted focus:border-gold focus:outline-none"
                 />
                 <button
                   type="button"
                   onClick={() => handleSaveAvatarUrl(avatarUrlInput)}
-                  disabled={isUploadingAvatar}
-                  className="px-4 py-2 rounded-xl bg-gold text-brand-on font-bold text-xs hover:bg-warning disabled:opacity-50 transition-all shadow-md flex items-center gap-1"
+                  disabled={isUploadingAvatar || !avatarUrlInput.trim()}
+                  className="inline-flex min-h-[44px] items-center justify-center rounded-2xl border border-gold/40 bg-gold/15 px-5 py-2.5 text-xs font-black text-gold transition-all hover:bg-gold/25 disabled:opacity-50"
                 >
-                  {isUploadingAvatar ? <Loader2 className="w-4 h-4 animate-spin" /> : 'حفظ'}
+                  {isUploadingAvatar ? <Loader2 className="w-4 h-4 animate-spin" /> : 'حفظ الرابط'}
                 </button>
               </div>
-
-              <button
-                type="button"
-                onClick={() => setIsChangingAvatar(false)}
-                className="px-3 py-2 rounded-xl bg-nav text-content-muted text-xs hover:text-content"
-              >
-                إلغاء
-              </button>
             </div>
+          </div>
+        )}
+
+        {/* Avatar Error Feedback — this state existed but was never rendered,
+            so every failed save looked like a silent no-op. */}
+        {avatarErrorMsg && (
+          <div className="flex items-center gap-2 border-b border-danger/30 bg-danger/10 px-4 py-2 text-xs font-bold text-danger animate-fade-in">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>{avatarErrorMsg}</span>
           </div>
         )}
 

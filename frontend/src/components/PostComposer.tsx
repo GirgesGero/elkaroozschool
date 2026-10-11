@@ -12,6 +12,7 @@ import {
   Globe,
 } from 'lucide-react';
 import type { Profile } from '@/types/database';
+import Avatar from '../components/Avatar';
 
 interface PostComposerProps {
   currentUser: Profile | null;
@@ -54,7 +55,7 @@ export default function PostComposer({ currentUser, onPostCreated }: PostCompose
     const supabase = createClient();
 
     try {
-      const { error } = await supabase.from('posts').insert({
+      const { error } = await supabase.from('feed_posts').insert({
         author_id: currentUser.id,
         content: content.trim(),
         group_id: targetGroup,
@@ -81,7 +82,7 @@ export default function PostComposer({ currentUser, onPostCreated }: PostCompose
         <div className="flex items-start gap-3">
           <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-gold to-warning text-content flex items-center justify-center font-black text-sm shadow-md overflow-hidden shrink-0 mt-0.5">
             {currentUser.avatar_url ? (
-              <Image src={currentUser.avatar_url} alt={currentUser.full_name} width={40} height={40} className="object-cover" />
+              <Avatar src={currentUser.avatar_url} name={currentUser.full_name} size={40} />
             ) : (
               currentUser.full_name.charAt(0)
             )}

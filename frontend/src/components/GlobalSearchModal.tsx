@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import {
@@ -16,6 +15,7 @@ import {
   ArrowRight,
 } from 'lucide-react';
 
+import Avatar from '../components/Avatar';
 interface GlobalSearchModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -86,7 +86,7 @@ export default function GlobalSearchModal({
             .or(`title.ilike.${q},author.ilike.${q}`)
             .limit(4),
           supabase
-            .from('posts')
+            .from('feed_posts')
             .select('id, content, created_at, group_id')
             .ilike('content', q)
             .limit(4),
@@ -240,7 +240,7 @@ export default function GlobalSearchModal({
                     <div className="flex items-center gap-3">
                       <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-gold to-warning text-content flex items-center justify-center font-black text-xs shrink-0 overflow-hidden">
                         {p.avatar_url ? (
-                          <Image src={p.avatar_url} alt={p.full_name} width={36} height={36} className="object-cover" />
+                          <Avatar src={p.avatar_url} name={p.full_name} size={36} />
                         ) : (
                           p.full_name.charAt(0)
                         )}

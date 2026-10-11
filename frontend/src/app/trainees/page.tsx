@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { explainDbError } from '@/lib/errors/db';
@@ -37,6 +36,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import type { Profile } from '@/types/database';
+import Avatar from '../../components/Avatar';
 
 export default function TraineesDirectoryPage() {
   const router = useRouter();
@@ -282,7 +282,7 @@ export default function TraineesDirectoryPage() {
                     <div className="flex items-center gap-3">
                       <div className="w-12 h-12 rounded-xl bg-nav border border-line flex items-center justify-center text-gold font-bold text-base shrink-0">
                         {t.avatar_url ? (
-                          <Image src={t.avatar_url} alt={t.full_name} width={48} height={48} className="rounded-xl object-cover" />
+                          <Avatar src={t.avatar_url} name={t.full_name} size={48} />
                         ) : (
                           <User className="w-6 h-6" />
                         )}

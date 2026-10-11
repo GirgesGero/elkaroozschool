@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
 import { explainDbError } from '@/lib/errors/db';
 import {
@@ -29,6 +28,7 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import type { Profile, AttendanceStatus } from '@/types/database';
+import Avatar from '../components/Avatar';
 
 interface TraineeProfileDrawerProps {
   traineeId: string | null;
@@ -300,7 +300,7 @@ export default function TraineeProfileDrawer({
                   <div className="flex items-center gap-4">
                     <div className="relative w-18 h-18 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-tr from-gold/30 via-canvas to-gold/10 border-2 border-gold p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-lg shadow-gold/10">
                       {prof.avatar_url ? (
-                        <Image src={prof.avatar_url} alt={prof.full_name} fill sizes="80px" className="object-cover rounded-xl" />
+                        <Avatar src={prof.avatar_url} name={prof.full_name} size={80} />
                       ) : (
                         <User className="w-10 h-10 text-gold" />
                       )}

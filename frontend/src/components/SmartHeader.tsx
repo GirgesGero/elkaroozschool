@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import Avatar from './Avatar';
 import { useRouter, usePathname } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useAppTheme, type AppTheme } from '@/context/ThemeContext';
@@ -256,7 +257,7 @@ export default function SmartHeader({ profile, onOpenSearch, onOpenProfile }: Sm
                 style={{ backgroundColor: 'var(--brand-primary)', color: 'var(--brand-primary-text)' }}
               >
                 {profile.avatar_url ? (
-                  <Image src={profile.avatar_url} alt="" width={28} height={28} className="object-cover" />
+                  <Avatar src={profile.avatar_url} name={profile.full_name} size={28} rounded="rounded-full" />
                 ) : (
                   profile.full_name.charAt(0)
                 )}
