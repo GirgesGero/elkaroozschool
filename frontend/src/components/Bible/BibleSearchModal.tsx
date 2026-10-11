@@ -125,20 +125,20 @@ export default function BibleSearchModal({ isOpen, onClose, onSelectArticle, sec
   const { query, results, total, loading, searched, expandedTokens } = searchState;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center p-4 bg-slate-950/80 backdrop-blur-md overflow-y-auto" dir="rtl">
-      <div className="w-full max-w-3xl mt-20 rounded-3xl overflow-hidden shadow-2xl border border-slate-800 bg-[#0a101d]">
+    <div className="fixed inset-0 z-50 flex items-start justify-center p-4 bg-nav/80 backdrop-blur-md overflow-y-auto" dir="rtl">
+      <div className="w-full max-w-3xl mt-20 rounded-3xl overflow-hidden shadow-2xl border border-line bg-canvas">
         {/* Header */}
-        <div className="p-6 border-b border-slate-800/80 flex items-center justify-between">
+        <div className="p-6 border-b border-line/80 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-2xl bg-[#c29938]/15 border border-[#c29938]/30">
-              <Search className="w-5 h-5 text-[#c29938]" />
+            <div className="p-2.5 rounded-2xl bg-gold/15 border border-gold/30">
+              <Search className="w-5 h-5 text-gold" />
             </div>
             <div>
-              <h3 className="font-black text-base text-white flex items-center gap-2">
+              <h3 className="font-black text-base text-content flex items-center gap-2">
                 <span>البحث في الموسوعة</span>
-                <Sparkles className="w-3.5 h-3.5 text-[#c29938]" />
+                <Sparkles className="w-3.5 h-3.5 text-gold" />
               </h3>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <p className="text-xs text-content-muted mt-0.5">
                 {articleCount === null
                   ? 'البحث الفوري في الموسوعة'
                   : `البحث الفوري في ${articleCount.toLocaleString('ar-EG')} مقال ووثيقة`}
@@ -147,14 +147,14 @@ export default function BibleSearchModal({ isOpen, onClose, onSelectArticle, sec
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-xl bg-slate-900/80 hover:bg-slate-800 text-slate-400 hover:text-white border border-slate-800 transition-all"
+            className="p-2 rounded-xl bg-nav/80 hover:bg-nav text-content-muted hover:text-content border border-line transition-all"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Search Input */}
-        <div className="p-6 border-b border-slate-800/80">
+        <div className="p-6 border-b border-line/80">
           <div className="relative">
             <input
               type="text"
@@ -163,11 +163,11 @@ export default function BibleSearchModal({ isOpen, onClose, onSelectArticle, sec
               onKeyDown={handleKeyDown}
               placeholder="ابحث في الكتاب المقدس، التفاسير، الأطلس، اللاهوتيات..."
               autoFocus
-              className="w-full bg-slate-900/60 border border-slate-800 rounded-2xl px-5 py-4 pr-12 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#c29938] transition-all"
+              className="w-full bg-nav/60 border border-line rounded-2xl px-5 py-4 pr-12 text-sm text-content placeholder-content-muted focus:outline-none focus:border-gold transition-all"
             />
-            <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+            <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-content-muted" />
             {loading && (
-              <Loader2 className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#c29938] animate-spin" />
+              <Loader2 className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gold animate-spin" />
             )}
           </div>
         </div>
@@ -176,21 +176,21 @@ export default function BibleSearchModal({ isOpen, onClose, onSelectArticle, sec
         <div className="max-h-[500px] overflow-y-auto">
           {loading && !results.length ? (
             <div className="p-12 text-center">
-              <Loader2 className="w-8 h-8 text-[#c29938] animate-spin mx-auto mb-4" />
-              <p className="text-sm text-slate-400">جاري البحث في الفهارس...</p>
+              <Loader2 className="w-8 h-8 text-gold animate-spin mx-auto mb-4" />
+              <p className="text-sm text-content-muted">جاري البحث في الفهارس...</p>
             </div>
           ) : searched && results.length === 0 ? (
             <div className="p-12 text-center">
-              <BookOpen className="w-12 h-12 text-slate-700 mx-auto mb-4" />
-              <p className="text-sm text-slate-400">لم يتم العثور على نتائج للبحث &ldquo;{query}&rdquo;</p>
+              <BookOpen className="w-12 h-12 text-content-muted mx-auto mb-4" />
+              <p className="text-sm text-content-muted">لم يتم العثور على نتائج للبحث &ldquo;{query}&rdquo;</p>
             </div>
           ) : results.length > 0 ? (
             <div className="p-4 space-y-2">
-              <div className="px-3 py-2 text-xs text-slate-400">
-                تم العثور على <span className="text-[#c29938] font-bold">{total.toLocaleString()}</span> نتيجة
+              <div className="px-3 py-2 text-xs text-content-muted">
+                تم العثور على <span className="text-gold font-bold">{total.toLocaleString()}</span> نتيجة
               </div>
               {expandedTokens && expandedTokens.length > 0 && (
-                <div className="mx-3 mb-2 px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/25 text-[11px] text-amber-300/90 leading-relaxed">
+                <div className="mx-3 mb-2 px-3 py-2 rounded-lg bg-warning/10 border border-warning/25 text-[11px] text-warning/90 leading-relaxed">
                   لم يُعثر على &ldquo;{expandedTokens.join('، ')}&rdquo; ككلمة كاملة — هذه نتائج تقريبية لكلمات مشابهة.
                 </div>
               )}
@@ -201,23 +201,23 @@ export default function BibleSearchModal({ isOpen, onClose, onSelectArticle, sec
                     onSelectArticle(result.id);
                     onClose();
                   }}
-                  className="w-full p-4 rounded-2xl bg-slate-900/40 hover:bg-slate-800/60 border border-slate-800/60 hover:border-[#c29938]/40 text-right transition-all group"
+                  className="w-full p-4 rounded-2xl bg-nav/40 hover:bg-nav/60 border border-line/60 hover:border-gold/40 text-right transition-all group"
                 >
                   <div className="flex items-start justify-between gap-3 mb-2">
-                    <h4 className="text-sm font-bold text-white group-hover:text-[#c29938] transition-colors flex-1">
+                    <h4 className="text-sm font-bold text-content group-hover:text-gold transition-colors flex-1">
                       {result.title}
                     </h4>
                     {result.section_title && (
-                      <span className="text-xs text-slate-500 shrink-0">{result.section_title}</span>
+                      <span className="text-xs text-content-muted shrink-0">{result.section_title}</span>
                     )}
                   </div>
                   {result.snippet && (
-                    <p className="text-xs text-slate-300 leading-relaxed line-clamp-2">
+                    <p className="text-xs text-content-secondary leading-relaxed line-clamp-2">
                       {result.snippet}
                     </p>
                   )}
                   {result.book_name && (
-                    <div className="mt-2 text-xs text-slate-500">
+                    <div className="mt-2 text-xs text-content-muted">
                       {result.book_name} {result.chapter_num && result.chapter_num > 0 ? `- الإصحاح ${result.chapter_num}` : ''}
                     </div>
                   )}
@@ -226,8 +226,8 @@ export default function BibleSearchModal({ isOpen, onClose, onSelectArticle, sec
             </div>
           ) : (
             <div className="p-12 text-center">
-              <Search className="w-12 h-12 text-slate-700 mx-auto mb-4" />
-              <p className="text-sm text-slate-400">اكتب كلمة البحث واضغط Enter أو انتظر النتائج</p>
+              <Search className="w-12 h-12 text-content-muted mx-auto mb-4" />
+              <p className="text-sm text-content-muted">اكتب كلمة البحث واضغط Enter أو انتظر النتائج</p>
             </div>
           )}
         </div>

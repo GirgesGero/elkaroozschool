@@ -188,13 +188,13 @@ export default function NotificationCenter() {
   const getCategoryIcon = (category: string) => {
     switch (category) {
       case 'PASTORAL':
-        return <HeartHandshake className="w-4 h-4 text-rose-400" />;
+        return <HeartHandshake className="w-4 h-4 text-danger" />;
       case 'BIRTHDAY':
-        return <Cake className="w-4 h-4 text-amber-400" />;
+        return <Cake className="w-4 h-4 text-warning" />;
       case 'DAILY_VERSE':
-        return <BookOpen className="w-4 h-4 text-emerald-400" />;
+        return <BookOpen className="w-4 h-4 text-success" />;
       default:
-        return <Info className="w-4 h-4 text-blue-400" />;
+        return <Info className="w-4 h-4 text-info" />;
     }
   };
 
@@ -208,12 +208,19 @@ export default function NotificationCenter() {
       {/* Bell Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 rounded-full bg-[var(--bg-input)] hover:bg-[var(--bg-card-hover)] text-[var(--text-secondary)] border border-[var(--border-card)] transition flex items-center justify-center w-9 h-9"
+        className="tap-target relative rounded-full"
+        style={{
+          backgroundColor: 'var(--bg-input)',
+          color: 'var(--text-secondary)',
+          border: '1px solid var(--border-card)',
+        }}
         title="الإشعارات"
+        aria-label={`الإشعارات${unreadCount > 0 ? ` — ${unreadCount} غير مقروء` : ''}`}
+        aria-expanded={isOpen}
       >
-        <Bell className="w-4 h-4 text-[#C5A059]" />
+        <Bell className="w-5 h-5" style={{ color: 'var(--brand-gold)' }} aria-hidden="true" />
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 bg-red-600 text-white font-bold text-[10px] min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center border-2 border-[var(--bg-nav)] shadow-sm animate-pulse">
+          <span className="absolute -top-1 -right-1 bg-[var(--color-danger)] text-content font-bold text-[10px] min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center border-2 border-[var(--bg-nav)] shadow-sm animate-pulse">
             {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}
@@ -226,10 +233,10 @@ export default function NotificationCenter() {
           {/* Header */}
           <div className="p-4 border-b border-[var(--border-subtle)] flex items-center justify-between bg-[var(--bg-input)]">
             <div className="flex items-center gap-2">
-              <Bell className="w-4 h-4 text-[#C5A059]" />
+              <Bell className="w-4 h-4 text-gold" />
               <h3 className="font-bold text-[var(--text-primary)] text-sm">مركز الإشعارات</h3>
               {unreadCount > 0 && (
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#7B0017]/10 border border-[#7B0017]/30 text-[#7B0017] dark:text-[#FA383E]">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-brand/10 border border-brand/30 text-brand dark:text-brand">
                   {unreadCount} غير مقروء
                 </span>
               )}
@@ -240,7 +247,7 @@ export default function NotificationCenter() {
                 onClick={handleMarkAllRead}
                 className="text-[11px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] flex items-center gap-1 transition font-medium"
               >
-                <CheckCheck className="w-3.5 h-3.5 text-emerald-500" />
+                <CheckCheck className="w-3.5 h-3.5 text-success" />
                 تحديد الكل كمقروء
               </button>
             )}
@@ -252,7 +259,7 @@ export default function NotificationCenter() {
               onClick={() => setFilter('ALL')}
               className={`px-3 py-1 rounded-full transition font-bold text-[11px] ${
                 filter === 'ALL'
-                  ? 'bg-[#7B0017] text-white shadow-sm'
+                  ? 'bg-brand text-content shadow-sm'
                   : 'text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)]'
               }`}
             >
@@ -262,7 +269,7 @@ export default function NotificationCenter() {
               onClick={() => setFilter('PASTORAL')}
               className={`px-3 py-1 rounded-full transition font-bold text-[11px] ${
                 filter === 'PASTORAL'
-                  ? 'bg-rose-500/20 text-rose-500 border border-rose-500/30'
+                  ? 'bg-danger/20 text-danger border border-danger/30'
                   : 'text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)]'
               }`}
             >
@@ -272,7 +279,7 @@ export default function NotificationCenter() {
               onClick={() => setFilter('BIRTHDAY')}
               className={`px-3 py-1 rounded-full transition font-bold text-[11px] ${
                 filter === 'BIRTHDAY'
-                  ? 'bg-amber-500/20 text-amber-500 border border-amber-500/30'
+                  ? 'bg-warning/20 text-warning border border-warning/30'
                   : 'text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)]'
               }`}
             >
@@ -282,7 +289,7 @@ export default function NotificationCenter() {
               onClick={() => setFilter('DAILY_VERSE')}
               className={`px-3 py-1 rounded-full transition font-bold text-[11px] ${
                 filter === 'DAILY_VERSE'
-                  ? 'bg-emerald-500/20 text-emerald-500 border border-emerald-500/30'
+                  ? 'bg-success/20 text-success border border-success/30'
                   : 'text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)]'
               }`}
             >
@@ -294,7 +301,7 @@ export default function NotificationCenter() {
           <div className="max-h-[380px] overflow-y-auto divide-y divide-[var(--border-subtle)]">
             {loading ? (
               <div className="py-12 flex items-center justify-center text-[var(--text-muted)] gap-2">
-                <Loader2 className="w-5 h-5 animate-spin text-[#C5A059]" />
+                <Loader2 className="w-5 h-5 animate-spin text-gold" />
                 <span className="text-xs">جاري تحديث الإشعارات...</span>
               </div>
             ) : filteredNotifications.length === 0 ? (
@@ -307,7 +314,7 @@ export default function NotificationCenter() {
                   key={n.id}
                   onClick={() => handleMarkAsRead(n.id, n.action_url)}
                   className={`p-3.5 hover:bg-[var(--bg-card-hover)] cursor-pointer transition flex gap-3 items-start ${
-                    !n.is_read ? 'bg-[#7B0017]/5 border-r-2 border-r-[#7B0017]' : ''
+                    !n.is_read ? 'bg-brand/5 border-r-2 border-r-brand' : ''
                   }`}
                 >
                   <div className="p-2 rounded-xl bg-[var(--bg-input)] border border-[var(--border-card)] flex-shrink-0 mt-0.5">
@@ -329,7 +336,7 @@ export default function NotificationCenter() {
                     </p>
 
                     {n.action_url && (
-                      <div className="flex items-center gap-1 text-[10px] text-[#C5A059] pt-0.5 font-bold">
+                      <div className="flex items-center gap-1 text-[10px] text-gold pt-0.5 font-bold">
                         <ExternalLink className="w-3 h-3" />
                         عرض التفاصيل
                       </div>

@@ -77,10 +77,10 @@ export default function SectionBrowserPage() {
 
   if (loadingSections) {
     return (
-      <div className="min-h-screen bg-[#070b14] flex items-center justify-center" dir="rtl">
+      <div className="min-h-screen bg-canvas flex items-center justify-center" dir="rtl">
         <div className="text-center">
-          <Loader2 className="w-12 h-12 text-[#c29938] animate-spin mx-auto mb-4" />
-          <p className="text-slate-400">جاري تحميل الأقسام...</p>
+          <Loader2 className="w-12 h-12 text-gold animate-spin mx-auto mb-4" />
+          <p className="text-content-muted">جاري تحميل الأقسام...</p>
         </div>
       </div>
     );
@@ -89,7 +89,7 @@ export default function SectionBrowserPage() {
   const categoryTitle = sections[0]?.category_title || 'الموسوعة';
 
   return (
-    <div className="min-h-screen bg-[#070b14]" dir="rtl">
+    <div className="min-h-screen bg-canvas" dir="rtl">
       <SmartHeader 
         profile={null}
         onOpenSearch={() => setIsSearchOpen(true)}
@@ -100,14 +100,14 @@ export default function SectionBrowserPage() {
         {/* Header Breadcrumb */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <div className="flex items-center gap-2 text-sm text-slate-400 mb-3">
-              <button onClick={() => router.push('/bible')} className="hover:text-[#c29938] transition-colors">
+            <div className="flex items-center gap-2 text-sm text-content-muted mb-3">
+              <button onClick={() => router.push('/bible')} className="hover:text-gold transition-colors">
                 الموسوعة الكنسية
               </button>
               <ChevronLeft className="w-4 h-4" />
-              <span className="text-white font-bold">{categoryTitle}</span>
+              <span className="text-content font-bold">{categoryTitle}</span>
             </div>
-            <h1 className="text-3xl md:text-4xl font-black text-white">
+            <h1 className="text-3xl md:text-4xl font-black text-content">
               {categoryTitle}
             </h1>
           </div>
@@ -115,18 +115,18 @@ export default function SectionBrowserPage() {
           <div className="flex items-center gap-3">
             <button
               onClick={() => setIsSearchOpen(true)}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900/80 border border-slate-800 text-slate-300 hover:text-white hover:border-[#c29938]/40 transition-all text-sm"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-nav/80 border border-line text-content-secondary hover:text-content hover:border-gold/40 transition-all text-sm"
             >
-              <Search className="w-4 h-4 text-[#c29938]" />
+              <Search className="w-4 h-4 text-gold" />
               <span className="hidden sm:inline">بحث في القسم</span>
             </button>
-            <div className="flex items-center gap-1 border border-slate-800 rounded-xl p-1 bg-slate-900/60">
+            <div className="flex items-center gap-1 border border-line rounded-xl p-1 bg-nav/60">
               <button
                 onClick={() => setViewMode('grid')}
                 className={`p-2 rounded-lg transition-all ${
                   viewMode === 'grid'
-                    ? 'bg-[#c29938] text-slate-950 font-bold'
-                    : 'text-slate-400 hover:text-white'
+                    ? 'bg-gold text-content font-bold'
+                    : 'text-content-muted hover:text-content'
                 }`}
                 title="عرض شبكي"
               >
@@ -136,8 +136,8 @@ export default function SectionBrowserPage() {
                 onClick={() => setViewMode('list')}
                 className={`p-2 rounded-lg transition-all ${
                   viewMode === 'list'
-                    ? 'bg-[#c29938] text-slate-950 font-bold'
-                    : 'text-slate-400 hover:text-white'
+                    ? 'bg-gold text-content font-bold'
+                    : 'text-content-muted hover:text-content'
                 }`}
                 title="عرض قائمة"
               >
@@ -157,15 +157,15 @@ export default function SectionBrowserPage() {
                 onClick={() => handleSelectSection(sec)}
                 className={`px-4 py-2.5 rounded-xl font-bold text-xs whitespace-nowrap transition-all flex items-center gap-2 shrink-0 ${
                   isSelected
-                    ? 'bg-[#c29938] text-slate-950 shadow-lg shadow-[#c29938]/20'
-                    : 'bg-slate-900/60 border border-slate-800 text-slate-300 hover:border-slate-700 hover:text-white'
+                    ? 'bg-gold text-content shadow-lg shadow-gold/20'
+                    : 'bg-nav/60 border border-line text-content-secondary hover:border-line hover:text-content'
                 }`}
               >
                 <span>{sec.icon || '📁'}</span>
                 <span>{sec.title}</span>
                 {sec.doc_count > 0 && (
                   <span className={`px-2 py-0.5 rounded-full text-[10px] ${
-                    isSelected ? 'bg-slate-950/20 text-slate-950' : 'bg-slate-800 text-slate-400'
+                    isSelected ? 'bg-nav/20 text-content' : 'bg-nav text-content-muted'
                   }`}>
                     {sec.doc_count.toLocaleString()}
                   </span>
@@ -177,18 +177,18 @@ export default function SectionBrowserPage() {
 
         {/* Selected Section Header */}
         {selectedSection && (
-          <div className="mb-6 flex items-center justify-between border-b border-slate-800/80 pb-4">
+          <div className="mb-6 flex items-center justify-between border-b border-line/80 pb-4">
             <div>
-              <h2 className="text-xl font-bold text-white flex items-center gap-2">
+              <h2 className="text-xl font-bold text-content flex items-center gap-2">
                 <span>{selectedSection.icon}</span>
                 <span>{selectedSection.title}</span>
               </h2>
               {selectedSection.description && (
-                <p className="text-sm text-slate-400 mt-1">{selectedSection.description}</p>
+                <p className="text-sm text-content-muted mt-1">{selectedSection.description}</p>
               )}
             </div>
-            <div className="text-xs text-slate-400">
-              إجمالي: <span className="text-[#c29938] font-bold">{totalArticles.toLocaleString()}</span> وثيقة
+            <div className="text-xs text-content-muted">
+              إجمالي: <span className="text-gold font-bold">{totalArticles.toLocaleString()}</span> وثيقة
             </div>
           </div>
         )}
@@ -196,13 +196,13 @@ export default function SectionBrowserPage() {
         {/* Articles List / Grid */}
         {loadingArticles ? (
           <div className="py-20 text-center">
-            <Loader2 className="w-10 h-10 text-[#c29938] animate-spin mx-auto mb-4" />
-            <p className="text-sm text-slate-400">جاري تحميل وثائق القسم...</p>
+            <Loader2 className="w-10 h-10 text-gold animate-spin mx-auto mb-4" />
+            <p className="text-sm text-content-muted">جاري تحميل وثائق القسم...</p>
           </div>
         ) : articles.length === 0 ? (
-          <div className="py-20 text-center bg-slate-900/30 rounded-3xl border border-slate-800/60 p-8">
-            <BookOpen className="w-12 h-12 text-slate-700 mx-auto mb-4" />
-            <p className="text-slate-400">لا توجد وثائق في هذا القسم حالياً</p>
+          <div className="py-20 text-center bg-nav/30 rounded-3xl border border-line/60 p-8">
+            <BookOpen className="w-12 h-12 text-content-muted mx-auto mb-4" />
+            <p className="text-content-muted">لا توجد وثائق في هذا القسم حالياً</p>
           </div>
         ) : viewMode === 'grid' ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -210,22 +210,22 @@ export default function SectionBrowserPage() {
               <button
                 key={art.id}
                 onClick={() => router.push(`/bible/reader/${art.id}`)}
-                className="p-5 rounded-2xl bg-slate-900/40 hover:bg-slate-900/80 border border-slate-800/80 hover:border-[#c29938]/40 text-right transition-all group flex flex-col justify-between h-40"
+                className="p-5 rounded-2xl bg-nav/40 hover:bg-nav/80 border border-line/80 hover:border-gold/40 text-right transition-all group flex flex-col justify-between h-40"
               >
                 <div>
-                  <div className="flex items-center gap-2 text-xs text-slate-500 mb-2">
-                    <FileText className="w-3.5 h-3.5 text-[#c29938]" />
+                  <div className="flex items-center gap-2 text-xs text-content-muted mb-2">
+                    <FileText className="w-3.5 h-3.5 text-gold" />
                     <span>مقال #{art.id}</span>
                   </div>
-                  <h3 className="text-sm font-bold text-white group-hover:text-[#c29938] transition-colors line-clamp-2 leading-relaxed">
+                  <h3 className="text-sm font-bold text-content group-hover:text-gold transition-colors line-clamp-2 leading-relaxed">
                     {art.title}
                   </h3>
                 </div>
                 {art.book && (
-                  <div className="text-xs text-slate-400 mt-2 flex items-center justify-between border-t border-slate-800/40 pt-2">
+                  <div className="text-xs text-content-muted mt-2 flex items-center justify-between border-t border-line/40 pt-2">
                     <span className="truncate">{art.book}</span>
                     {art.ch && art.ch > 0 ? (
-                      <span className="text-[#c29938] shrink-0 font-medium">إصحاح {art.ch}</span>
+                      <span className="text-gold shrink-0 font-medium">إصحاح {art.ch}</span>
                     ) : null}
                   </div>
                 )}
@@ -238,24 +238,24 @@ export default function SectionBrowserPage() {
               <button
                 key={art.id}
                 onClick={() => router.push(`/bible/reader/${art.id}`)}
-                className="w-full p-4 rounded-xl bg-slate-900/40 hover:bg-slate-800/60 border border-slate-800/60 hover:border-[#c29938]/40 text-right transition-all group flex items-center justify-between gap-4"
+                className="w-full p-4 rounded-xl bg-nav/40 hover:bg-nav/60 border border-line/60 hover:border-gold/40 text-right transition-all group flex items-center justify-between gap-4"
               >
                 <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <div className="p-2 rounded-lg bg-slate-800/60 text-[#c29938] shrink-0">
+                  <div className="p-2 rounded-lg bg-nav/60 text-gold shrink-0">
                     <FileText className="w-4 h-4" />
                   </div>
                   <div className="min-w-0">
-                    <h3 className="text-sm font-bold text-white group-hover:text-[#c29938] transition-colors truncate">
+                    <h3 className="text-sm font-bold text-content group-hover:text-gold transition-colors truncate">
                       {art.title}
                     </h3>
                     {art.book && (
-                      <p className="text-xs text-slate-400 mt-0.5">
+                      <p className="text-xs text-content-muted mt-0.5">
                         {art.book} {art.ch && art.ch > 0 ? `- إصحاح ${art.ch}` : ''}
                       </p>
                     )}
                   </div>
                 </div>
-                <ChevronLeft className="w-4 h-4 text-slate-600 group-hover:text-[#c29938] transition-colors shrink-0" />
+                <ChevronLeft className="w-4 h-4 text-content-muted group-hover:text-gold transition-colors shrink-0" />
               </button>
             ))}
           </div>
@@ -271,14 +271,14 @@ export default function SectionBrowserPage() {
                 setCurrentPage(nextP);
                 if (selectedSection) loadSectionArticles(selectedSection.id, nextP);
               }}
-              className="px-4 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-300 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
+              className="px-4 py-2 rounded-xl bg-nav border border-line text-xs text-content-secondary hover:text-content disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
             >
               <ChevronRight className="w-4 h-4" />
               <span>السابق</span>
             </button>
 
-            <span className="text-xs text-slate-400 px-3">
-              صفحة <span className="text-white font-bold">{currentPage}</span> من <span className="text-white font-bold">{totalPages}</span>
+            <span className="text-xs text-content-muted px-3">
+              صفحة <span className="text-content font-bold">{currentPage}</span> من <span className="text-content font-bold">{totalPages}</span>
             </span>
 
             <button
@@ -288,7 +288,7 @@ export default function SectionBrowserPage() {
                 setCurrentPage(nextP);
                 if (selectedSection) loadSectionArticles(selectedSection.id, nextP);
               }}
-              className="px-4 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-300 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
+              className="px-4 py-2 rounded-xl bg-nav border border-line text-xs text-content-secondary hover:text-content disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
             >
               <span>التالي</span>
               <ChevronLeft className="w-4 h-4" />

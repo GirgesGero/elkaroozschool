@@ -67,7 +67,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen relative flex flex-col justify-between overflow-x-hidden selection:bg-[#7B0017] selection:text-white"
+    <div className="min-h-screen relative flex flex-col justify-between overflow-x-hidden selection:bg-brand selection:text-content"
          style={{ backgroundColor: 'var(--bg-canvas)', color: 'var(--text-primary)' }}>
       
       {/* Background Ambient Logo Watermark */}
@@ -111,42 +111,57 @@ export default function LoginPage() {
 
         {/* Left side in RTL: Navigation + Theme Switcher */}
         <div className="flex items-center gap-3">
-          <div className="flex items-center bg-[var(--bg-input)] rounded-full p-1 border border-[var(--border-card)]">
+          {/* One brand accent for every pill. These were #7B0017 (crimson),
+              #FA383E (red) and #D4AF37 (gold) — three different colours for
+              one control group, so the row read as three unrelated buttons. */}
+          <div className="flex items-center gap-1 rounded-full p-1 bg-[var(--bg-input)] border border-[var(--border-card)]">
             <button
               onClick={() => setTheme('light')}
-              className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold transition-all ${
-                theme === 'light' ? 'bg-[var(--bg-card)] shadow-sm text-[#7B0017]' : 'opacity-70 hover:opacity-100'
-              }`}
+              aria-pressed={theme === 'light'}
+              aria-label="المظهر النهاري"
+              className="flex min-h-[44px] items-center gap-1.5 px-4 rounded-full text-xs font-bold transition-colors"
+              style={{
+                backgroundColor: theme === 'light' ? 'var(--brand-primary)' : 'transparent',
+                color: theme === 'light' ? 'var(--brand-primary-text)' : 'var(--text-secondary)',
+              }}
             >
-              <Sun className="w-3.5 h-3.5" />
+              <Sun className="w-4 h-4" aria-hidden="true" />
               <span className="hidden md:inline">نهاري</span>
             </button>
             <button
               onClick={() => setTheme('dark')}
-              className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold transition-all ${
-                theme === 'dark' ? 'bg-[var(--bg-card)] shadow-sm text-[#FA383E]' : 'opacity-70 hover:opacity-100'
-              }`}
+              aria-pressed={theme === 'dark'}
+              aria-label="المظهر الليلي"
+              className="flex min-h-[44px] items-center gap-1.5 px-4 rounded-full text-xs font-bold transition-colors"
+              style={{
+                backgroundColor: theme === 'dark' ? 'var(--brand-primary)' : 'transparent',
+                color: theme === 'dark' ? 'var(--brand-primary-text)' : 'var(--text-secondary)',
+              }}
             >
-              <Moon className="w-3.5 h-3.5" />
+              <Moon className="w-4 h-4" aria-hidden="true" />
               <span className="hidden md:inline">ليلي</span>
             </button>
             <button
               onClick={() => setTheme('luxury')}
-              className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold transition-all ${
-                theme === 'luxury' ? 'bg-[var(--bg-card)] shadow-sm text-[#D4AF37]' : 'opacity-70 hover:opacity-100'
-              }`}
+              aria-pressed={theme === 'luxury'}
+              aria-label="المظهر الملكي القبطي"
+              className="flex min-h-[44px] items-center gap-1.5 px-4 rounded-full text-xs font-bold transition-colors"
+              style={{
+                backgroundColor: theme === 'luxury' ? 'var(--brand-primary)' : 'transparent',
+                color: theme === 'luxury' ? 'var(--brand-primary-text)' : 'var(--text-secondary)',
+              }}
             >
-              <Crown className="w-3.5 h-3.5" />
+              <Crown className="w-4 h-4" aria-hidden="true" />
               <span className="hidden md:inline">ملكي</span>
             </button>
           </div>
 
           <Link
             href="/bible"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-colors bg-[var(--bg-input)] hover:bg-[var(--bg-card-hover)] border border-[var(--border-card)]"
+            className="flex min-h-[44px] items-center gap-1.5 px-4 rounded-full text-xs font-bold transition-colors bg-[var(--bg-input)] hover:bg-[var(--bg-card-hover)] border border-[var(--border-card)]"
           >
-            <BookOpen className="w-3.5 h-3.5 text-[#C5A059]" />
-            <span className="hidden sm:inline">الكتاب المقدس</span>
+            <BookOpen className="w-4 h-4 text-[var(--brand-gold)]" aria-hidden="true" />
+            <span className="hidden sm:inline">تصفح الكتاب المقدس</span>
           </Link>
         </div>
       </header>
@@ -160,7 +175,7 @@ export default function LoginPage() {
             <div className="space-y-3">
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight leading-tight">
                 مرحباً بك في <br />
-                <span className="text-[#7B0017] dark:text-[#9E1B32]">مدرسة الكاروز</span>
+                <span className="text-brand dark:text-brand">مدرسة الكاروز</span>
               </h1>
               <p className="text-base sm:text-lg opacity-80 leading-relaxed max-w-xl">
                 المنظومة الرقمية الشاملة لدراسة أسفار وتفاسير الكتاب المقدس ومتابعة الأنشطة الأكاديمية والخدمية.
@@ -178,7 +193,7 @@ export default function LoginPage() {
               </div>
 
               {error && (
-                <div className="p-3.5 bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 rounded-xl flex items-center gap-2.5 text-sm">
+                <div className="p-3.5 bg-danger/10 border border-danger/20 text-rose-600 dark:text-danger rounded-xl flex items-center gap-2.5 text-sm">
                   <AlertCircle className="w-5 h-5 flex-shrink-0" />
                   <span>{error}</span>
                 </div>
@@ -223,10 +238,18 @@ export default function LoginPage() {
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="opacity-60 hover:opacity-100 transition-opacity p-1"
-                        tabIndex={-1}
+                        /* Was tabIndex={-1} — a keyboard user could not reach the
+                           toggle at all. The field is a real focusable control and
+                           must be labelled, not decorative. */
+                        aria-label={showPassword ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور'}
+                        aria-pressed={showPassword}
+                        className="tap-target opacity-70 hover:opacity-100 transition-opacity rounded-lg"
                       >
-                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        {showPassword ? (
+                          <EyeOff className="w-4 h-4" aria-hidden="true" />
+                        ) : (
+                          <Eye className="w-4 h-4" aria-hidden="true" />
+                        )}
                       </button>
                       <Lock className="w-4 h-4 opacity-50" />
                     </div>
@@ -259,7 +282,7 @@ export default function LoginPage() {
                 href="/bible"
                 className="app-btn-secondary w-full py-3 px-4 flex items-center justify-center gap-2 text-sm text-center block"
               >
-                <BookOpen className="w-4 h-4 text-[#C5A059]" />
+                <BookOpen className="w-4 h-4 text-gold" />
                 <span>تصفح الكتاب المقدس والتفاسير (عام)</span>
               </Link>
             </div>

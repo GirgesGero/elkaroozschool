@@ -258,8 +258,8 @@ export default function AdminImportsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-        <div className="flex items-center gap-3 text-amber-400">
+      <div className="min-h-screen bg-nav flex items-center justify-center p-4">
+        <div className="flex items-center gap-3 text-warning">
           <RefreshCw className="w-6 h-6 animate-spin" />
           <span className="font-bold">جاري تحميل لوحة الاستيراد...</span>
         </div>
@@ -269,16 +269,16 @@ export default function AdminImportsPage() {
 
   if (!isAdmin) {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-        <div className="bg-slate-800 border border-red-500/30 p-8 rounded-2xl max-w-md text-center">
-          <ShieldAlert className="w-16 h-16 text-red-400 mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-white mb-2">غير مصرح بالوصول</h2>
-          <p className="text-slate-400 mb-6 text-sm">
+      <div className="min-h-screen bg-nav flex items-center justify-center p-4">
+        <div className="bg-nav border border-danger/30 p-8 rounded-2xl max-w-md text-center">
+          <ShieldAlert className="w-16 h-16 text-danger mx-auto mb-4" />
+          <h2 className="text-xl font-bold text-content mb-2">غير مصرح بالوصول</h2>
+          <p className="text-content-muted mb-6 text-sm">
             لوحة الاستيراد الجماعي محصورة على مسؤولي النظام (Admin / Super User).
           </p>
           <Link
             href="/"
-            className="inline-flex items-center gap-2 bg-amber-600 hover:bg-amber-700 text-white px-6 py-2.5 rounded-xl font-medium transition"
+            className="inline-flex items-center gap-2 bg-warning hover:bg-warning text-content px-6 py-2.5 rounded-xl font-medium transition"
           >
             <ArrowRight className="w-4 h-4" />
             العودة للرئيسية
@@ -289,7 +289,7 @@ export default function AdminImportsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#070b14] text-slate-100 flex flex-col selection:bg-[#c29938] selection:text-slate-950 pb-20 font-sans" dir="rtl">
+    <div className="min-h-screen bg-canvas text-content flex flex-col selection:bg-gold selection:text-content font-sans" dir="rtl">
       {/* Smart Unified Header */}
       <SmartHeader
         profile={profile}
@@ -314,15 +314,15 @@ export default function AdminImportsPage() {
       <div className="max-w-6xl w-full mx-auto p-4 md:p-6 flex-1 space-y-8 pb-28 md:pb-12">
         
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-line pb-6">
           <div>
             <div className="flex items-center gap-3 mb-2">
-              <div className="p-2.5 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-emerald-400">
+              <div className="p-2.5 bg-success/10 border border-success/30 rounded-xl text-success">
                 <Users className="w-6 h-6" />
               </div>
-              <h1 className="text-2xl md:text-3xl font-bold text-white">استيراد وتصدير بيانات المتدربين الجماعي</h1>
+              <h1 className="text-2xl md:text-3xl font-bold text-content">استيراد وتصدير بيانات المتدربين الجماعي</h1>
             </div>
-            <p className="text-slate-400 text-sm">
+            <p className="text-content-muted text-sm">
               استيراد حسابات الطلاب دفعة واحدة بقاعدة (All-or-Nothing) الآمنة وتصدير الكشوفات المعتمدة.
             </p>
           </div>
@@ -330,14 +330,14 @@ export default function AdminImportsPage() {
           <div className="flex items-center gap-3">
             <Link
               href="/admin/backups"
-              className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition"
+              className="flex items-center gap-2 bg-nav hover:bg-input border border-line text-content px-4 py-2.5 rounded-xl text-sm font-medium transition"
             >
-              <Database className="w-4 h-4 text-amber-400" />
+              <Database className="w-4 h-4 text-warning" />
               النسخ الاحتياطي المشفر
             </Link>
             <Link
               href="/"
-              className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition"
+              className="flex items-center gap-2 bg-nav hover:bg-input border border-line text-content px-4 py-2.5 rounded-xl text-sm font-medium transition"
             >
               <ArrowRight className="w-4 h-4" />
               الرئيسية
@@ -350,14 +350,14 @@ export default function AdminImportsPage() {
           <div
             className={`p-4 rounded-xl border flex items-center gap-3 ${
               statusMsg.type === 'success'
-                ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-200'
-                : 'bg-red-950/40 border-red-500/40 text-red-200'
+                ? 'bg-canvas/40 border-success/40 text-success'
+                : 'bg-canvas/40 border-danger/40 text-danger'
             }`}
           >
             {statusMsg.type === 'success' ? (
-              <CheckCircle2 className="w-5 h-5 text-emerald-400 flex-shrink-0" />
+              <CheckCircle2 className="w-5 h-5 text-success flex-shrink-0" />
             ) : (
-              <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0" />
+              <AlertTriangle className="w-5 h-5 text-danger flex-shrink-0" />
             )}
             <p className="text-sm font-medium">{statusMsg.text}</p>
           </div>
@@ -365,30 +365,30 @@ export default function AdminImportsPage() {
 
         {/* Quick Export Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex items-center justify-between">
+          <div className="bg-nav border border-line rounded-2xl p-5 flex items-center justify-between">
             <div>
-              <h3 className="font-bold text-white mb-1">تصدير سجلات المتدربين (CSV)</h3>
-              <p className="text-xs text-slate-400">تصدير فوري لكافة المتدربين حسب الصلاحية والنطاق</p>
+              <h3 className="font-bold text-content mb-1">تصدير سجلات المتدربين (CSV)</h3>
+              <p className="text-xs text-content-muted">تصدير فوري لكافة المتدربين حسب الصلاحية والنطاق</p>
             </div>
             <button
               onClick={() => handleExportTrainees('csv')}
-              className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 px-4 py-2 rounded-xl text-xs font-semibold transition"
+              className="flex items-center gap-2 bg-nav hover:bg-input border border-line text-content px-4 py-2 rounded-xl text-xs font-semibold transition"
             >
-              <Download className="w-4 h-4 text-amber-400" />
+              <Download className="w-4 h-4 text-warning" />
               تحميل CSV
             </button>
           </div>
 
-          <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 flex items-center justify-between opacity-70">
+          <div className="bg-nav/60 border border-line rounded-2xl p-5 flex items-center justify-between opacity-70">
             <div>
-              <h3 className="font-bold text-slate-300 mb-1">تصدير سجلات المتدربين (Excel / XLSX)</h3>
-              <p className="text-xs text-slate-500">
+              <h3 className="font-bold text-content-secondary mb-1">تصدير سجلات المتدربين (Excel / XLSX)</h3>
+              <p className="text-xs text-content-muted">
                 غير متاح حالياً — التصدير بصيغة CSV فقط. لن نُنزّل ملف CSV باسم xlsx.
               </p>
             </div>
             <button
               disabled
-              className="flex items-center gap-2 bg-slate-800/60 border border-slate-700 text-slate-500 px-4 py-2 rounded-xl text-xs font-semibold cursor-not-allowed"
+              className="flex items-center gap-2 bg-nav/60 border border-line text-content-muted px-4 py-2 rounded-xl text-xs font-semibold cursor-not-allowed"
             >
               <FileSpreadsheet className="w-4 h-4" />
               غير متاح
@@ -397,11 +397,11 @@ export default function AdminImportsPage() {
         </div>
 
         {/* Bulk Import Form Card */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
+        <div className="bg-nav border border-line rounded-2xl p-6 shadow-xl space-y-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Upload className="w-5 h-5 text-emerald-400" />
-              <h2 className="text-lg font-bold text-white">استيراد حسابات الطلاب (CSV / Excel)</h2>
+              <Upload className="w-5 h-5 text-success" />
+              <h2 className="text-lg font-bold text-content">استيراد حسابات الطلاب (CSV / Excel)</h2>
             </div>
             <button
               type="button"
@@ -409,7 +409,7 @@ export default function AdminImportsPage() {
                 const sample = `username,full_name,phone,father_name,group_name,birth_date,password\nmina_gerges,مينا جرجس صليب,01234567890,أبونا جرجس,الفرقة الأولى,2005-01-15,Trainee123!\nkareem_morcos,كريم مرقص حنا,01122334455,أبونا مرقص,الفرقة الأولى,2004-06-20,Trainee123!`;
                 handleParseCsv(sample);
               }}
-              className="text-xs text-amber-400 hover:underline"
+              className="text-xs text-warning hover:underline"
             >
               تحميل نموذج تجريبي (Sample CSV)
             </button>
@@ -417,7 +417,7 @@ export default function AdminImportsPage() {
 
           <div className="space-y-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-2">
+              <label className="block text-xs font-semibold text-content-secondary mb-2">
                 الصق محتوى ملف الـ CSV أو اكتب السطور بالترتيب: (username,full_name,phone,father_name,group_name,birth_date,password)
               </label>
               <textarea
@@ -425,37 +425,37 @@ export default function AdminImportsPage() {
                 value={csvText}
                 onChange={(e) => handleParseCsv(e.target.value)}
                 placeholder="username,full_name,phone,father_name,group_name,birth_date,password&#10;peter_samir,بيتر سمير زكي,01011223344,أبونا يوسف,الفرقة الأولى,2005-02-10,Trainee123!"
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl p-4 text-white font-mono text-xs placeholder-slate-600 focus:outline-none focus:border-emerald-500"
+                className="w-full bg-nav border border-line rounded-xl p-4 text-content font-mono text-xs placeholder-content-muted focus:outline-none focus:border-success"
               />
             </div>
 
             {/* Validation & Preview Stats */}
             {previewStats && (
-              <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3 text-xs">
-                <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                  <span className="font-bold text-slate-200">معاينة دفعة الاستيراد:</span>
+              <div className="bg-nav p-4 rounded-xl border border-line space-y-3 text-xs">
+                <div className="flex items-center justify-between border-b border-line pb-2">
+                  <span className="font-bold text-content">معاينة دفعة الاستيراد:</span>
                   <div className="flex items-center gap-4">
-                    <span className="text-slate-400">الإجمالي: <strong className="text-white">{previewStats.total}</strong></span>
-                    <span className="text-emerald-400">حسابات جديدة: <strong>{previewStats.newCount}</strong></span>
-                    <span className="text-blue-400">تحديث حسابات: <strong>{previewStats.updatedCount}</strong></span>
+                    <span className="text-content-muted">الإجمالي: <strong className="text-content">{previewStats.total}</strong></span>
+                    <span className="text-success">حسابات جديدة: <strong>{previewStats.newCount}</strong></span>
+                    <span className="text-info">تحديث حسابات: <strong>{previewStats.updatedCount}</strong></span>
                   </div>
                 </div>
 
                 {previewStats.errors.length > 0 ? (
-                  <div className="p-3 bg-red-950/40 border border-red-500/40 rounded-lg text-red-300 space-y-1">
+                  <div className="p-3 bg-canvas/40 border border-danger/40 rounded-lg text-danger space-y-1">
                     <div className="font-bold flex items-center gap-1.5">
-                      <AlertTriangle className="w-4 h-4 text-red-400" />
+                      <AlertTriangle className="w-4 h-4 text-danger" />
                       تم اكتشاف {previewStats.errors.length} خطأ في البيانات (الاستيراد معطل حتى التصحيح - All-or-Nothing):
                     </div>
-                    <ul className="list-disc list-inside space-y-0.5 text-xs text-red-200">
+                    <ul className="list-disc list-inside space-y-0.5 text-xs text-danger">
                       {previewStats.errors.map((err, idx) => (
                         <li key={idx}>السطر {err.row}: {err.error}</li>
                       ))}
                     </ul>
                   </div>
                 ) : (
-                  <div className="p-3 bg-emerald-950/30 border border-emerald-500/30 rounded-lg text-emerald-300 flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  <div className="p-3 bg-canvas/30 border border-success/30 rounded-lg text-success flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-success" />
                     كافة السطور مطابقة للشروط وجاهزة للاستيراد الذري.
                   </div>
                 )}
@@ -467,9 +467,9 @@ export default function AdminImportsPage() {
                 type="button"
                 disabled={processing || parsedRows.length === 0}
                 onClick={() => handleExecuteImport(true)}
-                className="flex items-center gap-2 px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-sm font-semibold transition disabled:opacity-50"
+                className="flex items-center gap-2 px-5 py-2.5 bg-nav hover:bg-input text-content rounded-xl text-sm font-semibold transition disabled:opacity-50"
               >
-                <Eye className="w-4 h-4 text-blue-400" />
+                <Eye className="w-4 h-4 text-info" />
                 معاينة فقط (Dry-Run)
               </button>
 
@@ -477,7 +477,7 @@ export default function AdminImportsPage() {
                 type="button"
                 disabled={processing || parsedRows.length === 0 || (previewStats?.errors.length || 0) > 0}
                 onClick={() => handleExecuteImport(false)}
-                className="flex items-center gap-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-bold transition shadow-lg shadow-emerald-900/30 disabled:opacity-50"
+                className="flex items-center gap-2 px-6 py-2.5 bg-success hover:bg-success text-content rounded-xl text-sm font-bold transition shadow-lg shadow-emerald-900/30 disabled:opacity-50"
               >
                 {processing ? (
                   <>
@@ -496,15 +496,15 @@ export default function AdminImportsPage() {
         </div>
 
         {/* Import History Table */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+        <div className="bg-nav border border-line rounded-2xl p-6 shadow-xl space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <History className="w-5 h-5 text-emerald-400" />
-              <h2 className="text-lg font-bold text-white">سجل عمليات الاستيراد السابقة ({importHistory.length})</h2>
+              <History className="w-5 h-5 text-success" />
+              <h2 className="text-lg font-bold text-content">سجل عمليات الاستيراد السابقة ({importHistory.length})</h2>
             </div>
             <button
               onClick={fetchData}
-              className="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300 transition"
+              className="p-2 bg-nav hover:bg-input rounded-lg text-content-secondary transition"
               title="تحديث السجل"
             >
               <RefreshCw className="w-4 h-4" />
@@ -512,7 +512,7 @@ export default function AdminImportsPage() {
           </div>
 
           {importHistory.length === 0 ? (
-            <div className="text-center py-12 text-slate-500">
+            <div className="text-center py-12 text-content-muted">
               <Upload className="w-12 h-12 mx-auto mb-3 opacity-30" />
               <p>لا توجد عمليات استيراد سابقة.</p>
             </div>
@@ -520,7 +520,7 @@ export default function AdminImportsPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-right text-sm">
                 <thead>
-                  <tr className="border-b border-slate-800 text-slate-400 font-medium">
+                  <tr className="border-b border-line text-content-muted font-medium">
                     <th className="pb-3 pr-4">الملف</th>
                     <th className="pb-3">الصفوف</th>
                     <th className="pb-3">حسابات جديدة</th>
@@ -529,35 +529,35 @@ export default function AdminImportsPage() {
                     <th className="pb-3 pl-4">التاريخ</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/60">
+                <tbody className="divide-y divide-line-subtle/60">
                   {importHistory.map((h) => (
-                    <tr key={h.id} className="hover:bg-slate-800/40 transition">
-                      <td className="py-4 pr-4 font-mono text-white text-xs font-semibold">
+                    <tr key={h.id} className="hover:bg-nav/40 transition">
+                      <td className="py-4 pr-4 font-mono text-content text-xs font-semibold">
                         {h.filename}
                       </td>
-                      <td className="py-4 text-slate-300 font-mono text-xs">
+                      <td className="py-4 text-content-secondary font-mono text-xs">
                         {h.total_rows}
                       </td>
-                      <td className="py-4 text-emerald-400 font-mono text-xs font-semibold">
+                      <td className="py-4 text-success font-mono text-xs font-semibold">
                         {h.new_accounts_count}
                       </td>
-                      <td className="py-4 text-blue-400 font-mono text-xs font-semibold">
+                      <td className="py-4 text-info font-mono text-xs font-semibold">
                         {h.updated_accounts_count}
                       </td>
                       <td className="py-4">
                         <span
                           className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
                             h.status === 'SUCCESS'
-                              ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-300'
+                              ? 'bg-success/10 border border-success/30 text-success'
                               : h.status === 'DRY RUN ONLY'
-                              ? 'bg-blue-500/10 border border-blue-500/30 text-blue-300'
-                              : 'bg-red-500/10 border border-red-500/30 text-red-300'
+                              ? 'bg-info/10 border border-info/30 text-info'
+                              : 'bg-danger/10 border border-danger/30 text-danger'
                           }`}
                         >
                           {h.status}
                         </span>
                       </td>
-                      <td className="py-4 pl-4 text-xs text-slate-400">
+                      <td className="py-4 pl-4 text-xs text-content-muted">
                         {new Date(h.created_at).toLocaleString('ar-EG')}
                       </td>
                     </tr>

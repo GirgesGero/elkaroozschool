@@ -263,8 +263,8 @@ export default function AdminBackupsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-        <div className="flex items-center gap-3 text-amber-400">
+      <div className="min-h-screen bg-nav flex items-center justify-center p-4">
+        <div className="flex items-center gap-3 text-warning">
           <RefreshCw className="w-6 h-6 animate-spin" />
           <span className="font-bold">جاري تحميل لوحة النسخ الاحتياطي...</span>
         </div>
@@ -274,16 +274,16 @@ export default function AdminBackupsPage() {
 
   if (!isAdmin) {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-        <div className="bg-slate-800 border border-red-500/30 p-8 rounded-2xl max-w-md text-center">
-          <ShieldAlert className="w-16 h-16 text-red-400 mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-white mb-2">غير مصرح بالوصول</h2>
-          <p className="text-slate-400 mb-6 text-sm">
+      <div className="min-h-screen bg-nav flex items-center justify-center p-4">
+        <div className="bg-nav border border-danger/30 p-8 rounded-2xl max-w-md text-center">
+          <ShieldAlert className="w-16 h-16 text-danger mx-auto mb-4" />
+          <h2 className="text-xl font-bold text-content mb-2">غير مصرح بالوصول</h2>
+          <p className="text-content-muted mb-6 text-sm">
             لوحة النسخ الاحتياطي وإدارة الملفات محصورة حصراً على مسؤولي النظام (Admin / Super User).
           </p>
           <Link
             href="/"
-            className="inline-flex items-center gap-2 bg-amber-600 hover:bg-amber-700 text-white px-6 py-2.5 rounded-xl font-medium transition"
+            className="inline-flex items-center gap-2 bg-warning hover:bg-warning text-content px-6 py-2.5 rounded-xl font-medium transition"
           >
             <ArrowRight className="w-4 h-4" />
             العودة للرئيسية
@@ -294,7 +294,7 @@ export default function AdminBackupsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#070b14] text-slate-100 flex flex-col selection:bg-[#c29938] selection:text-slate-950 pb-20 font-sans" dir="rtl">
+    <div className="min-h-screen bg-canvas text-content flex flex-col selection:bg-gold selection:text-content font-sans" dir="rtl">
       {/* Smart Unified Header */}
       <SmartHeader
         profile={profile}
@@ -319,15 +319,15 @@ export default function AdminBackupsPage() {
       <div className="max-w-6xl w-full mx-auto p-4 md:p-6 flex-1 space-y-8 pb-28 md:pb-12">
         
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-line pb-6">
           <div>
             <div className="flex items-center gap-3 mb-2">
-              <div className="p-2.5 bg-amber-500/10 border border-amber-500/30 rounded-xl text-amber-400">
+              <div className="p-2.5 bg-warning/10 border border-warning/30 rounded-xl text-warning">
                 <Database className="w-6 h-6" />
               </div>
-              <h1 className="text-2xl md:text-3xl font-bold text-white">إدارة النسخ الاحتياطي والاستعادة المشفرة</h1>
+              <h1 className="text-2xl md:text-3xl font-bold text-content">إدارة النسخ الاحتياطي والاستعادة المشفرة</h1>
             </div>
-            <p className="text-slate-400 text-sm">
+            <p className="text-content-muted text-sm">
               إنشاء واستعادة النسخ الاحتياطية الكاملة (قاعدة البيانات وملفات التخزين) بتشفير AES-256 مع نقاط استرجاع ذرية.
             </p>
           </div>
@@ -335,14 +335,14 @@ export default function AdminBackupsPage() {
           <div className="flex items-center gap-3">
             <Link
               href="/admin/imports"
-              className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition"
+              className="flex items-center gap-2 bg-nav hover:bg-input border border-line text-content px-4 py-2.5 rounded-xl text-sm font-medium transition"
             >
-              <Upload className="w-4 h-4 text-emerald-400" />
+              <Upload className="w-4 h-4 text-success" />
               استيراد الطلاب الجماعي
             </Link>
             <Link
               href="/"
-              className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition"
+              className="flex items-center gap-2 bg-nav hover:bg-input border border-line text-content px-4 py-2.5 rounded-xl text-sm font-medium transition"
             >
               <ArrowRight className="w-4 h-4" />
               الرئيسية
@@ -355,30 +355,30 @@ export default function AdminBackupsPage() {
           <div
             className={`p-4 rounded-xl border flex items-center gap-3 ${
               operationMsg.type === 'success'
-                ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-200'
-                : 'bg-red-950/40 border-red-500/40 text-red-200'
+                ? 'bg-canvas/40 border-success/40 text-success'
+                : 'bg-canvas/40 border-danger/40 text-danger'
             }`}
           >
             {operationMsg.type === 'success' ? (
-              <CheckCircle2 className="w-5 h-5 text-emerald-400 flex-shrink-0" />
+              <CheckCircle2 className="w-5 h-5 text-success flex-shrink-0" />
             ) : (
-              <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0" />
+              <AlertTriangle className="w-5 h-5 text-danger flex-shrink-0" />
             )}
             <p className="text-sm font-medium">{operationMsg.text}</p>
           </div>
         )}
 
         {/* Create Backup Form Card */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
+        <div className="bg-nav border border-line rounded-2xl p-6 shadow-xl">
           <div className="flex items-center gap-3 mb-6">
-            <Lock className="w-5 h-5 text-amber-400" />
-            <h2 className="text-lg font-bold text-white">إنشاء نسخة احتياطية مشفرة جديدة (AES-256)</h2>
+            <Lock className="w-5 h-5 text-warning" />
+            <h2 className="text-lg font-bold text-content">إنشاء نسخة احتياطية مشفرة جديدة (AES-256)</h2>
           </div>
 
           <form onSubmit={handleCreateBackup} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
+                <label className="block text-sm font-medium text-content-secondary mb-2">
                   كلمة مرور التشفير (تُدخل يدوياً ولا تُحفظ في النظام) *
                 </label>
                 <input
@@ -387,15 +387,15 @@ export default function AdminBackupsPage() {
                   placeholder="أدخل كلمة مرور قوية لتشفير الـ ZIP..."
                   value={backupPassword}
                   onChange={(e) => setBackupPassword(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 text-sm"
+                  className="w-full bg-nav border border-line rounded-xl px-4 py-3 text-content placeholder-content-muted focus:outline-none focus:border-warning text-sm"
                 />
-                <span className="text-xs text-slate-500 mt-1 block">
+                <span className="text-xs text-content-muted mt-1 block">
                   🔒 يتم استخدام معيار التشفير AES-256. كلمة المرور لا تُسجل إطلاقاً في السجلات أو قاعدة البيانات.
                 </span>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
+                <label className="block text-sm font-medium text-content-secondary mb-2">
                   وجهة حفظ النسخة الاحتياطية *
                 </label>
                 <div className="grid grid-cols-2 gap-3">
@@ -404,8 +404,8 @@ export default function AdminBackupsPage() {
                     onClick={() => setStorageOption('HOSTINGER')}
                     className={`flex items-center justify-center gap-2 p-3 rounded-xl border text-sm font-medium transition ${
                       storageOption === 'HOSTINGER'
-                        ? 'bg-amber-500/10 border-amber-500 text-amber-300'
-                        : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
+                        ? 'bg-warning/10 border-warning text-warning'
+                        : 'bg-nav border-line text-content-muted hover:border-line'
                     }`}
                   >
                     <Database className="w-4 h-4" />
@@ -416,8 +416,8 @@ export default function AdminBackupsPage() {
                     onClick={() => setStorageOption('DOWNLOAD')}
                     className={`flex items-center justify-center gap-2 p-3 rounded-xl border text-sm font-medium transition ${
                       storageOption === 'DOWNLOAD'
-                        ? 'bg-amber-500/10 border-amber-500 text-amber-300'
-                        : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
+                        ? 'bg-warning/10 border-warning text-warning'
+                        : 'bg-nav border-line text-content-muted hover:border-line'
                     }`}
                   >
                     <Download className="w-4 h-4" />
@@ -430,7 +430,7 @@ export default function AdminBackupsPage() {
             <button
               type="submit"
               disabled={creatingBackup}
-              className="w-full md:w-auto flex items-center justify-center gap-2 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white px-8 py-3 rounded-xl font-bold transition shadow-lg shadow-amber-900/20 disabled:opacity-50"
+              className="w-full md:w-auto flex items-center justify-center gap-2 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-warning hover:to-warning text-content px-8 py-3 rounded-xl font-bold transition shadow-lg shadow-amber-900/20 disabled:opacity-50"
             >
               {creatingBackup ? (
                 <>
@@ -448,15 +448,15 @@ export default function AdminBackupsPage() {
         </div>
 
         {/* Backups List Table */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+        <div className="bg-nav border border-line rounded-2xl p-6 shadow-xl space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <History className="w-5 h-5 text-amber-400" />
-              <h2 className="text-lg font-bold text-white">سجل النسخ الاحتياطية المسجلة ({backups.length})</h2>
+              <History className="w-5 h-5 text-warning" />
+              <h2 className="text-lg font-bold text-content">سجل النسخ الاحتياطية المسجلة ({backups.length})</h2>
             </div>
             <button
               onClick={fetchBackups}
-              className="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300 transition"
+              className="p-2 bg-nav hover:bg-input rounded-lg text-content-secondary transition"
               title="تحديث القائمة"
             >
               <RefreshCw className="w-4 h-4" />
@@ -464,7 +464,7 @@ export default function AdminBackupsPage() {
           </div>
 
           {backups.length === 0 ? (
-            <div className="text-center py-12 text-slate-500">
+            <div className="text-center py-12 text-content-muted">
               <FileArchive className="w-12 h-12 mx-auto mb-3 opacity-30" />
               <p>لا توجد نسخ احتياطية مسجلة حالياً.</p>
             </div>
@@ -472,7 +472,7 @@ export default function AdminBackupsPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-right text-sm">
                 <thead>
-                  <tr className="border-b border-slate-800 text-slate-400 font-medium">
+                  <tr className="border-b border-line text-content-muted font-medium">
                     <th className="pb-3 pr-4">اسم الملف</th>
                     <th className="pb-3">الحجم</th>
                     <th className="pb-3">موقع التخزين</th>
@@ -482,29 +482,29 @@ export default function AdminBackupsPage() {
                     <th className="pb-3 pl-4 text-center">الإجراءات</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/60">
+                <tbody className="divide-y divide-line-subtle/60">
                   {backups.map((b) => (
-                    <tr key={b.id} className="hover:bg-slate-800/40 transition">
-                      <td className="py-4 pr-4 font-mono text-white text-xs md:text-sm font-semibold flex items-center gap-2">
-                        <FileArchive className="w-4 h-4 text-amber-400 flex-shrink-0" />
+                    <tr key={b.id} className="hover:bg-nav/40 transition">
+                      <td className="py-4 pr-4 font-mono text-content text-xs md:text-sm font-semibold flex items-center gap-2">
+                        <FileArchive className="w-4 h-4 text-warning flex-shrink-0" />
                         {b.filename}
                       </td>
-                      <td className="py-4 text-slate-300 font-mono text-xs">
+                      <td className="py-4 text-content-secondary font-mono text-xs">
                         {(b.file_size_bytes / (1024 * 1024)).toFixed(2)} MB
                       </td>
                       <td className="py-4">
-                        <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-500/10 border border-blue-500/30 text-blue-300">
+                        <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-info/10 border border-info/30 text-info">
                           {b.storage_type}
                         </span>
                       </td>
-                      <td className="py-4 font-mono text-xs text-slate-400" title={b.checksum_sha256}>
+                      <td className="py-4 font-mono text-xs text-content-muted" title={b.checksum_sha256}>
                         {b.checksum_sha256.slice(0, 16)}...
                       </td>
-                      <td className="py-4 text-xs text-slate-400">
+                      <td className="py-4 text-xs text-content-muted">
                         {new Date(b.created_at).toLocaleString('ar-EG')}
                       </td>
                       <td className="py-4">
-                        <label className="inline-flex items-center gap-1.5 cursor-pointer px-2.5 py-1 rounded-lg border border-slate-700 bg-slate-800/60 hover:border-amber-500/50 text-xs text-slate-300 transition">
+                        <label className="inline-flex items-center gap-1.5 cursor-pointer px-2.5 py-1 rounded-lg border border-line bg-nav/60 hover:border-warning/50 text-xs text-content-secondary transition">
                           <Upload className="w-3.5 h-3.5" />
                           {backupFiles[b.id] ? 'تغيير الملف' : 'إرفاق ملف ZIP'}
                           <input
@@ -515,7 +515,7 @@ export default function AdminBackupsPage() {
                           />
                         </label>
                         {backupFiles[b.id] && (
-                          <span className="block mt-1.5 text-[11px] text-emerald-400 truncate max-w-[160px]" title={backupFiles[b.id].name}>
+                          <span className="block mt-1.5 text-[11px] text-success truncate max-w-[160px]" title={backupFiles[b.id].name}>
                             {backupFiles[b.id].name}
                           </span>
                         )}
@@ -524,7 +524,7 @@ export default function AdminBackupsPage() {
                         <div className="flex items-center justify-center gap-2">
                           <button
                             onClick={() => setSelectedBackupForRestore(b)}
-                            className="p-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 rounded-lg border border-emerald-500/30 transition text-xs font-medium flex items-center gap-1"
+                            className="p-2 bg-success/10 hover:bg-success/20 text-success rounded-lg border border-success/30 transition text-xs font-medium flex items-center gap-1"
                             title="استعادة من هذه النسخة"
                           >
                             <RefreshCw className="w-3.5 h-3.5" />
@@ -532,7 +532,7 @@ export default function AdminBackupsPage() {
                           </button>
                           <button
                             onClick={() => setSelectedBackupForDelete(b)}
-                            className="p-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg border border-red-500/30 transition"
+                            className="p-2 bg-danger/10 hover:bg-danger/20 text-danger rounded-lg border border-danger/30 transition"
                             title="حذف النسخة"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -550,15 +550,15 @@ export default function AdminBackupsPage() {
         {/* Delete Confirmation Modal */}
         {selectedBackupForDelete && (
           <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-slate-900 border border-red-500/40 rounded-2xl max-w-md w-full p-6 space-y-6 shadow-2xl">
-              <div className="flex items-center gap-3 text-red-400">
+            <div className="bg-nav border border-danger/40 rounded-2xl max-w-md w-full p-6 space-y-6 shadow-2xl">
+              <div className="flex items-center gap-3 text-danger">
                 <AlertTriangle className="w-6 h-6 flex-shrink-0" />
-                <h3 className="text-lg font-bold text-white">هل أنت متأكد الآن؟</h3>
+                <h3 className="text-lg font-bold text-content">هل أنت متأكد الآن؟</h3>
               </div>
-              <p className="text-slate-300 text-sm">
+              <p className="text-content-secondary text-sm">
                 أنت على وشك حذف النسخة الاحتياطية المشفرة:
                 <br />
-                <strong className="text-white font-mono text-xs mt-1 block">{selectedBackupForDelete.filename}</strong>
+                <strong className="text-content font-mono text-xs mt-1 block">{selectedBackupForDelete.filename}</strong>
                 <br />
                 هذا الإجراء سيقوم بحذف السجل والملف من التخزين وتسجيل العملية في سجل التدقيق.
               </p>
@@ -566,14 +566,14 @@ export default function AdminBackupsPage() {
                 <button
                   type="button"
                   onClick={() => setSelectedBackupForDelete(null)}
-                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-sm font-medium transition"
+                  className="px-4 py-2 bg-nav hover:bg-input text-content-secondary rounded-xl text-sm font-medium transition"
                 >
                   إلغاء
                 </button>
                 <button
                   type="button"
                   onClick={handleDeleteBackup}
-                  className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-bold transition shadow-lg shadow-red-900/30"
+                  className="px-6 py-2 bg-danger hover:bg-danger text-content rounded-xl text-sm font-bold transition shadow-lg shadow-red-900/30"
                 >
                   تأكيد الحذف
                 </button>
@@ -585,21 +585,21 @@ export default function AdminBackupsPage() {
         {/* Restore Confirmation Modal */}
         {selectedBackupForRestore && (
           <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-slate-900 border border-amber-500/40 rounded-2xl max-w-lg w-full p-6 space-y-6 shadow-2xl">
-              <div className="flex items-center gap-3 text-amber-400">
+            <div className="bg-nav border border-warning/40 rounded-2xl max-w-lg w-full p-6 space-y-6 shadow-2xl">
+              <div className="flex items-center gap-3 text-warning">
                 <Layers className="w-6 h-6 flex-shrink-0" />
-                <h3 className="text-lg font-bold text-white">معاينة الاستعادة الآمنة والذرية</h3>
+                <h3 className="text-lg font-bold text-content">معاينة الاستعادة الآمنة والذرية</h3>
               </div>
 
-              <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2 text-xs text-slate-300">
-                <div><strong>الملف المستهدف:</strong> <span className="font-mono text-white">{selectedBackupForRestore.filename}</span></div>
+              <div className="bg-nav p-4 rounded-xl border border-line space-y-2 text-xs text-content-secondary">
+                <div><strong>الملف المستهدف:</strong> <span className="font-mono text-content">{selectedBackupForRestore.filename}</span></div>
                 <div><strong>الحجم:</strong> {(selectedBackupForRestore.file_size_bytes / (1024 * 1024)).toFixed(2)} MB</div>
                 <div><strong>تاريخ النسخة:</strong> {new Date(selectedBackupForRestore.created_at).toLocaleString('ar-EG')}</div>
                 <div><strong>نقطة الأمان التلقائية:</strong> سيتم إنشاء Pre-Restore Safety Backup تلقائياً قبل البدء.</div>
               </div>
 
               {!backupFiles[selectedBackupForRestore.id] && (
-                <div className="bg-red-500/10 border border-red-500/30 p-3 rounded-xl text-xs text-red-300 space-y-2">
+                <div className="bg-danger/10 border border-danger/30 p-3 rounded-xl text-xs text-danger space-y-2">
                   <p className="font-bold">الملف غير مرفق — لا يمكن تنفيذ الاستعادة.</p>
                   <p>
                     قاعدة البيانات تخزّن بيانات النسخة فقط (الاسم، الحجم، والبصمة). الاستعادة تحتاج
@@ -610,13 +610,13 @@ export default function AdminBackupsPage() {
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-2">
+                  <label className="block text-xs font-semibold text-content-secondary mb-2">
                     اختر وضع الاستعادة (Restore Mode)
                   </label>
                   <select
                     value={restoreMode}
                     onChange={(e: any) => setRestoreMode(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-amber-500"
+                    className="w-full bg-nav border border-line rounded-xl px-4 py-2.5 text-content text-sm focus:outline-none focus:border-warning"
                   >
                     <option value="FULL">استعادة كاملة (قاعدة البيانات + ملفات التخزين)</option>
                     <option value="DATABASE_ONLY">استعادة قاعدة البيانات فقط</option>
@@ -625,7 +625,7 @@ export default function AdminBackupsPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-2">
+                  <label className="block text-xs font-semibold text-content-secondary mb-2">
                     أدخل كلمة مرور فك تشفير النسخة *
                   </label>
                   <input
@@ -634,12 +634,12 @@ export default function AdminBackupsPage() {
                     placeholder="كلمة مرور AES-256..."
                     value={restorePassword}
                     onChange={(e) => setRestorePassword(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-amber-500"
+                    className="w-full bg-nav border border-line rounded-xl px-4 py-2.5 text-content text-sm focus:outline-none focus:border-warning"
                   />
                 </div>
               </div>
 
-              <p className="text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 p-3 rounded-xl">
+              <p className="text-xs text-warning bg-warning/10 border border-warning/20 p-3 rounded-xl">
                 ⚠️ هل تريد بدء الاستعادة؟ في حالة حدوث أي خطأ سيقوم النظام بالرجوع الذري الفوري (Atomic Rollback).
               </p>
 
@@ -648,7 +648,7 @@ export default function AdminBackupsPage() {
                   type="button"
                   disabled={restoring}
                   onClick={() => setSelectedBackupForRestore(null)}
-                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-sm font-medium transition"
+                  className="px-4 py-2 bg-nav hover:bg-input text-content-secondary rounded-xl text-sm font-medium transition"
                 >
                   إلغاء
                 </button>
@@ -661,7 +661,7 @@ export default function AdminBackupsPage() {
                       ? undefined
                       : 'أرفق ملف الأرشيف أولاً'
                   }
-                  className="flex items-center gap-2 px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-bold transition shadow-lg shadow-emerald-900/30 disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="flex items-center gap-2 px-6 py-2 bg-success hover:bg-success text-content rounded-xl text-sm font-bold transition shadow-lg shadow-emerald-900/30 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   {restoring ? (
                     <>

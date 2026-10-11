@@ -28,17 +28,17 @@ export default function GroupSelector({
     <div className="relative inline-block text-right" dir="rtl">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2.5 px-3.5 py-2 rounded-2xl bg-[#0c1322] hover:bg-[#111a2e] text-slate-100 border border-[#c29938]/30 hover:border-[#c29938]/60 text-xs sm:text-sm font-bold shadow-md transition-all backdrop-blur-md"
+        className="flex items-center gap-2.5 px-3.5 py-2 rounded-2xl bg-canvas hover:bg-card text-content border border-gold/30 hover:border-gold/60 text-xs sm:text-sm font-bold shadow-md transition-all backdrop-blur-md"
       >
-        <Layers className="w-4 h-4 text-[#c29938]" />
+        <Layers className="w-4 h-4 text-gold" />
         <span>{currentGroup ? currentGroup.name : 'اختر الفرقة'}</span>
-        <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`w-4 h-4 text-content-muted transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {isOpen && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
-          <div className="absolute right-0 mt-2 w-60 rounded-3xl bg-[#070b14] border border-[#c29938]/30 shadow-2xl shadow-black/90 p-2 z-50 animate-scale-in">
+          <div className="absolute right-0 mt-2 w-60 rounded-3xl bg-canvas border border-gold/30 shadow-2xl shadow-black/90 p-2 z-50 animate-scale-in">
             {showAllOption && (
               <button
                 onClick={() => {
@@ -47,8 +47,8 @@ export default function GroupSelector({
                 }}
                 className={`w-full text-right px-3.5 py-2.5 rounded-2xl text-xs font-bold flex items-center justify-between transition-colors mb-1 ${
                   selectedGroupId === 0
-                    ? 'bg-karooz-gold text-slate-950 font-black shadow-sm'
-                    : 'text-slate-300 hover:bg-slate-800/60'
+                    ? 'bg-gold text-content font-black shadow-sm'
+                    : 'text-content-secondary hover:bg-nav/60'
                 }`}
               >
                 <span>جميع الفرق (نظرة شاملة)</span>
@@ -65,15 +65,15 @@ export default function GroupSelector({
                 }}
                 className={`w-full text-right px-3.5 py-2.5 rounded-2xl text-xs font-bold flex items-center justify-between transition-colors mb-1 ${
                   selectedGroupId === grp.id
-                    ? 'bg-karooz-gold text-slate-950 font-black shadow-sm'
-                    : 'text-slate-300 hover:bg-slate-800/60'
+                    ? 'bg-gold text-content font-black shadow-sm'
+                    : 'text-content-secondary hover:bg-nav/60'
                 }`}
               >
                 <div>
                   <span className="block text-xs font-bold">{grp.name}</span>
                   <span
                     className={`text-[10px] block mt-0.5 ${
-                      selectedGroupId === grp.id ? 'text-slate-900 font-semibold' : 'text-slate-400'
+                      selectedGroupId === grp.id ? 'text-content font-semibold' : 'text-content-muted'
                     }`}
                   >
                     {grp.desc}

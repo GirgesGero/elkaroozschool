@@ -188,8 +188,11 @@ describe('the selected row is marked', () => {
 
     // The check is a lucide Check icon, so it carries no text of its own; what it does
     // carry is a distinct class on the selected row.
-    expect(rows[1].className).toContain('bg-karooz-gold');
-    expect(rows[0].className).not.toContain('bg-karooz-gold');
-    expect(rows[2].className).not.toContain('bg-karooz-gold');
+    // Asserted against `bg-gold`, the semantic token. This used to assert
+    // `bg-karooz-gold`, a class that no longer exists in the palette — so the
+    // assertion passed while proving nothing about rendered output.
+    expect(rows[1].className).toContain('bg-gold');
+    expect(rows[0].className).not.toContain('bg-gold');
+    expect(rows[2].className).not.toContain('bg-gold');
   });
 });

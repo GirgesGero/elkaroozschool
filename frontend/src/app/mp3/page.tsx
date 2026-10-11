@@ -174,7 +174,7 @@ export default function Mp3Page() {
   };
 
   return (
-    <div className="min-h-screen bg-[#070b14] text-slate-100 flex flex-col selection:bg-[#c29938] selection:text-slate-950 pb-32" dir="rtl">
+    <div className="min-h-screen bg-canvas text-content flex flex-col selection:bg-gold selection:text-content" dir="rtl">
       <audio
         ref={audioRef}
         onTimeUpdate={handleTimeUpdate}
@@ -206,9 +206,9 @@ export default function Mp3Page() {
       {/* Main Container */}
       <main className="max-w-5xl w-full mx-auto px-4 py-6 flex-1 flex flex-col gap-6 pb-28 md:pb-12">
         {/* Banner */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="bg-nav border border-line rounded-2xl p-5 shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2 text-amber-400 mb-1 text-xs font-semibold">
+            <div className="flex items-center gap-2 text-warning mb-1 text-xs font-semibold">
               <Headphones className="w-4 h-4" />
               <span>
                 {profile?.group_id === 1 && 'تسجيلات الفرقة الأولى'}
@@ -216,8 +216,8 @@ export default function Mp3Page() {
                 {profile?.group_id === 3 && 'تسجيلات الفرقة الثالثة'}
               </span>
             </div>
-            <h1 className="text-xl font-bold text-white">تسجيلات المحاضرات والترانيم الدراسية</h1>
-            <p className="text-xs text-slate-400 mt-1">
+            <h1 className="text-xl font-bold text-content">تسجيلات المحاضرات والترانيم الدراسية</h1>
+            <p className="text-xs text-content-muted mt-1">
               استمع للمحاضرات والتأملات الصوتية بدقة عالية داخل المشغل المدمج.
             </p>
           </div>
@@ -225,7 +225,7 @@ export default function Mp3Page() {
           {canManage && (
             <button
               onClick={() => setShowAddModal(true)}
-              className="bg-karooz-crimson hover:bg-rose-700 text-white font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 transition-all shadow"
+              className="bg-karooz-crimson hover:bg-danger text-content font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 transition-all shadow"
             >
               <Plus className="w-4 h-4" />
               <span>إضافة تسجيل صوتي</span>
@@ -234,16 +234,16 @@ export default function Mp3Page() {
         </div>
 
         {notice && (
-          <div className="p-3 bg-blue-950/60 border border-blue-800/60 text-blue-200 rounded-xl text-xs flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 text-blue-400" />
+          <div className="p-3 bg-canvas/60 border border-line-subtle/60 text-info rounded-xl text-xs flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-info" />
             <span>{notice}</span>
           </div>
         )}
 
         {/* --- TRACKS PLAYLIST --- */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-md space-y-2">
+        <div className="bg-nav border border-line rounded-2xl p-4 shadow-md space-y-2">
           {tracks.length === 0 ? (
-            <div className="p-8 text-center text-slate-400 text-xs">
+            <div className="p-8 text-center text-content-muted text-xs">
               لا توجد تسجيلات صوتية مضافة لفرقتك حالياً.
             </div>
           ) : (
@@ -256,16 +256,16 @@ export default function Mp3Page() {
                   onClick={() => handlePlayTrack(track)}
                   className={`p-3.5 rounded-xl border flex items-center justify-between gap-3 cursor-pointer transition-all ${
                     isCurrent
-                      ? 'bg-amber-950/30 border-amber-600/60 text-white shadow'
-                      : 'bg-slate-950/60 border-slate-800/80 text-slate-300 hover:bg-slate-800/60 hover:border-slate-700'
+                      ? 'bg-canvas/30 border-warning/60 text-content shadow'
+                      : 'bg-nav/60 border-line/80 text-content-secondary hover:bg-nav/60 hover:border-line'
                   }`}
                 >
                   <div className="flex items-center gap-3">
                     <button
                       className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${
                         isCurrent && isPlaying
-                          ? 'bg-amber-500 text-slate-950 shadow-md'
-                          : 'bg-slate-800 text-amber-400 hover:bg-slate-700'
+                          ? 'bg-warning text-content shadow-md'
+                          : 'bg-nav text-warning hover:bg-input'
                       }`}
                     >
                       {isCurrent && isPlaying ? (
@@ -276,14 +276,14 @@ export default function Mp3Page() {
                     </button>
 
                     <div>
-                      <h4 className="font-bold text-xs sm:text-sm text-white">{track.title}</h4>
-                      <span className="text-[11px] text-slate-400">
+                      <h4 className="font-bold text-xs sm:text-sm text-content">{track.title}</h4>
+                      <span className="text-[11px] text-content-muted">
                         {new Date(track.created_at).toLocaleDateString('ar-EG')}
                       </span>
                     </div>
                   </div>
 
-                  <span className="text-xs font-mono text-slate-400 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">
+                  <span className="text-xs font-mono text-content-muted bg-nav px-2 py-0.5 rounded border border-line">
                     MP3
                   </span>
                 </div>
@@ -295,38 +295,38 @@ export default function Mp3Page() {
         {/* --- ADD MODAL --- */}
         {showAddModal && (
           <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-6 shadow-2xl">
-              <h3 className="text-base font-bold text-white mb-4">إضافة تسجيل صوتي جديد</h3>
+            <div className="bg-nav border border-line rounded-2xl max-w-md w-full p-6 shadow-2xl">
+              <h3 className="text-base font-bold text-content mb-4">إضافة تسجيل صوتي جديد</h3>
 
               <div className="space-y-3.5 text-xs">
                 <div>
-                  <label className="block text-slate-300 font-semibold mb-1">عنوان التسجيل</label>
+                  <label className="block text-content-secondary font-semibold mb-1">عنوان التسجيل</label>
                   <input
                     type="text"
                     value={newTitle}
                     onChange={(e) => setNewTitle(e.target.value)}
                     placeholder="مثال: تسجيل محاضرة مقدمة العهد الجديد"
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white"
+                    className="w-full bg-nav border border-line rounded-xl p-2.5 text-content"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-slate-300 font-semibold mb-1">رابط الملف الصوتي (MP3)</label>
+                  <label className="block text-content-secondary font-semibold mb-1">رابط الملف الصوتي (MP3)</label>
                   <input
                     type="text"
                     value={newAudioUrl}
                     onChange={(e) => setNewAudioUrl(e.target.value)}
                     placeholder="https://.../lecture.mp3"
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white"
+                    className="w-full bg-nav border border-line rounded-xl p-2.5 text-content"
                   />
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-2 mt-6 pt-4 border-t border-slate-800">
+              <div className="flex items-center justify-end gap-2 mt-6 pt-4 border-t border-line">
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 rounded-xl bg-slate-800 text-slate-400 text-xs font-bold"
+                  className="px-4 py-2 rounded-xl bg-nav text-content-muted text-xs font-bold"
                 >
                   إلغاء
                 </button>
@@ -334,7 +334,7 @@ export default function Mp3Page() {
                   type="button"
                   disabled={saving}
                   onClick={handleSaveTrack}
-                  className="px-5 py-2 rounded-xl bg-karooz-crimson text-white text-xs font-bold flex items-center gap-1.5"
+                  className="px-5 py-2 rounded-xl bg-karooz-crimson text-content text-xs font-bold flex items-center gap-1.5"
                 >
                   {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                   <span>حفظ</span>
@@ -347,36 +347,36 @@ export default function Mp3Page() {
 
       {/* --- BOTTOM STICKY AUDIO PLAYER BAR --- */}
       {currentTrack && (
-        <div className="fixed bottom-0 inset-x-0 bg-slate-900/95 border-t border-slate-800 p-3.5 backdrop-blur-md z-40 shadow-2xl">
+        <div className="fixed bottom-0 inset-x-0 bg-nav/95 border-t border-line p-3.5 backdrop-blur-md z-40 shadow-2xl">
           <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
             <div className="flex items-center gap-3 w-full sm:w-auto">
               <button
                 onClick={() => handlePlayTrack(currentTrack)}
-                className="w-10 h-10 rounded-full bg-amber-500 text-slate-950 font-bold flex items-center justify-center shadow-lg shadow-amber-950/40 hover:bg-amber-400 transition-colors"
+                className="w-10 h-10 rounded-full bg-warning text-content font-bold flex items-center justify-center shadow-lg shadow-amber-950/40 hover:bg-warning transition-colors"
               >
                 {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 translate-x-[-1px]" />}
               </button>
 
               <div className="truncate">
-                <h4 className="font-bold text-xs sm:text-sm text-white truncate max-w-xs sm:max-w-md">
+                <h4 className="font-bold text-xs sm:text-sm text-content truncate max-w-xs sm:max-w-md">
                   {currentTrack.title}
                 </h4>
-                <span className="text-[10px] text-amber-400 font-semibold">جاري التشغيل في المدرسة</span>
+                <span className="text-[10px] text-warning font-semibold">جاري التشغيل في المدرسة</span>
               </div>
             </div>
 
             {/* Seek Bar & Timers */}
             <div className="flex items-center gap-3 w-full sm:w-1/2">
-              <span className="text-[11px] font-mono text-slate-400">{formatTime(currentTime)}</span>
+              <span className="text-[11px] font-mono text-content-muted">{formatTime(currentTime)}</span>
               <input
                 type="range"
                 min="0"
                 max={duration || 100}
                 value={currentTime}
                 onChange={handleSeek}
-                className="flex-1 h-1.5 bg-slate-950 rounded-full accent-amber-500 cursor-pointer"
+                className="flex-1 h-1.5 bg-nav rounded-full accent-amber-500 cursor-pointer"
               />
-              <span className="text-[11px] font-mono text-slate-400">{formatTime(duration)}</span>
+              <span className="text-[11px] font-mono text-content-muted">{formatTime(duration)}</span>
             </div>
           </div>
         </div>

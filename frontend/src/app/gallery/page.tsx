@@ -150,7 +150,7 @@ export default function GalleryPage() {
   });
 
   return (
-    <div className="min-h-screen bg-[#070b14] text-slate-100 flex flex-col selection:bg-[#c29938] selection:text-slate-950 pb-20" dir="rtl">
+    <div className="min-h-screen bg-canvas text-content flex flex-col selection:bg-gold selection:text-content" dir="rtl">
       {/* Smart Unified Header */}
       <SmartHeader
         profile={profile}
@@ -175,9 +175,9 @@ export default function GalleryPage() {
       {/* Main Container */}
       <main className="max-w-5xl w-full mx-auto px-4 py-6 flex-1 flex flex-col gap-6 pb-28 md:pb-12">
         {/* Banner & Filter */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="bg-nav border border-line rounded-2xl p-5 shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2 text-amber-400 mb-1 text-xs font-semibold">
+            <div className="flex items-center gap-2 text-warning mb-1 text-xs font-semibold">
               <Users className="w-4 h-4" />
               <span>
                 {profile?.group_id === 1 && 'معرض الفرقة الأولى'}
@@ -185,13 +185,13 @@ export default function GalleryPage() {
                 {profile?.group_id === 3 && 'معرض الفرقة الثالثة'}
               </span>
             </div>
-            <h1 className="text-xl font-bold text-white">ألبوم الذكريات والأنشطة الكنسية</h1>
+            <h1 className="text-xl font-bold text-content">ألبوم الذكريات والأنشطة الكنسية</h1>
           </div>
 
           {canManage && (
             <button
               onClick={() => setShowUploadModal(true)}
-              className="bg-karooz-crimson hover:bg-rose-700 text-white font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 transition-all shadow"
+              className="bg-karooz-crimson hover:bg-danger text-content font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 transition-all shadow"
             >
               <Plus className="w-4 h-4" />
               <span>إضافة صورة للمعرض</span>
@@ -200,8 +200,8 @@ export default function GalleryPage() {
         </div>
 
         {notice && (
-          <div className="p-3 bg-blue-950/60 border border-blue-800/60 text-blue-200 rounded-xl text-xs flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 text-blue-400" />
+          <div className="p-3 bg-canvas/60 border border-line-subtle/60 text-info rounded-xl text-xs flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-info" />
             <span>{notice}</span>
           </div>
         )}
@@ -209,7 +209,7 @@ export default function GalleryPage() {
         {/* --- PHOTOS GRID --- */}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
           {filteredPhotos.length === 0 ? (
-            <div className="col-span-full bg-slate-900 border border-slate-800 rounded-2xl p-12 text-center text-slate-400 text-xs">
+            <div className="col-span-full bg-nav border border-line rounded-2xl p-12 text-center text-content-muted text-xs">
               لا توجد صور في معرض فرقتك حالياً.
             </div>
           ) : (
@@ -217,7 +217,7 @@ export default function GalleryPage() {
               <div
                 key={photo.id}
                 onClick={() => setLightboxIndex(pIdx)}
-                className="relative h-44 bg-slate-950 rounded-2xl overflow-hidden border border-slate-800 cursor-pointer group shadow-md"
+                className="relative h-44 bg-nav rounded-2xl overflow-hidden border border-line cursor-pointer group shadow-md"
               >
                 <img
                   src={photo.image_url}
@@ -225,7 +225,7 @@ export default function GalleryPage() {
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 />
                 {photo.title && (
-                  <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/80 to-transparent text-[11px] font-semibold text-white truncate">
+                  <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/80 to-transparent text-[11px] font-semibold text-content truncate">
                     {photo.title}
                   </div>
                 )}
@@ -239,7 +239,7 @@ export default function GalleryPage() {
           <div className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-4">
             <button
               onClick={() => setLightboxIndex(null)}
-              className="absolute top-4 right-4 text-white hover:text-rose-400 p-2 z-50"
+              className="absolute top-4 right-4 text-content hover:text-danger p-2 z-50"
             >
               <X className="w-7 h-7" />
             </button>
@@ -252,7 +252,7 @@ export default function GalleryPage() {
                       prev !== null && prev > 0 ? prev - 1 : filteredPhotos.length - 1
                     )
                   }
-                  className="absolute left-4 top-1/2 -translate-y-1/2 p-3 bg-black/60 text-white rounded-full hover:bg-black"
+                  className="absolute left-4 top-1/2 -translate-y-1/2 p-3 bg-black/60 text-content rounded-full hover:bg-black"
                 >
                   <ChevronLeft className="w-6 h-6" />
                 </button>
@@ -262,7 +262,7 @@ export default function GalleryPage() {
                       prev !== null && prev + 1 < filteredPhotos.length ? prev + 1 : 0
                     )
                   }
-                  className="absolute right-4 top-1/2 -translate-y-1/2 p-3 bg-black/60 text-white rounded-full hover:bg-black"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 p-3 bg-black/60 text-content rounded-full hover:bg-black"
                 >
                   <ChevronRight className="w-6 h-6" />
                 </button>
@@ -276,7 +276,7 @@ export default function GalleryPage() {
                 className="max-w-full max-h-[80vh] object-contain rounded-xl shadow-2xl"
               />
               {filteredPhotos[lightboxIndex].title && (
-                <p className="text-white text-xs font-semibold mt-3 bg-black/60 px-4 py-1.5 rounded-full">
+                <p className="text-content text-xs font-semibold mt-3 bg-black/60 px-4 py-1.5 rounded-full">
                   {filteredPhotos[lightboxIndex].title}
                 </p>
               )}
@@ -287,38 +287,38 @@ export default function GalleryPage() {
         {/* --- UPLOAD MODAL --- */}
         {showUploadModal && (
           <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-6 shadow-2xl">
-              <h3 className="text-base font-bold text-white mb-4">إضافة صورة جديدة للمعرض</h3>
+            <div className="bg-nav border border-line rounded-2xl max-w-md w-full p-6 shadow-2xl">
+              <h3 className="text-base font-bold text-content mb-4">إضافة صورة جديدة للمعرض</h3>
 
               <div className="space-y-3.5 text-xs">
                 <div>
-                  <label className="block text-slate-300 font-semibold mb-1">عنوان الصورة</label>
+                  <label className="block text-content-secondary font-semibold mb-1">عنوان الصورة</label>
                   <input
                     type="text"
                     value={newPhotoTitle}
                     onChange={(e) => setNewPhotoTitle(e.target.value)}
                     placeholder="مثال: حفل بداية العام الدراسي"
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white"
+                    className="w-full bg-nav border border-line rounded-xl p-2.5 text-content"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-slate-300 font-semibold mb-1">رابط الصورة</label>
+                  <label className="block text-content-secondary font-semibold mb-1">رابط الصورة</label>
                   <input
                     type="text"
                     value={newPhotoUrl}
                     onChange={(e) => setNewPhotoUrl(e.target.value)}
                     placeholder="https://.../photo.jpg"
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white"
+                    className="w-full bg-nav border border-line rounded-xl p-2.5 text-content"
                   />
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-2 mt-6 pt-4 border-t border-slate-800">
+              <div className="flex items-center justify-end gap-2 mt-6 pt-4 border-t border-line">
                 <button
                   type="button"
                   onClick={() => setShowUploadModal(false)}
-                  className="px-4 py-2 rounded-xl bg-slate-800 text-slate-400 text-xs font-bold"
+                  className="px-4 py-2 rounded-xl bg-nav text-content-muted text-xs font-bold"
                 >
                   إلغاء
                 </button>
@@ -326,7 +326,7 @@ export default function GalleryPage() {
                   type="button"
                   disabled={uploading}
                   onClick={handleUploadPhoto}
-                  className="px-5 py-2 rounded-xl bg-karooz-crimson text-white text-xs font-bold flex items-center gap-1.5"
+                  className="px-5 py-2 rounded-xl bg-karooz-crimson text-content text-xs font-bold flex items-center gap-1.5"
                 >
                   {uploading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                   <span>حفظ في المعرض</span>

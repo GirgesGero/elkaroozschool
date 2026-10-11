@@ -28,25 +28,49 @@ interface SmartHeaderProps {
   onOpenProfile: (id: string, role: string) => void;
 }
 
+interface ThemeOption {
+  id: AppTheme;
+  label: string;
+  Icon: typeof Sun;
+}
+
+/**
+ * Every colour here is a CSS variable. The previous version hardcoded
+ * `slate-800`, `#c29938` and `slate-900/80` in 20+ places, so the header stayed
+ * navy-on-dark in ALL THREE themes — the light theme rendered a dark bar
+ * across the top with dark-on-dark text in places.
+ *
+ * Every icon-only control is >=44px (`.tap-target`) and carries an accessible
+ * name, because an icon with no text has no name for a screen reader.
+ */
 export default function SmartHeader({ profile, onOpenSearch, onOpenProfile }: SmartHeaderProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const { theme, setTheme, toggleTheme } = useAppTheme();
+  const { theme, setTheme } = useAppTheme();
   const isVisible = useScrollChrome();
   const [showThemeMenu, setShowThemeMenu] = useState(false);
   const themeMenuRef = useRef<HTMLDivElement>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  // Click outside to close theme menu
+  // Click outside AND Escape both close the menu — a keyboard user must not be
+  // stranded in a popover they cannot dismiss.
   useEffect(() => {
+    if (!showThemeMenu) return;
     const handleClickOutside = (e: MouseEvent) => {
       if (themeMenuRef.current && !themeMenuRef.current.contains(e.target as Node)) {
         setShowThemeMenu(false);
       }
     };
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setShowThemeMenu(false);
+    };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    document.addEventListener('keydown', handleKey);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKey);
+    };
+  }, [showThemeMenu]);
 
   const handleLogout = async () => {
     const supabase = createClient();
@@ -57,45 +81,71 @@ export default function SmartHeader({ profile, onOpenSearch, onOpenProfile }: Sm
   const isAdminOrSuper =
     profile?.role_id === 'admin' || profile?.role_id === 'super_user';
 
+  const THEME_OPTIONS: ThemeOption[] = [
+    { id: 'luxury', label: 'الملكي القبطي', Icon: Crown },
+    { id: 'dark', label: 'الداكن الليلي', Icon: Moon },
+    { id: 'light', label: 'النهاري الفاتح', Icon: Sun },
+    { id: 'system', label: 'تلقائي النظام', Icon: Sparkles },
+  ];
+
+  const activeThemeOption = THEME_OPTIONS.find((o) => o.id === theme) ?? THEME_OPTIONS[0];
+  const ActiveThemeIcon = activeThemeOption.Icon;
+
   return (
     <header
       className={`sticky top-0 z-40 transition-all duration-300 backdrop-blur-xl border-b ${
         isVisible ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0 pointer-events-none'
       }`}
       style={{
-        backgroundColor: 'var(--bg-nav, #0b1324)',
-        borderColor: 'var(--border-card, #253556)',
-        boxShadow: 'var(--shadow-card-elevated, 0 4px 20px rgba(0, 0, 0, 0.4))',
+        backgroundColor: 'var(--bg-nav)',
+        borderColor: 'var(--border-card)',
+        boxShadow: 'var(--shadow-card-elevated)',
       }}
       dir="rtl"
     >
-      <div className="max-w-7xl mx-auto px-3 sm:px-5 h-15 flex items-center justify-between gap-3">
-        {/* Right Section: Brand Logo & Title */}
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-3 px-4 sm:px-6">
+        {/* Right: brand */}
         <div className="flex items-center gap-3">
-          <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="relative w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#c29938]/30 via-slate-800 to-[#c29938]/10 border border-[#c29938]/40 p-0.5 shadow-md flex items-center justify-center overflow-hidden shrink-0 group-hover:scale-105 transition-transform">
-              <Image src="/logo.png" alt="شعار مدرسة الكاروز" fill sizes="40px" className="object-cover rounded-xl" />
+          <Link href="/" className="app-card-interactive flex items-center gap-2.5 rounded-[14px] px-1 py-1">
+            <div
+              className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-[12px] border p-0.5"
+              style={{ borderColor: 'var(--brand-gold)', backgroundColor: 'var(--bg-card-hover)' }}
+            >
+              <Image src="/logo.png" alt="شعار مدرسة الكاروز" fill sizes="40px" className="object-cover rounded-[10px]" />
             </div>
             <div className="text-right">
-              <span className="font-black text-sm block leading-tight text-slate-100 group-hover:text-[#c29938] transition-colors">
+              <span
+                className="block text-sm font-extrabold leading-tight transition-colors"
+                style={{ color: 'var(--text-primary)' }}
+              >
                 مدرسة الكاروز
               </span>
-              <span className="text-[10px] text-slate-400 block -mt-0.5">كنيسة مارمرقس بالمنشية</span>
+              <span className="-mt-0.5 block text-[11px]" style={{ color: 'var(--text-muted)' }}>
+                كنيسة مارمرقس بالمنشية
+              </span>
             </div>
           </Link>
 
-          {/* Search Trigger Button */}
+          {/* Search trigger — 44px tall (was 30px, below tap-target guidance). */}
           <button
             onClick={onOpenSearch}
-            className="hidden md:flex items-center gap-2 bg-[#0e1626]/80 hover:bg-[#131f37] border border-slate-800 hover:border-[#c29938]/40 rounded-2xl px-3 py-1.5 text-xs text-slate-400 w-44 lg:w-56 transition-all shadow-inner"
+            className="hidden items-center gap-2 rounded-[12px] border px-3 text-xs transition-colors md:flex md:h-11 lg:w-64"
+            style={{
+              backgroundColor: 'var(--bg-input)',
+              borderColor: 'var(--border-card)',
+              color: 'var(--text-muted)',
+            }}
+            aria-label="فتح البحث الشامل"
           >
-            <Search className="w-3.5 h-3.5 text-[#c29938] shrink-0" />
-            <span className="truncate">بحث شامل...</span>
+            <Search className="h-4 w-4 shrink-0" style={{ color: 'var(--brand-gold)' }} aria-hidden="true" />
+            <span className="truncate">ابحث في الكتاب المقدس والتفاسير</span>
           </button>
         </div>
 
-        {/* Center: the five primary destinations, icons only (Desktop) */}
-        <nav className="hidden lg:flex items-center gap-0.5 h-full" aria-label="التنقل الرئيسي">
+        {/* Centre: the five primary destinations, icons only (desktop).
+            Icon-only means each link MUST carry an accessible name — aria-label
+            and title both provide one. */}
+        <nav className="hidden items-center gap-1 lg:flex" aria-label="التنقل الرئيسي">
           {PRIMARY_NAV.map((item) => {
             const active = navIsActive(item, pathname);
             const Icon = item.icon;
@@ -106,117 +156,77 @@ export default function SmartHeader({ profile, onOpenSearch, onOpenProfile }: Sm
                 aria-label={item.label}
                 title={item.label}
                 aria-current={active ? 'page' : undefined}
-                className={`grid h-9 w-9 place-items-center rounded-xl transition-all ${
-                  active
-                    ? 'bg-[#c29938]/15 text-[#c29938] border border-[#c29938]/40'
-                    : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60 border border-transparent'
-                }`}
+                className="grid h-11 w-11 place-items-center rounded-[12px] border transition-colors"
+                style={{
+                  backgroundColor: active ? 'var(--bg-active-tab)' : 'transparent',
+                  borderColor: active ? 'var(--brand-primary)' : 'transparent',
+                  color: active ? 'var(--text-active-tab)' : 'var(--text-secondary)',
+                }}
               >
-                <Icon className={`h-[18px] w-[18px] ${active ? 'stroke-[2.4]' : ''}`} />
+                <Icon className={`h-[18px] w-[18px] ${active ? 'stroke-[2.4]' : ''}`} aria-hidden="true" />
               </Link>
             );
           })}
         </nav>
 
-        {/* Left Section: Mobile Search, Settings/Theme Icon, Notification Bell, User Profile Capsule & Logout */}
-        <div className="flex items-center gap-2">
-          {/* Mobile Search Button */}
-          <button
-            onClick={onOpenSearch}
-            className="p-2 rounded-xl bg-slate-900/80 border border-slate-800 text-slate-300 md:hidden hover:text-[#c29938]"
-            title="بحث"
-          >
-            <Search className="w-4 h-4" />
+        {/* Left: mobile search, theme, overflow, notifications, profile, logout */}
+        <div className="flex items-center gap-1.5">
+          <button onClick={onOpenSearch} className="tap-target md:hidden" aria-label="بحث" title="بحث">
+            <Search className="h-5 w-5" aria-hidden="true" />
           </button>
 
-          {/* Theme Quick Switcher Popover */}
+          {/* Theme quick switcher */}
           <div className="relative" ref={themeMenuRef}>
             <button
-              onClick={() => setShowThemeMenu(!showThemeMenu)}
-              className="p-2 rounded-xl bg-slate-900/80 hover:bg-slate-800/90 border border-slate-800 text-slate-300 hover:text-[#c29938] transition-all flex items-center gap-1"
-              title="تغيير المظهر السريع"
+              onClick={() => setShowThemeMenu((v) => !v)}
+              className="tap-target gap-1"
+              aria-label="تغيير المظهر"
+              aria-expanded={showThemeMenu}
+              aria-haspopup="menu"
+              title="تغيير المظهر"
             >
-              {theme === 'luxury' ? (
-                <Crown className="w-4 h-4 text-[#c29938]" />
-              ) : theme === 'dark' ? (
-                <Moon className="w-4 h-4 text-rose-400" />
-              ) : (
-                <Sun className="w-4 h-4 text-amber-400" />
-              )}
-              <ChevronDown className="w-3 h-3 text-slate-500" />
+              <ActiveThemeIcon className="h-5 w-5" style={{ color: 'var(--brand-gold)' }} aria-hidden="true" />
+              <ChevronDown className="h-3 w-3" style={{ color: 'var(--text-muted)' }} aria-hidden="true" />
             </button>
 
             {showThemeMenu && (
               <div
-                className="absolute left-0 mt-2 w-44 rounded-2xl border shadow-xl p-2 z-50 animate-fade-in space-y-1"
+                role="menu"
+                className="absolute left-0 z-50 mt-2 w-52 overflow-hidden rounded-[14px] border p-1.5"
                 style={{
-                  backgroundColor: 'var(--bg-card, #0e182d)',
-                  borderColor: 'var(--border-card, #253556)',
+                  backgroundColor: 'var(--bg-card-raised)',
+                  borderColor: 'var(--border-card)',
+                  boxShadow: 'var(--shadow-overlay)',
                 }}
               >
-                <div className="px-2.5 py-1 text-[10px] font-bold text-slate-400 border-b border-slate-800">
-                  المظهر السريع
+                <div className="app-meta px-3 py-2" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                  المظهر
                 </div>
-                <button
-                  onClick={() => {
-                    setTheme('luxury');
-                    setShowThemeMenu(false);
-                  }}
-                  className={`w-full flex items-center justify-between px-3 py-1.5 rounded-xl text-xs font-bold transition-colors ${
-                    theme === 'luxury' ? 'bg-[#c29938] text-slate-950 font-black' : 'text-slate-300 hover:bg-slate-800'
-                  }`}
-                >
-                  <span className="flex items-center gap-2">
-                    <Crown className="w-3.5 h-3.5" />
-                    <span>الملكي القبطي</span>
-                  </span>
-                  {theme === 'luxury' && <span className="text-[10px]">✓</span>}
-                </button>
-                <button
-                  onClick={() => {
-                    setTheme('dark');
-                    setShowThemeMenu(false);
-                  }}
-                  className={`w-full flex items-center justify-between px-3 py-1.5 rounded-xl text-xs font-bold transition-colors ${
-                    theme === 'dark' ? 'bg-rose-900/60 text-white font-black' : 'text-slate-300 hover:bg-slate-800'
-                  }`}
-                >
-                  <span className="flex items-center gap-2">
-                    <Moon className="w-3.5 h-3.5" />
-                    <span>الداكن الليلي</span>
-                  </span>
-                  {theme === 'dark' && <span className="text-[10px]">✓</span>}
-                </button>
-                <button
-                  onClick={() => {
-                    setTheme('light');
-                    setShowThemeMenu(false);
-                  }}
-                  className={`w-full flex items-center justify-between px-3 py-1.5 rounded-xl text-xs font-bold transition-colors ${
-                    theme === 'light' ? 'bg-slate-200 text-slate-950 font-black' : 'text-slate-300 hover:bg-slate-800'
-                  }`}
-                >
-                  <span className="flex items-center gap-2">
-                    <Sun className="w-3.5 h-3.5" />
-                    <span>النهاري الفاتح</span>
-                  </span>
-                  {theme === 'light' && <span className="text-[10px]">✓</span>}
-                </button>
-                <button
-                  onClick={() => {
-                    setTheme('system');
-                    setShowThemeMenu(false);
-                  }}
-                  className={`w-full flex items-center justify-between px-3 py-1.5 rounded-xl text-xs font-bold transition-colors ${
-                    theme === 'system' ? 'bg-slate-700 text-white font-black' : 'text-slate-300 hover:bg-slate-800'
-                  }`}
-                >
-                  <span className="flex items-center gap-2">
-                    <Sparkles className="w-3.5 h-3.5" />
-                    <span>تلقائي النظام</span>
-                  </span>
-                  {theme === 'system' && <span className="text-[10px]">✓</span>}
-                </button>
+                {THEME_OPTIONS.map(({ id, label, Icon }) => {
+                  const selected = theme === id;
+                  return (
+                    <button
+                      key={id}
+                      role="menuitemradio"
+                      aria-checked={selected}
+                      onClick={() => {
+                        setTheme(id);
+                        setShowThemeMenu(false);
+                      }}
+                      className="flex min-h-[44px] w-full items-center justify-between rounded-[12px] px-3 text-sm font-semibold transition-colors"
+                      style={{
+                        backgroundColor: selected ? 'var(--bg-active-tab)' : 'transparent',
+                        color: selected ? 'var(--text-active-tab)' : 'var(--text-primary)',
+                      }}
+                    >
+                      <span className="flex items-center gap-2.5">
+                        <Icon className="h-4 w-4" aria-hidden="true" />
+                        <span>{label}</span>
+                      </span>
+                      {selected && <span aria-hidden="true">✓</span>}
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -224,43 +234,50 @@ export default function SmartHeader({ profile, onOpenSearch, onOpenProfile }: Sm
           {/* Overflow: opens the side drawer where settings and the rest live */}
           <button
             onClick={() => setDrawerOpen(true)}
+            className="tap-target"
             aria-label="كل الأقسام"
             title="كل الأقسام"
             aria-expanded={drawerOpen}
-            className="grid h-9 w-9 place-items-center rounded-xl border border-slate-800 bg-slate-900/80 text-slate-300 transition-colors hover:border-[#c29938]/40 hover:text-[#c29938]"
           >
-            <LayoutGrid className="h-4 w-4" />
+            <LayoutGrid className="h-5 w-5" aria-hidden="true" />
           </button>
 
-          {/* Notification Center Popover */}
           <NotificationCenter />
 
-          {/* User Profile Capsule Button */}
+          {/* Profile capsule */}
           {profile && (
             <button
               onClick={() => onOpenProfile(profile.id, profile.role_id)}
-              className="flex items-center gap-2 bg-[#0e1626]/80 hover:bg-[#131f37] border border-slate-800 hover:border-[#c29938]/40 rounded-full py-1 pr-1.5 pl-3 transition-all shadow-sm group"
+              className="flex min-h-[44px] items-center gap-2 rounded-full border py-1 pr-1 pl-3 transition-colors"
+              style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-card)' }}
             >
-              <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-[#c29938] to-amber-600 text-slate-950 flex items-center justify-center font-black text-xs shadow-sm overflow-hidden shrink-0">
+              <div
+                className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full text-xs font-extrabold"
+                style={{ backgroundColor: 'var(--brand-primary)', color: 'var(--brand-primary-text)' }}
+              >
                 {profile.avatar_url ? (
-                  <Image src={profile.avatar_url} alt={profile.full_name} width={28} height={28} className="object-cover" />
+                  <Image src={profile.avatar_url} alt="" width={28} height={28} className="object-cover" />
                 ) : (
                   profile.full_name.charAt(0)
                 )}
               </div>
-              <span className="text-xs font-bold text-slate-200 hidden sm:inline max-w-[90px] truncate group-hover:text-[#c29938]">
+              <span
+                className="hidden max-w-[90px] truncate text-xs font-bold sm:inline"
+                style={{ color: 'var(--text-primary)' }}
+              >
                 {profile.full_name.split(' ')[0]}
               </span>
             </button>
           )}
 
-          {/* Quick Logout Button */}
           <button
             onClick={handleLogout}
-            className="p-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/20 transition-colors"
+            className="tap-target"
+            style={{ color: 'var(--color-danger)' }}
             title="تسجيل الخروج"
+            aria-label="تسجيل الخروج"
           >
-            <LogOut className="w-4 h-4" />
+            <LogOut className="h-5 w-5" aria-hidden="true" />
           </button>
         </div>
       </div>

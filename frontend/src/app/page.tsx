@@ -109,7 +109,7 @@ export default function FeedPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#070b14] text-slate-100 flex flex-col selection:bg-[#c29938] selection:text-slate-950" dir="rtl">
+    <div className="min-h-screen bg-canvas text-content flex flex-col selection:bg-gold selection:text-content" dir="rtl">
       {/* Smart Scroll Header */}
       <SmartHeader
         profile={profile}
@@ -137,9 +137,9 @@ export default function FeedPage() {
           {/* RIGHT SIDEBAR (Desktop Only) */}
           <aside className="hidden lg:block lg:col-span-3 space-y-4 sticky top-20 h-fit">
             {profile && (
-              <div className="p-4 rounded-3xl bg-[#0a101d] border border-slate-800/80 shadow-xl text-center">
-                <div className="relative w-16 h-16 mx-auto rounded-full bg-gradient-to-tr from-[#c29938] to-amber-600 p-0.5 shadow-lg overflow-hidden mb-2">
-                  <div className="w-full h-full rounded-full bg-slate-900 flex items-center justify-center font-black text-xl text-[#c29938] overflow-hidden">
+              <div className="p-4 rounded-3xl bg-canvas border border-line/80 shadow-xl text-center">
+                <div className="relative w-16 h-16 mx-auto rounded-full bg-gradient-to-tr from-gold to-warning p-0.5 shadow-lg overflow-hidden mb-2">
+                  <div className="w-full h-full rounded-full bg-nav flex items-center justify-center font-black text-xl text-gold overflow-hidden">
                     {profile.avatar_url ? (
                       <Image src={profile.avatar_url} alt={profile.full_name} fill sizes="64px" className="object-cover" />
                     ) : (
@@ -147,8 +147,8 @@ export default function FeedPage() {
                     )}
                   </div>
                 </div>
-                <h3 className="font-black text-sm text-slate-100">{profile.full_name}</h3>
-                <span className="text-[11px] font-bold text-[#c29938] block mt-0.5">
+                <h3 className="font-black text-sm text-content">{profile.full_name}</h3>
+                <span className="text-[11px] font-bold text-gold block mt-0.5">
                   {profile.role_id === 'admin'
                     ? 'مدير النظام'
                     : profile.role_id === 'servant'
@@ -159,55 +159,55 @@ export default function FeedPage() {
                 </span>
                 <button
                   onClick={() => handleOpenProfile(profile.id)}
-                  className="w-full mt-3 py-1.5 rounded-xl bg-slate-900 hover:bg-[#c29938] hover:text-slate-950 border border-slate-800 text-xs font-bold text-slate-300 transition-all"
+                  className="w-full mt-3 py-1.5 rounded-xl bg-nav hover:bg-gold hover:text-content border border-line text-xs font-bold text-content-secondary transition-all"
                 >
                   عرض ملفي الشخصي
                 </button>
               </div>
             )}
 
-            <div className="p-4 rounded-3xl bg-[#0a101d] border border-slate-800/80 shadow-xl space-y-1">
-              <span className="text-xs font-black text-[#c29938] block px-2 mb-2">الأقسام التعليمية</span>
+            <div className="p-4 rounded-3xl bg-canvas border border-line/80 shadow-xl space-y-1">
+              <span className="text-xs font-black text-gold block px-2 mb-2">الأقسام التعليمية</span>
               <Link
                 href="/groups"
-                className="flex items-center gap-2.5 p-2.5 rounded-2xl hover:bg-slate-800/60 text-slate-300 hover:text-white text-xs font-bold transition-all"
+                className="flex items-center gap-2.5 p-2.5 rounded-2xl hover:bg-nav/60 text-content-secondary hover:text-content text-xs font-bold transition-all"
               >
-                <Users className="w-4 h-4 text-blue-400" />
+                <Users className="w-4 h-4 text-info" />
                 <span>الفرق والمجموعات</span>
               </Link>
               <Link
                 href="/curriculum"
-                className="flex items-center gap-2.5 p-2.5 rounded-2xl hover:bg-slate-800/60 text-slate-300 hover:text-white text-xs font-bold transition-all"
+                className="flex items-center gap-2.5 p-2.5 rounded-2xl hover:bg-nav/60 text-content-secondary hover:text-content text-xs font-bold transition-all"
               >
-                <BookOpen className="w-4 h-4 text-amber-400" />
+                <BookOpen className="w-4 h-4 text-warning" />
                 <span>المناهج والمحاضرات</span>
               </Link>
               <Link
                 href="/marathon"
-                className="flex items-center gap-2.5 p-2.5 rounded-2xl hover:bg-slate-800/60 text-slate-300 hover:text-white text-xs font-bold transition-all"
+                className="flex items-center gap-2.5 p-2.5 rounded-2xl hover:bg-nav/60 text-content-secondary hover:text-content text-xs font-bold transition-all"
               >
-                <Flame className="w-4 h-4 text-rose-400" />
+                <Flame className="w-4 h-4 text-danger" />
                 <span>ماراثون الآيات</span>
               </Link>
               <Link
                 href="/exams"
-                className="flex items-center gap-2.5 p-2.5 rounded-2xl hover:bg-slate-800/60 text-slate-300 hover:text-white text-xs font-bold transition-all"
+                className="flex items-center gap-2.5 p-2.5 rounded-2xl hover:bg-nav/60 text-content-secondary hover:text-content text-xs font-bold transition-all"
               >
                 <Award className="w-4 h-4 text-purple-400" />
                 <span>الامتحانات والتقييم</span>
               </Link>
               <Link
                 href="/attendance"
-                className="flex items-center gap-2.5 p-2.5 rounded-2xl hover:bg-slate-800/60 text-slate-300 hover:text-white text-xs font-bold transition-all"
+                className="flex items-center gap-2.5 p-2.5 rounded-2xl hover:bg-nav/60 text-content-secondary hover:text-content text-xs font-bold transition-all"
               >
-                <CalendarCheck className="w-4 h-4 text-emerald-400" />
+                <CalendarCheck className="w-4 h-4 text-success" />
                 <span>الغياب والحضور</span>
               </Link>
               <Link
                 href="/bible"
-                className="flex items-center gap-2.5 p-2.5 rounded-2xl hover:bg-slate-800/60 text-slate-300 hover:text-white text-xs font-bold transition-all"
+                className="flex items-center gap-2.5 p-2.5 rounded-2xl hover:bg-nav/60 text-content-secondary hover:text-content text-xs font-bold transition-all"
               >
-                <BookOpen className="w-4 h-4 text-cyan-400" />
+                <BookOpen className="w-4 h-4 text-info" />
                 <span>الكتاب المقدس</span>
               </Link>
             </div>
@@ -215,14 +215,14 @@ export default function FeedPage() {
 
           {/* CENTER FEED STREAM */}
           <section className="lg:col-span-6 space-y-4">
-            <div className="p-4 rounded-3xl bg-gradient-to-r from-[#0B1B3D]/80 via-[#132347]/80 to-[#7B0017]/50 border border-[#c29938]/30 shadow-xl flex items-center justify-between gap-3">
+            <div className="p-4 rounded-3xl bg-gradient-to-r from-[#0B1B3D]/80 via-canvas/80 to-brand/50 border border-gold/30 shadow-xl flex items-center justify-between gap-3">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-[#c29938]/20 border border-[#c29938]/40 text-[#c29938] flex items-center justify-center shrink-0">
+                <div className="w-10 h-10 rounded-2xl bg-gold/20 border border-gold/40 text-gold flex items-center justify-center shrink-0">
                   <Sparkles className="w-5 h-5" />
                 </div>
                 <div>
-                  <p className="text-xs font-bold text-slate-200 leading-snug">{quickVerse.text}</p>
-                  <span className="text-[10px] text-[#c29938] font-black mt-0.5 block">{quickVerse.reference}</span>
+                  <p className="text-xs font-bold text-content leading-snug">{quickVerse.text}</p>
+                  <span className="text-[10px] text-gold font-black mt-0.5 block">{quickVerse.reference}</span>
                 </div>
               </div>
             </div>
@@ -232,23 +232,23 @@ export default function FeedPage() {
             {isLoading ? (
               <div className="space-y-4">
                 {[1, 2, 3].map((n) => (
-                  <div key={n} className="p-4 rounded-3xl bg-[#0a101d] border border-slate-800 animate-pulse space-y-3">
+                  <div key={n} className="p-4 rounded-3xl bg-canvas border border-line animate-pulse space-y-3">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-slate-800" />
+                      <div className="w-10 h-10 rounded-full bg-nav" />
                       <div className="space-y-1.5">
-                        <div className="w-24 h-3 bg-slate-800 rounded" />
-                        <div className="w-16 h-2 bg-slate-800 rounded" />
+                        <div className="w-24 h-3 bg-nav rounded" />
+                        <div className="w-16 h-2 bg-nav rounded" />
                       </div>
                     </div>
-                    <div className="w-full h-12 bg-slate-800/60 rounded-xl" />
+                    <div className="w-full h-12 bg-nav/60 rounded-xl" />
                   </div>
                 ))}
               </div>
             ) : posts.length === 0 ? (
-              <div className="p-12 rounded-3xl bg-[#0a101d] border border-slate-800 text-center">
-                <MessageCircle className="w-10 h-10 text-slate-600 mx-auto mb-2" />
-                <h4 className="text-sm font-bold text-slate-300">لا توجد منشورات حالياً</h4>
-                <p className="text-xs text-slate-500 mt-1">كن أول من ينشر إعلاناً أو كلمة مباركة للمدرسة</p>
+              <div className="p-12 rounded-3xl bg-canvas border border-line text-center">
+                <MessageCircle className="w-10 h-10 text-content-muted mx-auto mb-2" />
+                <h4 className="text-sm font-bold text-content-secondary">لا توجد منشورات حالياً</h4>
+                <p className="text-xs text-content-muted mt-1">كن أول من ينشر إعلاناً أو كلمة مباركة للمدرسة</p>
               </div>
             ) : (
               <div className="space-y-4">
@@ -267,65 +267,65 @@ export default function FeedPage() {
 
           {/* LEFT SIDEBAR (Desktop Only) */}
           <aside className="hidden lg:block lg:col-span-3 space-y-4 sticky top-20 h-fit">
-            <div className="p-4 rounded-3xl bg-[#0a101d] border border-slate-800/80 shadow-xl space-y-2.5">
+            <div className="p-4 rounded-3xl bg-canvas border border-line/80 shadow-xl space-y-2.5">
               <div className="flex items-center justify-between px-1">
-                <span className="text-xs font-black text-[#c29938]">الفرق الدراسية</span>
-                <Link href="/groups" className="text-[11px] text-slate-400 hover:text-[#c29938]">
+                <span className="text-xs font-black text-gold">الفرق الدراسية</span>
+                <Link href="/groups" className="text-[11px] text-content-muted hover:text-gold">
                   عرض الكل
                 </Link>
               </div>
               <div className="space-y-1.5">
                 <Link
                   href="/groups/1"
-                  className="p-3 rounded-2xl bg-[#0e1626] hover:bg-[#131f37] border border-slate-800 flex items-center justify-between text-xs font-bold text-slate-200 transition-all group"
+                  className="p-3 rounded-2xl bg-canvas hover:bg-card border border-line flex items-center justify-between text-xs font-bold text-content transition-all group"
                 >
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full bg-blue-400" />
                     <span>الفرقة الأولى</span>
                   </div>
-                  <ChevronLeft className="w-4 h-4 text-slate-500 group-hover:text-[#c29938] transition-transform" />
+                  <ChevronLeft className="w-4 h-4 text-content-muted group-hover:text-gold transition-transform" />
                 </Link>
 
                 <Link
                   href="/groups/2"
-                  className="p-3 rounded-2xl bg-[#0e1626] hover:bg-[#131f37] border border-slate-800 flex items-center justify-between text-xs font-bold text-slate-200 transition-all group"
+                  className="p-3 rounded-2xl bg-canvas hover:bg-card border border-line flex items-center justify-between text-xs font-bold text-content transition-all group"
                 >
                   <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-emerald-400" />
+                    <div className="w-2 h-2 rounded-full bg-success" />
                     <span>الفرقة الثانية</span>
                   </div>
-                  <ChevronLeft className="w-4 h-4 text-slate-500 group-hover:text-[#c29938] transition-transform" />
+                  <ChevronLeft className="w-4 h-4 text-content-muted group-hover:text-gold transition-transform" />
                 </Link>
 
                 <Link
                   href="/groups/3"
-                  className="p-3 rounded-2xl bg-[#0e1626] hover:bg-[#131f37] border border-slate-800 flex items-center justify-between text-xs font-bold text-slate-200 transition-all group"
+                  className="p-3 rounded-2xl bg-canvas hover:bg-card border border-line flex items-center justify-between text-xs font-bold text-content transition-all group"
                 >
                   <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-amber-400" />
+                    <div className="w-2 h-2 rounded-full bg-warning" />
                     <span>الفرقة الثالثة</span>
                   </div>
-                  <ChevronLeft className="w-4 h-4 text-slate-500 group-hover:text-[#c29938] transition-transform" />
+                  <ChevronLeft className="w-4 h-4 text-content-muted group-hover:text-gold transition-transform" />
                 </Link>
               </div>
             </div>
 
-            <div className="p-4 rounded-3xl bg-[#0a101d] border border-slate-800/80 shadow-xl space-y-2">
-              <span className="text-xs font-black text-[#c29938] block px-1">الوسائط السحابية</span>
+            <div className="p-4 rounded-3xl bg-canvas border border-line/80 shadow-xl space-y-2">
+              <span className="text-xs font-black text-gold block px-1">الوسائط السحابية</span>
               <div className="grid grid-cols-2 gap-2">
                 <Link
                   href="/mp3"
-                  className="p-3 rounded-2xl bg-[#0e1626] border border-slate-800 hover:border-cyan-500/50 flex flex-col items-center justify-center text-center group transition-all"
+                  className="p-3 rounded-2xl bg-canvas border border-line hover:border-cyan-500/50 flex flex-col items-center justify-center text-center group transition-all"
                 >
-                  <Music className="w-5 h-5 text-cyan-400 mb-1 group-hover:scale-110 transition-transform" />
-                  <span className="text-[11px] font-bold text-slate-200">الصوتيات MP3</span>
+                  <Music className="w-5 h-5 text-info mb-1 group-hover:scale-110 transition-transform" />
+                  <span className="text-[11px] font-bold text-content">الصوتيات MP3</span>
                 </Link>
                 <Link
                   href="/gallery"
-                  className="p-3 rounded-2xl bg-[#0e1626] border border-slate-800 hover:border-amber-500/50 flex flex-col items-center justify-center text-center group transition-all"
+                  className="p-3 rounded-2xl bg-canvas border border-line hover:border-warning/50 flex flex-col items-center justify-center text-center group transition-all"
                 >
-                  <ImageIcon className="w-5 h-5 text-amber-400 mb-1 group-hover:scale-110 transition-transform" />
-                  <span className="text-[11px] font-bold text-slate-200">معرض الصور</span>
+                  <ImageIcon className="w-5 h-5 text-warning mb-1 group-hover:scale-110 transition-transform" />
+                  <span className="text-[11px] font-bold text-content">معرض الصور</span>
                 </Link>
               </div>
             </div>

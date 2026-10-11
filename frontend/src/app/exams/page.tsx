@@ -192,7 +192,7 @@ export default function ExamsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#070b14] text-slate-100 flex flex-col selection:bg-[#c29938] selection:text-slate-950 pb-20" dir="rtl">
+    <div className="min-h-screen bg-canvas text-content flex flex-col selection:bg-gold selection:text-content" dir="rtl">
       {/* Smart Unified Header */}
       <SmartHeader
         profile={profile}
@@ -217,9 +217,9 @@ export default function ExamsPage() {
       {/* Main Content */}
       <main className="max-w-5xl w-full mx-auto px-4 py-6 flex-1 flex flex-col gap-6 pb-28 md:pb-12">
         {/* Banner */}
-        <div className="bg-gradient-to-r from-amber-950/60 via-slate-900 to-slate-900 border border-amber-900/40 rounded-2xl p-5 shadow-lg flex items-center justify-between">
+        <div className="bg-gradient-to-r from-warning/60 via-canvas to-canvas border border-warning/40 rounded-2xl p-5 shadow-lg flex items-center justify-between">
           <div>
-            <div className="flex items-center gap-2 text-amber-400 mb-1 text-xs font-semibold">
+            <div className="flex items-center gap-2 text-warning mb-1 text-xs font-semibold">
               <GraduationCap className="w-4 h-4" />
               <span>
                 {profile?.group_id === 1 && 'الفرقة الأولى'}
@@ -227,51 +227,51 @@ export default function ExamsPage() {
                 {profile?.group_id === 3 && 'الفرقة الثالثة'}
               </span>
             </div>
-            <h1 className="text-xl font-bold text-white">التقييم الأكاديمي وامتحان التيرم</h1>
-            <p className="text-xs text-slate-400 mt-1">
+            <h1 className="text-xl font-bold text-content">التقييم الأكاديمي وامتحان التيرم</h1>
+            <p className="text-xs text-content-muted mt-1">
               امتحان واحد لكل تيرم دراسي، مع احتساب التقدير اللفظي آلياً على الخادم.
             </p>
           </div>
         </div>
 
         {notice && (
-          <div className="p-3.5 bg-blue-950/60 border border-blue-800/60 text-blue-200 rounded-xl text-xs flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 text-blue-400 flex-shrink-0" />
+          <div className="p-3.5 bg-canvas/60 border border-line-subtle/60 text-info rounded-xl text-xs flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-info flex-shrink-0" />
             <span>{notice}</span>
           </div>
         )}
 
         {/* --- VIEW 1: TRAINEE PERSONAL EXAM RESULT --- */}
         {profile?.role_id === 'trainee' && (
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-md">
-            <h3 className="font-bold text-lg text-white mb-4 flex items-center gap-2">
-              <FileCheck className="w-5 h-5 text-karooz-gold" />
+          <div className="bg-nav border border-line rounded-2xl p-6 shadow-md">
+            <h3 className="font-bold text-lg text-content mb-4 flex items-center gap-2">
+              <FileCheck className="w-5 h-5 text-gold" />
               <span>نتيجة امتحان التيرم الأول</span>
             </h3>
 
             {!personalGrade ? (
-              <div className="text-center py-8 text-slate-500 text-xs bg-slate-950/50 rounded-xl border border-slate-800/60">
+              <div className="text-center py-8 text-content-muted text-xs bg-nav/50 rounded-xl border border-line/60">
                 لم يتم رصد نتيجة الامتحان حتى الآن.
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="bg-slate-950 border border-slate-800 p-5 rounded-xl text-center">
-                  <span className="text-xs text-slate-400 block mb-1">الدرجة المحصلة</span>
-                  <span className="text-3xl font-bold text-white">
+                <div className="bg-nav border border-line p-5 rounded-xl text-center">
+                  <span className="text-xs text-content-muted block mb-1">الدرجة المحصلة</span>
+                  <span className="text-3xl font-bold text-content">
                     {personalGrade.numeric_score} / {exam?.max_score || 100}
                   </span>
                 </div>
 
-                <div className="bg-slate-950 border border-slate-800 p-5 rounded-xl text-center">
-                  <span className="text-xs text-slate-400 block mb-1">النسبة المئوية</span>
-                  <span className="text-3xl font-bold text-amber-400">
+                <div className="bg-nav border border-line p-5 rounded-xl text-center">
+                  <span className="text-xs text-content-muted block mb-1">النسبة المئوية</span>
+                  <span className="text-3xl font-bold text-warning">
                     {Math.round((personalGrade.numeric_score / (exam?.max_score || 100)) * 100)}%
                   </span>
                 </div>
 
-                <div className="bg-slate-950 border border-slate-800 p-5 rounded-xl text-center">
-                  <span className="text-xs text-slate-400 block mb-1">التقدير المعتمد</span>
-                  <span className="text-2xl font-bold text-emerald-400">
+                <div className="bg-nav border border-line p-5 rounded-xl text-center">
+                  <span className="text-xs text-content-muted block mb-1">التقدير المعتمد</span>
+                  <span className="text-2xl font-bold text-success">
                     {personalGrade.appreciation_grade}
                   </span>
                 </div>
@@ -282,17 +282,17 @@ export default function ExamsPage() {
 
         {/* --- VIEW 2: STAFF GRADE ENTRY TABLE --- */}
         {profile?.role_id !== 'trainee' && canGrade && (
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-md">
+          <div className="bg-nav border border-line rounded-2xl p-5 shadow-md">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-base text-white flex items-center gap-2">
-                <Trophy className="w-5 h-5 text-amber-400" />
+              <h3 className="font-bold text-base text-content flex items-center gap-2">
+                <Trophy className="w-5 h-5 text-warning" />
                 <span>رصد وتصحيح درجات الامتحان (الدرجة العظمى: {exam?.max_score || 100})</span>
               </h3>
             </div>
 
             <div className="overflow-x-auto">
               <table className="w-full text-right text-xs">
-                <thead className="bg-slate-950/80 text-slate-400 border-b border-slate-800 font-semibold">
+                <thead className="bg-nav/80 text-content-muted border-b border-line font-semibold">
                   <tr>
                     <th className="p-3">اسم المتدرب</th>
                     <th className="p-3">اسم المستخدم</th>
@@ -301,11 +301,11 @@ export default function ExamsPage() {
                     <th className="p-3 text-center">إجراء</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/60">
+                <tbody className="divide-y divide-line-subtle/60">
                   {traineeGrades.map((t) => (
-                    <tr key={t.trainee_id} className="hover:bg-slate-950/40 transition-colors">
-                      <td className="p-3 font-bold text-white text-sm">{t.full_name}</td>
-                      <td className="p-3 text-slate-400 font-mono">@{t.username}</td>
+                    <tr key={t.trainee_id} className="hover:bg-nav/40 transition-colors">
+                      <td className="p-3 font-bold text-content text-sm">{t.full_name}</td>
+                      <td className="p-3 text-content-muted font-mono">@{t.username}</td>
                       <td className="p-3 text-center">
                         <input
                           type="number"
@@ -314,17 +314,17 @@ export default function ExamsPage() {
                           value={t.numeric_score}
                           onChange={(e) => handleScoreChange(t.trainee_id, e.target.value)}
                           placeholder="0"
-                          className="w-20 bg-slate-950 border border-slate-700 text-center text-white py-1.5 px-2 rounded-lg font-mono font-bold text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                          className="w-20 bg-nav border border-line text-center text-content py-1.5 px-2 rounded-lg font-mono font-bold text-sm focus:outline-none focus:ring-2 focus:ring-warning"
                         />
                       </td>
-                      <td className="p-3 text-center font-bold text-emerald-400 text-sm">
+                      <td className="p-3 text-center font-bold text-success text-sm">
                         {t.appreciation_grade || '—'}
                       </td>
                       <td className="p-3 text-center">
                         <button
                           disabled={saving || t.numeric_score === ''}
                           onClick={() => handleSaveGrade(t.trainee_id, Number(t.numeric_score))}
-                          className="p-2 bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold rounded-lg transition-colors inline-flex items-center gap-1 text-xs disabled:opacity-50"
+                          className="p-2 bg-warning hover:bg-warning text-content font-bold rounded-lg transition-colors inline-flex items-center gap-1 text-xs disabled:opacity-50"
                         >
                           <Save className="w-3.5 h-3.5" />
                           <span>حفظ</span>

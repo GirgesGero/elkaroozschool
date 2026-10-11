@@ -136,7 +136,7 @@ export default function CreateTraineeModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md overflow-y-auto" dir="rtl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-nav/80 backdrop-blur-md overflow-y-auto" dir="rtl">
       <div
         className="w-full max-w-xl rounded-3xl overflow-hidden shadow-2xl flex flex-col transition-all border my-8"
         style={{
@@ -146,17 +146,17 @@ export default function CreateTraineeModal({
         }}
       >
         {/* Modal Header */}
-        <div className="p-5 flex items-center justify-between border-b border-slate-800/80">
+        <div className="p-5 flex items-center justify-between border-b border-line/80">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-2xl bg-[#c29938]/15 border border-[#c29938]/30 text-[#c29938]">
+            <div className="p-2.5 rounded-2xl bg-gold/15 border border-gold/30 text-gold">
               <UserPlus className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-black text-base text-white flex items-center gap-2">
+              <h3 className="font-black text-base text-content flex items-center gap-2">
                 <span>إضافة متدرب جديد</span>
-                <Sparkles className="w-3.5 h-3.5 text-[#c29938]" />
+                <Sparkles className="w-3.5 h-3.5 text-gold" />
               </h3>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <p className="text-xs text-content-muted mt-0.5">
                 {isSecretariat
                   ? `تسجيل متدرب جديد في فرقتك (${currentUser?.group_id === 1 ? 'الفرقة الأولى' : currentUser?.group_id === 2 ? 'الفرقة الثانية' : 'الفرقة الثالثة'})`
                   : 'إضافة وتفعيل حساب متدرب جديد في المدرسة'}
@@ -167,7 +167,7 @@ export default function CreateTraineeModal({
           <button
             onClick={onClose}
             disabled={saving}
-            className="p-2 rounded-xl bg-slate-900/80 hover:bg-slate-800 text-slate-400 hover:text-white border border-slate-800 transition-all"
+            className="p-2 rounded-xl bg-nav/80 hover:bg-nav text-content-muted hover:text-content border border-line transition-all"
           >
             <X className="w-4 h-4" />
           </button>
@@ -176,15 +176,15 @@ export default function CreateTraineeModal({
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
           {errorMsg && (
-            <div className="p-3.5 bg-rose-950/70 border border-rose-800/80 text-rose-200 rounded-2xl text-xs flex items-start gap-2.5 animate-fade-in">
-              <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+            <div className="p-3.5 bg-canvas/70 border border-danger/80 text-danger rounded-2xl text-xs flex items-start gap-2.5 animate-fade-in">
+              <AlertCircle className="w-4 h-4 text-danger shrink-0 mt-0.5" />
               <span className="leading-relaxed">{errorMsg}</span>
             </div>
           )}
 
           {successMsg && (
-            <div className="p-3.5 bg-emerald-950/70 border border-emerald-800/80 text-emerald-200 rounded-2xl text-xs flex items-center gap-2.5 animate-fade-in">
-              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+            <div className="p-3.5 bg-canvas/70 border border-success/80 text-success rounded-2xl text-xs flex items-center gap-2.5 animate-fade-in">
+              <CheckCircle2 className="w-4 h-4 text-success shrink-0" />
               <span>{successMsg}</span>
             </div>
           )}
@@ -192,8 +192,8 @@ export default function CreateTraineeModal({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Full Name */}
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-300 block">
-                الاسم بالكامل <span className="text-rose-400">*</span>
+              <label className="text-xs font-bold text-content-secondary block">
+                الاسم بالكامل <span className="text-danger">*</span>
               </label>
               <input
                 type="text"
@@ -201,14 +201,14 @@ export default function CreateTraineeModal({
                 onChange={(e) => setFullName(e.target.value)}
                 placeholder="مثال: كيرلس سمير إبراهيم"
                 required
-                className="w-full bg-[#070b14] border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#c29938]"
+                className="w-full bg-canvas border border-line rounded-xl px-3.5 py-2.5 text-xs text-content placeholder-content-muted focus:outline-none focus:border-gold"
               />
             </div>
 
             {/* Username */}
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-300 block">
-                اسم المستخدم (Username) <span className="text-rose-400">*</span>
+              <label className="text-xs font-bold text-content-secondary block">
+                اسم المستخدم (Username) <span className="text-danger">*</span>
               </label>
               <input
                 type="text"
@@ -217,31 +217,31 @@ export default function CreateTraineeModal({
                 placeholder="kyrollos_samir"
                 dir="ltr"
                 required
-                className="w-full bg-[#070b14] border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#c29938] font-mono text-right"
+                className="w-full bg-canvas border border-line rounded-xl px-3.5 py-2.5 text-xs text-content placeholder-content-muted focus:outline-none focus:border-gold font-mono text-right"
               />
             </div>
 
             {/* Group Selection */}
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-300 flex items-center justify-between">
-                <span>الفرقة الدراسية <span className="text-rose-400">*</span></span>
+              <label className="text-xs font-bold text-content-secondary flex items-center justify-between">
+                <span>الفرقة الدراسية <span className="text-danger">*</span></span>
                 {isSecretariat && (
-                  <span className="text-[10px] text-[#c29938] font-normal flex items-center gap-1">
+                  <span className="text-[10px] text-gold font-normal flex items-center gap-1">
                     <Lock className="w-3 h-3" />
                     <span>مقفل لفرقتك</span>
                   </span>
                 )}
               </label>
               {isSecretariat ? (
-                <div className="w-full bg-slate-900/60 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-[#c29938] font-bold flex items-center justify-between">
+                <div className="w-full bg-nav/60 border border-line rounded-xl px-3.5 py-2.5 text-xs text-gold font-bold flex items-center justify-between">
                   <span>{currentUser?.group_id === 1 ? 'الفرقة الأولى' : currentUser?.group_id === 2 ? 'الفرقة الثانية' : 'الفرقة الثالثة'}</span>
-                  <Shield className="w-3.5 h-3.5 text-slate-500" />
+                  <Shield className="w-3.5 h-3.5 text-content-muted" />
                 </div>
               ) : (
                 <select
                   value={groupId}
                   onChange={(e) => setGroupId(Number(e.target.value))}
-                  className="w-full bg-[#070b14] border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-[#c29938] font-bold focus:outline-none focus:border-[#c29938]"
+                  className="w-full bg-canvas border border-line rounded-xl px-3.5 py-2.5 text-xs text-gold font-bold focus:outline-none focus:border-gold"
                 >
                   <option value={1}>الفرقة الأولى</option>
                   <option value={2}>الفرقة الثانية</option>
@@ -252,95 +252,95 @@ export default function CreateTraineeModal({
 
             {/* Birth Date */}
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-300 block">
-                تاريخ الميلاد <span className="text-rose-400">*</span>
+              <label className="text-xs font-bold text-content-secondary block">
+                تاريخ الميلاد <span className="text-danger">*</span>
               </label>
               <input
                 type="date"
                 value={birthDate}
                 onChange={(e) => setBirthDate(e.target.value)}
                 required
-                className="w-full bg-[#070b14] border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#c29938]"
+                className="w-full bg-canvas border border-line rounded-xl px-3.5 py-2.5 text-xs text-content placeholder-content-muted focus:outline-none focus:border-gold"
               />
             </div>
 
             {/* Phone Number */}
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-300 block">رقم الهاتف</label>
+              <label className="text-xs font-bold text-content-secondary block">رقم الهاتف</label>
               <input
                 type="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="01234567890"
                 dir="ltr"
-                className="w-full bg-[#070b14] border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#c29938] font-mono text-right"
+                className="w-full bg-canvas border border-line rounded-xl px-3.5 py-2.5 text-xs text-content placeholder-content-muted focus:outline-none focus:border-gold font-mono text-right"
               />
             </div>
 
             {/* Password */}
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-300 block">كلمة المرور الابتدائية</label>
+              <label className="text-xs font-bold text-content-secondary block">كلمة المرور الابتدائية</label>
               <input
                 type="text"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Trainee123!"
                 dir="ltr"
-                className="w-full bg-[#070b14] border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#c29938] font-mono text-right"
+                className="w-full bg-canvas border border-line rounded-xl px-3.5 py-2.5 text-xs text-content placeholder-content-muted focus:outline-none focus:border-gold font-mono text-right"
               />
             </div>
 
             {/* Confession Father */}
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-300 block">أب الاعتراف</label>
+              <label className="text-xs font-bold text-content-secondary block">أب الاعتراف</label>
               <input
                 type="text"
                 value={confessionFather}
                 onChange={(e) => setConfessionFather(e.target.value)}
                 placeholder="أبونا القس ..."
-                className="w-full bg-[#070b14] border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#c29938]"
+                className="w-full bg-canvas border border-line rounded-xl px-3.5 py-2.5 text-xs text-content placeholder-content-muted focus:outline-none focus:border-gold"
               />
             </div>
 
             {/* Church */}
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-300 block">الكنيسة</label>
+              <label className="text-xs font-bold text-content-secondary block">الكنيسة</label>
               <input
                 type="text"
                 value={church}
                 onChange={(e) => setChurch(e.target.value)}
                 placeholder="كنيسة مارمرقس بالمنشية"
-                className="w-full bg-[#070b14] border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#c29938]"
+                className="w-full bg-canvas border border-line rounded-xl px-3.5 py-2.5 text-xs text-content placeholder-content-muted focus:outline-none focus:border-gold"
               />
             </div>
           </div>
 
           {/* Address */}
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-300 block">العنوان / المنطقة</label>
+            <label className="text-xs font-bold text-content-secondary block">العنوان / المنطقة</label>
             <input
               type="text"
               value={address}
               onChange={(e) => setAddress(e.target.value)}
               placeholder="الشارع، الحي، المحافظة..."
-              className="w-full bg-[#070b14] border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#c29938]"
+              className="w-full bg-canvas border border-line rounded-xl px-3.5 py-2.5 text-xs text-content placeholder-content-muted focus:outline-none focus:border-gold"
             />
           </div>
 
           {/* Modal Footer Actions */}
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800/80">
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-line/80">
             <button
               type="button"
               onClick={onClose}
               disabled={saving}
-              className="px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-white text-xs font-bold transition-all"
+              className="px-4 py-2.5 rounded-xl bg-nav border border-line text-content-secondary hover:text-content text-xs font-bold transition-all"
             >
               إلغاء
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="px-5 py-2.5 rounded-xl bg-[#c29938] hover:bg-amber-400 disabled:opacity-50 text-slate-950 text-xs font-black transition-all shadow-lg flex items-center gap-2"
+              className="px-5 py-2.5 rounded-xl bg-gold hover:bg-warning disabled:opacity-50 text-content text-xs font-black transition-all shadow-lg flex items-center gap-2"
             >
               {saving ? (
                 <>

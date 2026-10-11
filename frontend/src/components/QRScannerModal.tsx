@@ -194,7 +194,7 @@ export default function QRScannerModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md" dir="rtl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-nav/80 backdrop-blur-md" dir="rtl">
       <div
         className="w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl flex flex-col transition-all border"
         style={{
@@ -204,17 +204,17 @@ export default function QRScannerModal({
         }}
       >
         {/* Header */}
-        <div className="p-4 flex items-center justify-between border-b border-slate-800/80">
+        <div className="p-4 flex items-center justify-between border-b border-line/80">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-[#c29938]/15 border border-[#c29938]/30 text-[#c29938]">
+            <div className="p-2 rounded-xl bg-gold/15 border border-gold/30 text-gold">
               <QrCode className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-bold text-sm text-white flex items-center gap-1.5">
+              <h3 className="font-bold text-sm text-content flex items-center gap-1.5">
                 <span>ماسح الـ QR الذكي لرصد الحضور</span>
-                <Sparkles className="w-3.5 h-3.5 text-[#c29938]" />
+                <Sparkles className="w-3.5 h-3.5 text-gold" />
               </h3>
-              <p className="text-[11px] text-slate-400">
+              <p className="text-[11px] text-content-muted">
                 {sessionDate ? `جلسة جمعة: ${sessionDate}` : 'رصد الحضور الفوري'}
               </p>
             </div>
@@ -225,22 +225,22 @@ export default function QRScannerModal({
               stopCamera();
               onClose();
             }}
-            className="p-2 rounded-xl bg-slate-900/80 hover:bg-slate-800 text-slate-400 hover:text-white border border-slate-800 transition-all"
+            className="p-2 rounded-xl bg-nav/80 hover:bg-nav text-content-muted hover:text-content border border-line transition-all"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Status Selector Bar */}
-        <div className="p-3 bg-slate-900/60 border-b border-slate-800/60 flex items-center justify-between gap-2">
-          <span className="text-xs font-semibold text-slate-300">الحالة المراد رصدها:</span>
+        <div className="p-3 bg-nav/60 border-b border-line/60 flex items-center justify-between gap-2">
+          <span className="text-xs font-semibold text-content-secondary">الحالة المراد رصدها:</span>
           <div className="flex items-center gap-1.5">
             <button
               onClick={() => setSelectedStatus('PRESENT')}
               className={`px-3 py-1 rounded-xl text-xs font-bold transition-all ${
                 selectedStatus === 'PRESENT'
-                  ? 'bg-emerald-500 text-slate-950 font-black shadow-md'
-                  : 'bg-slate-800 text-slate-400 hover:text-emerald-400'
+                  ? 'bg-success text-content font-black shadow-md'
+                  : 'bg-nav text-content-muted hover:text-success'
               }`}
             >
               حاضر ✓
@@ -249,8 +249,8 @@ export default function QRScannerModal({
               onClick={() => setSelectedStatus('LATE')}
               className={`px-3 py-1 rounded-xl text-xs font-bold transition-all ${
                 selectedStatus === 'LATE'
-                  ? 'bg-amber-500 text-slate-950 font-black shadow-md'
-                  : 'bg-slate-800 text-slate-400 hover:text-amber-400'
+                  ? 'bg-warning text-content font-black shadow-md'
+                  : 'bg-nav text-content-muted hover:text-warning'
               }`}
             >
               متأخر ⏱
@@ -259,8 +259,8 @@ export default function QRScannerModal({
               onClick={() => setSelectedStatus('ABSENT')}
               className={`px-3 py-1 rounded-xl text-xs font-bold transition-all ${
                 selectedStatus === 'ABSENT'
-                  ? 'bg-rose-500 text-slate-950 font-black shadow-md'
-                  : 'bg-slate-800 text-slate-400 hover:text-rose-400'
+                  ? 'bg-danger text-content font-black shadow-md'
+                  : 'bg-nav text-content-muted hover:text-danger'
               }`}
             >
               غائب ✕
@@ -270,21 +270,21 @@ export default function QRScannerModal({
 
         {/* Viewfinder / Camera Section */}
         <div className="p-4 flex flex-col items-center gap-4">
-          <div className="relative w-full aspect-square max-w-xs rounded-2xl overflow-hidden bg-slate-950 border-2 border-dashed border-[#c29938]/40 flex items-center justify-center shadow-inner">
+          <div className="relative w-full aspect-square max-w-xs rounded-2xl overflow-hidden bg-nav border-2 border-dashed border-gold/40 flex items-center justify-center shadow-inner">
             {isScanning ? (
               <>
                 <video ref={videoRef} className="w-full h-full object-cover" />
                 {/* Animated scanning line overlay */}
-                <div className="absolute inset-x-0 h-0.5 bg-gradient-to-r from-transparent via-[#c29938] to-transparent animate-pulse shadow-lg" style={{ top: '50%' }} />
-                <div className="absolute inset-4 border border-[#c29938]/30 rounded-xl pointer-events-none" />
+                <div className="absolute inset-x-0 h-0.5 bg-gradient-to-r from-transparent via-gold to-transparent animate-pulse shadow-lg" style={{ top: '50%' }} />
+                <div className="absolute inset-4 border border-gold/30 rounded-xl pointer-events-none" />
               </>
             ) : cameraError ? (
               <div className="p-6 text-center space-y-3">
-                <AlertTriangle className="w-10 h-10 text-amber-400 mx-auto" />
-                <p className="text-xs text-slate-300">{cameraError}</p>
+                <AlertTriangle className="w-10 h-10 text-warning mx-auto" />
+                <p className="text-xs text-content-secondary">{cameraError}</p>
                 <button
                   onClick={startCamera}
-                  className="px-4 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 border border-slate-700 inline-flex items-center gap-1.5"
+                  className="px-4 py-1.5 rounded-xl bg-nav hover:bg-input text-xs font-bold text-content border border-line inline-flex items-center gap-1.5"
                 >
                   <RefreshCw className="w-3.5 h-3.5" />
                   <span>إعادة المحاولة</span>
@@ -292,8 +292,8 @@ export default function QRScannerModal({
               </div>
             ) : (
               <div className="text-center p-6 space-y-2">
-                <Camera className="w-8 h-8 text-slate-500 mx-auto animate-pulse" />
-                <p className="text-xs text-slate-400">جاري تهيئة الكاميرا...</p>
+                <Camera className="w-8 h-8 text-content-muted mx-auto animate-pulse" />
+                <p className="text-xs text-content-muted">جاري تهيئة الكاميرا...</p>
               </div>
             )}
           </div>
@@ -303,26 +303,26 @@ export default function QRScannerModal({
             <div
               className={`w-full p-3 rounded-xl border text-xs flex items-start gap-2.5 transition-all ${
                 statusNotice.type === 'success'
-                  ? 'bg-emerald-950/70 border-emerald-800 text-emerald-200'
+                  ? 'bg-canvas/70 border-success text-success'
                   : statusNotice.type === 'error'
-                  ? 'bg-rose-950/70 border-rose-800 text-rose-200'
+                  ? 'bg-canvas/70 border-danger text-danger'
                   : statusNotice.type === 'warning'
-                  ? 'bg-amber-950/70 border-amber-800 text-amber-200'
-                  : 'bg-blue-950/70 border-blue-800 text-blue-200'
+                  ? 'bg-canvas/70 border-warning text-warning'
+                  : 'bg-canvas/70 border-line-subtle text-info'
               }`}
             >
               {statusNotice.type === 'success' ? (
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                <CheckCircle2 className="w-4 h-4 text-success shrink-0 mt-0.5" />
               ) : (
-                <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                <AlertTriangle className="w-4 h-4 text-warning shrink-0 mt-0.5" />
               )}
               <span className="leading-relaxed">{statusNotice.message}</span>
             </div>
           )}
 
           {/* Manual Input Fallback */}
-          <div className="w-full pt-2 border-t border-slate-800/80 space-y-2">
-            <div className="flex items-center justify-between text-[11px] text-slate-400">
+          <div className="w-full pt-2 border-t border-line/80 space-y-2">
+            <div className="flex items-center justify-between text-[11px] text-content-muted">
               <span>إدخال نص أو رمز الـ QR يدوياً:</span>
             </div>
             <form
@@ -337,12 +337,12 @@ export default function QRScannerModal({
                 value={manualInput}
                 onChange={(e) => setManualInput(e.target.value)}
                 placeholder="EKQR:v1|ID|Name أو الصق الـ QR..."
-                className="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#c29938]/60"
+                className="flex-1 bg-nav border border-line rounded-xl px-3 py-2 text-xs text-content placeholder-content-muted focus:outline-none focus:border-gold/60"
               />
               <button
                 type="submit"
                 disabled={!manualInput.trim() || processing}
-                className="px-4 py-2 rounded-xl bg-[#c29938] hover:bg-amber-400 disabled:opacity-50 text-slate-950 font-bold text-xs transition-all shadow-md"
+                className="px-4 py-2 rounded-xl bg-gold hover:bg-warning disabled:opacity-50 text-content font-bold text-xs transition-all shadow-md"
               >
                 {processing ? 'جاري الرصد...' : 'رصد'}
               </button>
@@ -351,7 +351,7 @@ export default function QRScannerModal({
         </div>
 
         {/* Footer */}
-        <div className="p-3 bg-slate-950/60 border-t border-slate-800/60 flex items-center justify-between text-[11px] text-slate-400">
+        <div className="p-3 bg-nav/60 border-t border-line/60 flex items-center justify-between text-[11px] text-content-muted">
           <span>الفرقة: {groupId === 1 ? 'الأولى' : groupId === 2 ? 'الثانية' : 'الثالثة'}</span>
           <span>حالة الجلسة: {sessionStatus === 'OPEN' ? 'مفتوحة للرصد' : 'مغلقة'}</span>
         </div>

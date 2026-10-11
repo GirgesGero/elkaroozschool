@@ -255,7 +255,7 @@ export default function BooksAndResearchPage() {
   });
 
   return (
-    <div className="min-h-screen bg-[#070b14] text-slate-100 flex flex-col selection:bg-[#c29938] selection:text-slate-950 pb-20" dir="rtl">
+    <div className="min-h-screen bg-canvas text-content flex flex-col selection:bg-gold selection:text-content" dir="rtl">
       {/* Smart Unified Header */}
       <SmartHeader
         profile={profile}
@@ -280,16 +280,16 @@ export default function BooksAndResearchPage() {
       {/* Main Container */}
       <main className="max-w-5xl w-full mx-auto px-4 py-6 flex-1 flex flex-col gap-6 pb-28 md:pb-12">
         {/* Controls & Tabs */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-lg flex flex-col gap-4">
+        <div className="bg-nav border border-line rounded-2xl p-5 shadow-lg flex flex-col gap-4">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             {/* Tabs */}
-            <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800">
+            <div className="flex bg-nav p-1 rounded-xl border border-line">
               <button
                 onClick={() => setActiveTab('books')}
                 className={`py-2 px-4 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
                   activeTab === 'books'
-                    ? 'bg-karooz-crimson text-white shadow'
-                    : 'text-slate-400 hover:text-white'
+                    ? 'bg-karooz-crimson text-content shadow'
+                    : 'text-content-muted hover:text-content'
                 }`}
               >
                 <BookOpen className="w-4 h-4" />
@@ -299,8 +299,8 @@ export default function BooksAndResearchPage() {
                 onClick={() => setActiveTab('researches')}
                 className={`py-2 px-4 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
                   activeTab === 'researches'
-                    ? 'bg-karooz-crimson text-white shadow'
-                    : 'text-slate-400 hover:text-white'
+                    ? 'bg-karooz-crimson text-content shadow'
+                    : 'text-content-muted hover:text-content'
                 }`}
               >
                 <FileText className="w-4 h-4" />
@@ -310,8 +310,8 @@ export default function BooksAndResearchPage() {
                 onClick={() => setActiveTab('favorites')}
                 className={`py-2 px-4 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
                   activeTab === 'favorites'
-                    ? 'bg-amber-600 text-slate-950 shadow'
-                    : 'text-slate-400 hover:text-white'
+                    ? 'bg-warning text-content shadow'
+                    : 'text-content-muted hover:text-content'
                 }`}
               >
                 <Bookmark className="w-4 h-4" />
@@ -322,7 +322,7 @@ export default function BooksAndResearchPage() {
             {canManage && (
               <button
                 onClick={() => setShowAddModal(true)}
-                className="bg-karooz-crimson hover:bg-rose-700 text-white font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 transition-all shadow"
+                className="bg-karooz-crimson hover:bg-danger text-content font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 transition-all shadow"
               >
                 <Plus className="w-4 h-4" />
                 <span>إضافة {activeTab === 'researches' ? 'بحث' : 'كتاب'}</span>
@@ -333,13 +333,13 @@ export default function BooksAndResearchPage() {
           {/* Search Bar & Category Filter */}
           <div className="flex flex-col sm:flex-row items-center gap-3">
             <div className="relative flex-1 w-full">
-              <Search className="w-4 h-4 absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
+              <Search className="w-4 h-4 absolute right-3.5 top-1/2 -translate-y-1/2 text-content-muted" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="ابحث بالاسم أو المؤلف..."
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl pr-10 pl-4 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-karooz-crimson"
+                className="w-full bg-nav border border-line rounded-xl pr-10 pl-4 py-2 text-xs text-content placeholder-content-muted focus:outline-none focus:ring-1 focus:ring-karooz-crimson"
               />
             </div>
 
@@ -348,8 +348,8 @@ export default function BooksAndResearchPage() {
                 onClick={() => setSelectedCategoryId('ALL')}
                 className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
                   selectedCategoryId === 'ALL'
-                    ? 'bg-slate-700 text-white'
-                    : 'bg-slate-950 text-slate-400 hover:text-white'
+                    ? 'bg-input text-content'
+                    : 'bg-nav text-content-muted hover:text-content'
                 }`}
               >
                 الكل
@@ -360,8 +360,8 @@ export default function BooksAndResearchPage() {
                   onClick={() => setSelectedCategoryId(c.id)}
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
                     selectedCategoryId === c.id
-                      ? 'bg-slate-700 text-white'
-                      : 'bg-slate-950 text-slate-400 hover:text-white'
+                      ? 'bg-input text-content'
+                      : 'bg-nav text-content-muted hover:text-content'
                   }`}
                 >
                   {c.name_ar}
@@ -372,8 +372,8 @@ export default function BooksAndResearchPage() {
         </div>
 
         {notice && (
-          <div className="p-3 bg-blue-950/60 border border-blue-800/60 text-blue-200 rounded-xl text-xs flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 text-blue-400" />
+          <div className="p-3 bg-canvas/60 border border-line-subtle/60 text-info rounded-xl text-xs flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-info" />
             <span>{notice}</span>
           </div>
         )}
@@ -381,18 +381,18 @@ export default function BooksAndResearchPage() {
         {/* --- ITEMS GRID --- */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
           {filteredItems.length === 0 ? (
-            <div className="col-span-full bg-slate-900 border border-slate-800 rounded-2xl p-12 text-center text-slate-400 text-xs">
+            <div className="col-span-full bg-nav border border-line rounded-2xl p-12 text-center text-content-muted text-xs">
               لا توجد عناصر مطابقة لبحثك في المكتبة.
             </div>
           ) : (
             filteredItems.map((item) => (
               <div
                 key={item.id}
-                className="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-md flex flex-col justify-between hover:border-slate-700 transition-all group"
+                className="bg-nav border border-line rounded-2xl p-4 shadow-md flex flex-col justify-between hover:border-line transition-all group"
               >
                 <div>
                   {/* Cover & Type Badge */}
-                  <div className="relative h-44 bg-slate-950 rounded-xl overflow-hidden mb-3 border border-slate-800 flex items-center justify-center">
+                  <div className="relative h-44 bg-nav rounded-xl overflow-hidden mb-3 border border-line flex items-center justify-center">
                     {item.cover_url ? (
                       <img
                         src={item.cover_url}
@@ -400,23 +400,23 @@ export default function BooksAndResearchPage() {
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
                     ) : (
-                      <BookOpen className="w-12 h-12 text-slate-700" />
+                      <BookOpen className="w-12 h-12 text-content-muted" />
                     )}
 
                     <div className="absolute top-2 right-2">
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-black/70 text-amber-300 backdrop-blur-sm border border-slate-700">
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-black/70 text-warning backdrop-blur-sm border border-line">
                         {item.type === 'BOOK' ? 'كتاب' : 'بحث'}
                       </span>
                     </div>
 
                     <button
                       onClick={() => handleToggleFavorite(item)}
-                      className="absolute top-2 left-2 p-1.5 rounded-full bg-black/70 text-slate-300 hover:text-rose-500 backdrop-blur-sm transition-colors"
+                      className="absolute top-2 left-2 p-1.5 rounded-full bg-black/70 text-content-secondary hover:text-danger backdrop-blur-sm transition-colors"
                       title="المفضلة"
                     >
                       <Heart
                         className={`w-4 h-4 ${
-                          item.is_favorite ? 'fill-rose-500 text-rose-500' : ''
+                          item.is_favorite ? 'fill-rose-500 text-danger' : ''
                         }`}
                       />
                     </button>
@@ -424,22 +424,22 @@ export default function BooksAndResearchPage() {
 
                   {/* Title & Category */}
                   {item.category_name && (
-                    <span className="text-[10px] text-amber-400 font-bold block mb-1">
+                    <span className="text-[10px] text-warning font-bold block mb-1">
                       {item.category_name}
                     </span>
                   )}
-                  <h3 className="font-bold text-sm text-white mb-1 leading-snug">{item.title}</h3>
+                  <h3 className="font-bold text-sm text-content mb-1 leading-snug">{item.title}</h3>
                   {item.author && (
-                    <span className="text-xs text-slate-400 block mb-3">بقلم: {item.author}</span>
+                    <span className="text-xs text-content-muted block mb-3">بقلم: {item.author}</span>
                   )}
                 </div>
 
                 {/* Read Button (NO DOWNLOAD BUTTON) */}
                 <button
                   onClick={() => setReadingItem(item)}
-                  className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors border border-slate-700"
+                  className="w-full py-2.5 bg-nav hover:bg-input text-content rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors border border-line"
                 >
-                  <Eye className="w-4 h-4 text-emerald-400" />
+                  <Eye className="w-4 h-4 text-success" />
                   <span>قراءة وعرض داخل التطبيق</span>
                 </button>
               </div>
@@ -450,20 +450,20 @@ export default function BooksAndResearchPage() {
         {/* --- IN-APP READER MODAL (NO DOWNLOAD BUTTON) --- */}
         {readingItem && (
           <div className="fixed inset-0 z-50 bg-black/95 flex flex-col p-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800 max-w-5xl w-full mx-auto">
+            <div className="flex items-center justify-between pb-3 border-b border-line max-w-5xl w-full mx-auto">
               <div className="flex items-center gap-3">
-                <BookOpen className="w-5 h-5 text-amber-400" />
-                <h3 className="font-bold text-sm text-white">{readingItem.title}</h3>
+                <BookOpen className="w-5 h-5 text-warning" />
+                <h3 className="font-bold text-sm text-content">{readingItem.title}</h3>
               </div>
               <button
                 onClick={() => setReadingItem(null)}
-                className="text-slate-400 hover:text-white p-1"
+                className="text-content-muted hover:text-content p-1"
               >
                 <X className="w-6 h-6" />
               </button>
             </div>
 
-            <div className="flex-1 max-w-5xl w-full mx-auto mt-4 bg-slate-900 rounded-2xl overflow-hidden border border-slate-800 shadow-2xl flex flex-col">
+            <div className="flex-1 max-w-5xl w-full mx-auto mt-4 bg-nav rounded-2xl overflow-hidden border border-line shadow-2xl flex flex-col">
               <iframe
                 src={readingItem.file_url}
                 className="w-full h-full flex-1 border-0"
@@ -476,40 +476,40 @@ export default function BooksAndResearchPage() {
         {/* --- ADD ITEM MODAL (Staff/Admin) --- */}
         {showAddModal && (
           <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-6 shadow-2xl">
-              <h3 className="text-base font-bold text-white mb-4">
+            <div className="bg-nav border border-line rounded-2xl max-w-md w-full p-6 shadow-2xl">
+              <h3 className="text-base font-bold text-content mb-4">
                 إضافة {activeTab === 'researches' ? 'بحث دراسي' : 'كتاب جديد'}
               </h3>
 
               <div className="space-y-3.5 text-xs">
                 <div>
-                  <label className="block text-slate-300 font-semibold mb-1">العنوان</label>
+                  <label className="block text-content-secondary font-semibold mb-1">العنوان</label>
                   <input
                     type="text"
                     value={newTitle}
                     onChange={(e) => setNewTitle(e.target.value)}
                     placeholder="عنوان الكتاب أو البحث"
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white"
+                    className="w-full bg-nav border border-line rounded-xl p-2.5 text-content"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-slate-300 font-semibold mb-1">المؤلف / الباحث</label>
+                  <label className="block text-content-secondary font-semibold mb-1">المؤلف / الباحث</label>
                   <input
                     type="text"
                     value={newAuthor}
                     onChange={(e) => setNewAuthor(e.target.value)}
                     placeholder="اسم الكاتب أو الأستاذ"
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white"
+                    className="w-full bg-nav border border-line rounded-xl p-2.5 text-content"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-slate-300 font-semibold mb-1">التصنيف</label>
+                  <label className="block text-content-secondary font-semibold mb-1">التصنيف</label>
                   <select
                     value={newCategoryId}
                     onChange={(e) => setNewCategoryId(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white"
+                    className="w-full bg-nav border border-line rounded-xl p-2.5 text-content"
                   >
                     <option value="">اختر التصنيف...</option>
                     {categories.map((c) => (
@@ -521,33 +521,33 @@ export default function BooksAndResearchPage() {
                 </div>
 
                 <div>
-                  <label className="block text-slate-300 font-semibold mb-1">رابط صورة الغلاف</label>
+                  <label className="block text-content-secondary font-semibold mb-1">رابط صورة الغلاف</label>
                   <input
                     type="text"
                     value={newCoverUrl}
                     onChange={(e) => setNewCoverUrl(e.target.value)}
                     placeholder="https://.../cover.jpg"
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white"
+                    className="w-full bg-nav border border-line rounded-xl p-2.5 text-content"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-slate-300 font-semibold mb-1">رابط ملف المحتوى (PDF)</label>
+                  <label className="block text-content-secondary font-semibold mb-1">رابط ملف المحتوى (PDF)</label>
                   <input
                     type="text"
                     value={newFileUrl}
                     onChange={(e) => setNewFileUrl(e.target.value)}
                     placeholder="https://.../document.pdf"
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white"
+                    className="w-full bg-nav border border-line rounded-xl p-2.5 text-content"
                   />
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-2 mt-6 pt-4 border-t border-slate-800">
+              <div className="flex items-center justify-end gap-2 mt-6 pt-4 border-t border-line">
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 rounded-xl bg-slate-800 text-slate-400 text-xs font-bold"
+                  className="px-4 py-2 rounded-xl bg-nav text-content-muted text-xs font-bold"
                 >
                   إلغاء
                 </button>
@@ -555,7 +555,7 @@ export default function BooksAndResearchPage() {
                   type="button"
                   disabled={savingItem}
                   onClick={handleSaveItem}
-                  className="px-5 py-2 rounded-xl bg-karooz-crimson text-white text-xs font-bold flex items-center gap-1.5"
+                  className="px-5 py-2 rounded-xl bg-karooz-crimson text-content text-xs font-bold flex items-center gap-1.5"
                 >
                   {savingItem && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                   <span>حفظ في المكتبة</span>

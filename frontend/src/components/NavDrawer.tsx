@@ -61,24 +61,38 @@ export default function NavDrawer({
         href={item.href}
         onClick={onClose}
         aria-current={active ? 'page' : undefined}
-        className={`group flex items-center gap-3 rounded-2xl px-3 py-2.5 transition-all ${
-          active
-            ? 'bg-[#c29938]/15 border border-[#c29938]/40 text-[#c29938]'
-            : 'border border-transparent text-slate-300 hover:bg-slate-800/50 hover:text-slate-100'
-        }`}
+        className="flex min-h-[48px] items-center gap-3 rounded-[12px] border px-3 py-2.5 transition-colors"
+        style={{
+          backgroundColor: active ? 'var(--bg-active-tab)' : 'transparent',
+          borderColor: active ? 'var(--brand-primary)' : 'transparent',
+          color: active ? 'var(--text-active-tab)' : 'var(--text-secondary)',
+        }}
       >
         <span
-          className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl transition-colors ${
-            active ? 'bg-[#c29938]/20 text-[#c29938]' : 'bg-slate-800/60 text-slate-400 group-hover:text-slate-200'
-          }`}
+          className="grid h-9 w-9 shrink-0 place-items-center rounded-[10px] transition-colors"
+          style={{
+            backgroundColor: active
+              ? 'color-mix(in srgb, var(--brand-primary) 18%, transparent)'
+              : 'var(--bg-card-hover)',
+            color: active ? 'var(--brand-primary)' : 'var(--text-secondary)',
+          }}
         >
-          <Icon className="h-[18px] w-[18px]" />
+          <Icon className="h-[18px] w-[18px]" aria-hidden="true" />
         </span>
         <span className="flex-1 text-sm font-bold">{item.label}</span>
-        {active && <ChevronLeft className="h-4 w-4 text-[#c29938]" />}
+        {active && <ChevronLeft className="h-4 w-4" style={{ color: 'var(--brand-primary)' }} aria-hidden="true" />}
       </Link>
     );
   };
+
+  const SectionLabel = ({ children }: { children: React.ReactNode }) => (
+    <p
+      className="px-3 pb-1 pt-4 text-[11px] font-bold"
+      style={{ color: 'var(--text-muted)' }}
+    >
+      {children}
+    </p>
+  );
 
   return (
     <div
@@ -87,61 +101,73 @@ export default function NavDrawer({
       aria-modal="true"
       aria-label="قائمة التنقل"
     >
+      {/* Scrim colour comes from the theme so it is strong enough to isolate
+          the panel in the light theme too. */}
       <button
         aria-label="إغلاق القائمة"
         onClick={onClose}
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+        className="absolute inset-0 backdrop-blur-sm"
+        style={{ backgroundColor: 'var(--bg-scrim)' }}
       />
 
       <div
         ref={panelRef}
-        className="absolute inset-y-0 right-0 flex w-[82%] max-w-sm flex-col border-l border-[#c29938]/25 bg-[#070b14] shadow-2xl"
-        style={{ animation: 'slide-in-right 220ms ease-out' }}
+        className="absolute inset-y-0 right-0 flex w-[82%] max-w-sm flex-col border-l"
+        style={{
+          backgroundColor: 'var(--bg-nav)',
+          borderColor: 'var(--border-card)',
+          boxShadow: 'var(--shadow-overlay)',
+          animation: 'slide-in-right 220ms cubic-bezier(0.16, 1, 0.3, 1)',
+        }}
       >
-        <div className="flex items-center justify-between border-b border-slate-800 px-4 py-4">
+        <div
+          className="flex items-center justify-between border-b px-4 py-4"
+          style={{ borderColor: 'var(--border-card)' }}
+        >
           <div className="flex items-center gap-2">
-            <span className="h-2.5 w-2.5 rounded-full bg-[#c29938]" />
-            <h2 className="text-sm font-black text-slate-100">كل أقسام المدرسة</h2>
+            <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: 'var(--brand-primary)' }} />
+            <h2 className="text-sm font-extrabold" style={{ color: 'var(--text-primary)' }}>
+              كل أقسام المدرسة
+            </h2>
           </div>
           <button
             ref={closeRef}
             onClick={onClose}
             aria-label="إغلاق"
-            className="rounded-full bg-slate-800 p-1.5 text-slate-300 hover:text-white"
+            className="tap-target rounded-full"
+            style={{ backgroundColor: 'var(--btn-secondary-bg)', color: 'var(--text-primary)' }}
           >
-            <X className="h-5 w-5" />
+            <X className="h-5 w-5" aria-hidden="true" />
           </button>
         </div>
 
         <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4" dir="rtl">
-          <p className="px-3 pb-1 text-[10px] font-bold uppercase tracking-wide text-slate-500">
-            الأساسية
-          </p>
+          <SectionLabel>الأساسية</SectionLabel>
           {PRIMARY_NAV.map(renderRow)}
 
-          <p className="px-3 pb-1 pt-4 text-[10px] font-bold uppercase tracking-wide text-slate-500">
-            المزيد
-          </p>
+          <SectionLabel>المزيد</SectionLabel>
           {SECONDARY_NAV.filter((s) => !PRIMARY_NAV.some((p) => p.href === s.href)).map(renderRow)}
 
           {canAdmin && (
             <>
-              <p className="px-3 pb-1 pt-4 text-[10px] font-bold uppercase tracking-wide text-slate-500">
-                إدارة النظام
-              </p>
+              <SectionLabel>إدارة النظام</SectionLabel>
               {ADMIN_NAV.map(renderRow)}
             </>
           )}
         </nav>
 
         {onOpenProfile && (
-          <div className="border-t border-slate-800 p-3">
+          <div className="p-3" style={{ borderTop: '1px solid var(--border-card)' }}>
             <button
               onClick={() => {
                 onClose();
                 onOpenProfile();
               }}
-              className="w-full rounded-2xl bg-[#0e1626] px-3 py-2.5 text-sm font-bold text-slate-200 hover:border hover:border-[#c29938]/40"
+              className="app-btn w-full"
+              style={{
+                backgroundColor: 'var(--bg-card-hover)',
+                color: 'var(--text-primary)',
+              }}
             >
               حسابي
             </button>

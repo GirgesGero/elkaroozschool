@@ -121,7 +121,7 @@ export default function CurriculumPage() {
   const isFridayToday = today.getDay() === 5;
 
   return (
-    <div className="min-h-screen bg-[#070b14] text-slate-100 flex flex-col selection:bg-[#c29938] selection:text-slate-950 pb-20" dir="rtl">
+    <div className="min-h-screen bg-canvas text-content flex flex-col selection:bg-gold selection:text-content" dir="rtl">
       {/* Smart Unified Header */}
       <SmartHeader
         profile={profile}
@@ -146,9 +146,9 @@ export default function CurriculumPage() {
       {/* Main Container */}
       <main className="max-w-5xl w-full mx-auto px-4 py-6 flex-1 flex flex-col gap-6 pb-28 md:pb-12">
         {/* Banner */}
-        <div className="bg-gradient-to-r from-blue-950/60 via-slate-900 to-slate-900 border border-blue-900/40 rounded-2xl p-5 shadow-lg flex items-center justify-between">
+        <div className="bg-gradient-to-r from-info/60 via-canvas to-canvas border border-info/40 rounded-2xl p-5 shadow-lg flex items-center justify-between">
           <div>
-            <div className="flex items-center gap-2 text-blue-400 mb-1 text-xs font-semibold">
+            <div className="flex items-center gap-2 text-info mb-1 text-xs font-semibold">
               <GraduationCap className="w-4 h-4" />
               <span>
                 {profile?.group_id === 1 && 'الفرقة الأولى'}
@@ -156,8 +156,8 @@ export default function CurriculumPage() {
                 {profile?.group_id === 3 && 'الفرقة الثالثة'}
               </span>
             </div>
-            <h1 className="text-xl font-bold text-white">الخطة الأكاديمية والمحاضرات الأسبوعية</h1>
-            <p className="text-xs text-slate-400 mt-1">
+            <h1 className="text-xl font-bold text-content">الخطة الأكاديمية والمحاضرات الأسبوعية</h1>
+            <p className="text-xs text-content-muted mt-1">
               محاضرتان كل يوم جمعة مع إمكانية الاستماع للتسجيل الصوتي وتحميل المذكرات.
             </p>
           </div>
@@ -169,8 +169,8 @@ export default function CurriculumPage() {
             onClick={() => setSelectedTerm(1)}
             className={`flex items-center gap-2 py-2.5 px-5 rounded-xl font-bold text-sm transition-all ${
               selectedTerm === 1
-                ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/40'
-                : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                ? 'bg-info text-content shadow-lg shadow-blue-900/40'
+                : 'bg-nav text-content-muted hover:text-content border border-line'
             }`}
           >
             <Unlock className="w-4 h-4" />
@@ -181,24 +181,24 @@ export default function CurriculumPage() {
             onClick={() => setSelectedTerm(2)}
             className={`flex items-center gap-2 py-2.5 px-5 rounded-xl font-bold text-sm transition-all ${
               selectedTerm === 2
-                ? 'bg-blue-600 text-white'
-                : 'bg-slate-900 text-slate-500 hover:text-slate-400 border border-slate-800/80'
+                ? 'bg-info text-content'
+                : 'bg-nav text-content-muted hover:text-content-muted border border-line/80'
             }`}
           >
-            <Lock className="w-4 h-4 text-amber-500" />
+            <Lock className="w-4 h-4 text-warning" />
             <span>التيرم الثاني (مغلق حتى اكتمال التيرم الأول)</span>
           </button>
         </div>
 
         {/* Section 1: Curriculum Downloads */}
-        <section className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-md">
-          <h3 className="font-bold text-base text-white mb-4 flex items-center gap-2">
-            <BookOpen className="w-5 h-5 text-karooz-gold" />
+        <section className="bg-nav border border-line rounded-2xl p-5 shadow-md">
+          <h3 className="font-bold text-base text-content mb-4 flex items-center gap-2">
+            <BookOpen className="w-5 h-5 text-gold" />
             <span>المذكرات والمناهج الدراسية</span>
           </h3>
 
           {curriculums.length === 0 ? (
-            <div className="text-center py-6 text-slate-500 text-xs bg-slate-950/50 rounded-xl border border-slate-800/60">
+            <div className="text-center py-6 text-content-muted text-xs bg-nav/50 rounded-xl border border-line/60">
               سيتم رفع مذكرات ومناهج التيرم قريباً من قِبل إدارة المدرسة.
             </div>
           ) : (
@@ -206,22 +206,22 @@ export default function CurriculumPage() {
               {curriculums.map((curr) => (
                 <div
                   key={curr.id}
-                  className="bg-slate-950/80 border border-slate-800 rounded-xl p-4 flex items-center justify-between hover:border-slate-700 transition-colors"
+                  className="bg-nav/80 border border-line rounded-xl p-4 flex items-center justify-between hover:border-line transition-colors"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-blue-950/50 border border-blue-800/40 flex items-center justify-center text-blue-400">
+                    <div className="w-10 h-10 rounded-lg bg-canvas/50 border border-line-subtle/40 flex items-center justify-center text-info">
                       <FileText className="w-5 h-5" />
                     </div>
                     <div>
-                      <h4 className="font-bold text-sm text-white">{curr.title}</h4>
-                      <span className="text-[11px] text-slate-400">{curr.file_type} • {Math.round(curr.file_size_bytes / 1024)} KB</span>
+                      <h4 className="font-bold text-sm text-content">{curr.title}</h4>
+                      <span className="text-[11px] text-content-muted">{curr.file_type} • {Math.round(curr.file_size_bytes / 1024)} KB</span>
                     </div>
                   </div>
                   <a
                     href={curr.file_url}
                     target="_blank"
                     rel="noreferrer"
-                    className="p-2 rounded-lg bg-slate-800 hover:bg-blue-600 text-slate-300 hover:text-white transition-colors"
+                    className="p-2 rounded-lg bg-nav hover:bg-info text-content-secondary hover:text-content transition-colors"
                     title="تحميل المنهج"
                   >
                     <Download className="w-4 h-4" />
@@ -233,19 +233,19 @@ export default function CurriculumPage() {
         </section>
 
         {/* Section 2: Friday Lectures Timeline */}
-        <section className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-md">
+        <section className="bg-nav border border-line rounded-2xl p-5 shadow-md">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-bold text-base text-white flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-emerald-400" />
+            <h3 className="font-bold text-base text-content flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-success" />
               <span>جدول محاضرات الجمعة (محاضرتان أسبوعياً)</span>
             </h3>
-            <span className="text-xs text-slate-400 bg-slate-950 px-3 py-1 rounded-lg border border-slate-800">
+            <span className="text-xs text-content-muted bg-nav px-3 py-1 rounded-lg border border-line">
               {isFridayToday ? '⭐ اليوم الجمعة (المحاضرة جارية)' : 'المحاضرة القادمة الجمعة'}
             </span>
           </div>
 
           {Object.keys(groupedByFriday).length === 0 ? (
-            <div className="text-center py-8 text-slate-500 text-xs bg-slate-950/50 rounded-xl border border-slate-800/60">
+            <div className="text-center py-8 text-content-muted text-xs bg-nav/50 rounded-xl border border-line/60">
               لا توجد محاضرات مجدولة حالياً.
             </div>
           ) : (
@@ -253,14 +253,14 @@ export default function CurriculumPage() {
               {Object.entries(groupedByFriday).map(([fridayDate, dayLectures], idx) => (
                 <div
                   key={fridayDate}
-                  className="bg-slate-950/90 border border-slate-800/80 rounded-xl p-4 transition-all"
+                  className="bg-nav/90 border border-line/80 rounded-xl p-4 transition-all"
                 >
-                  <div className="flex items-center justify-between border-b border-slate-800/80 pb-2.5 mb-3">
-                    <span className="font-bold text-sm text-karooz-gold flex items-center gap-2">
+                  <div className="flex items-center justify-between border-b border-line/80 pb-2.5 mb-3">
+                    <span className="font-bold text-sm text-gold flex items-center gap-2">
                       <Calendar className="w-4 h-4" />
                       <span>جمعة {fridayDate}</span>
                     </span>
-                    <span className="text-[11px] font-mono text-slate-400 bg-slate-900 px-2.5 py-0.5 rounded border border-slate-800">
+                    <span className="text-[11px] font-mono text-content-muted bg-nav px-2.5 py-0.5 rounded border border-line">
                       {dayLectures.length} محاضرات
                     </span>
                   </div>
@@ -269,21 +269,21 @@ export default function CurriculumPage() {
                     {dayLectures.map((lec, lIdx) => (
                       <div
                         key={lec.id}
-                        className="bg-slate-900/80 border border-slate-800 rounded-lg p-3.5 flex flex-col justify-between"
+                        className="bg-nav/80 border border-line rounded-lg p-3.5 flex flex-col justify-between"
                       >
                         <div>
-                          <div className="flex items-center justify-between text-xs text-slate-400 mb-1.5">
-                            <span className="font-bold text-blue-400">المحاضرة {lIdx + 1}</span>
+                          <div className="flex items-center justify-between text-xs text-content-muted mb-1.5">
+                            <span className="font-bold text-info">المحاضرة {lIdx + 1}</span>
                           </div>
-                          <h5 className="font-bold text-sm text-white mb-2">{lec.title}</h5>
+                          <h5 className="font-bold text-sm text-content mb-2">{lec.title}</h5>
 
                           {lec.lecturer && (
-                            <div className="flex items-center gap-2 text-xs text-slate-300 mb-3 bg-slate-950/60 p-2 rounded-lg border border-slate-800/60">
-                              <div className="w-7 h-7 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 text-xs font-bold">
+                            <div className="flex items-center gap-2 text-xs text-content-secondary mb-3 bg-nav/60 p-2 rounded-lg border border-line/60">
+                              <div className="w-7 h-7 rounded-full bg-nav flex items-center justify-center text-content-muted text-xs font-bold">
                                 {lec.lecturer.full_name.charAt(0)}
                               </div>
                               <div>
-                                <span className="text-slate-400 text-[10px] block">{lec.lecturer.title}</span>
+                                <span className="text-content-muted text-[10px] block">{lec.lecturer.title}</span>
                                 <span className="font-semibold">{lec.lecturer.full_name}</span>
                               </div>
                             </div>
@@ -291,8 +291,8 @@ export default function CurriculumPage() {
                         </div>
 
                         {lec.audio_url ? (
-                          <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between">
-                            <div className="flex items-center gap-1.5 text-xs text-emerald-400">
+                          <div className="pt-2 border-t border-line/80 flex items-center justify-between">
+                            <div className="flex items-center gap-1.5 text-xs text-success">
                               <Headphones className="w-4 h-4" />
                               <span>التسجيل الصوتي متاح</span>
                             </div>
@@ -300,13 +300,13 @@ export default function CurriculumPage() {
                               href={lec.audio_url}
                               target="_blank"
                               rel="noreferrer"
-                              className="text-xs bg-emerald-950/60 text-emerald-300 border border-emerald-800/50 hover:bg-emerald-800 px-3 py-1 rounded-lg transition-colors"
+                              className="text-xs bg-canvas/60 text-success border border-success/50 hover:bg-canvas px-3 py-1 rounded-lg transition-colors"
                             >
                               استماع
                             </a>
                           </div>
                         ) : (
-                          <span className="text-[11px] text-slate-500">التسجيل الصوتي يرفع بعد المحاضرة</span>
+                          <span className="text-[11px] text-content-muted">التسجيل الصوتي يرفع بعد المحاضرة</span>
                         )}
                       </div>
                     ))}

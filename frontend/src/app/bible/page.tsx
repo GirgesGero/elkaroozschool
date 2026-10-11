@@ -314,7 +314,7 @@ export default function BiblePage() {
   const filteredBooks = books.filter((b) => b.testament_id === selectedTestamentId);
 
   return (
-    <div className="min-h-screen bg-[#070b14] text-slate-100 flex flex-col selection:bg-[#c29938] selection:text-slate-950 pb-20" dir="rtl">
+    <div className="min-h-screen bg-canvas text-content flex flex-col selection:bg-gold selection:text-content" dir="rtl">
       {/* Smart Unified Header */}
       <SmartHeader
         profile={profile}
@@ -339,43 +339,44 @@ export default function BiblePage() {
       {/* Main Container */}
       <main className="max-w-5xl w-full mx-auto px-4 py-6 flex-1 flex flex-col gap-6 pb-28 md:pb-12">
         {/* Banner & Search */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="bg-nav border border-line rounded-2xl p-5 shadow-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2 text-amber-400 mb-1 text-xs font-semibold">
+            <div className="flex items-center gap-2 text-warning mb-1 text-xs font-semibold">
               <BookOpen className="w-4 h-4" />
               <span>مستودع نصوص وتفاسير موقع الأنبا تكلا هيمانوت المعتمد</span>
             </div>
-            <h1 className="text-xl font-bold text-white">الكتاب المقدس والشروحات الآبائية</h1>
-            <p className="text-xs text-slate-400 mt-1">
+            <h1 className="text-xl font-bold text-content">الكتاب المقدس والشروحات الآبائية</h1>
+            <p className="text-xs text-content-muted mt-1">
               انقر على أي كلمة لعرض معناها وقاموسها، أو انقر على رقم الآية لعرض تفاسير الآباء كاملة.
             </p>
           </div>
 
           <form onSubmit={handleSearch} className="w-full md:w-auto flex items-center gap-2">
-            <div className="relative flex-1 md:w-64">
-              <Search className="w-4 h-4 absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="ابحث في الآيات والتفاسير..."
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl pr-10 pl-3 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-amber-500"
-              />
-            </div>
-            <button
-              type="submit"
-              className="p-2 bg-amber-600 hover:bg-amber-500 text-slate-950 rounded-xl text-xs font-bold transition-colors"
-            >
-              بحث
-            </button>
-          </form>
+                      <div className="relative flex-1 md:w-64">
+                        <Search className="w-4 h-4 absolute right-3.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" aria-hidden="true" />
+                        <input
+                          type="text"
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          placeholder="ابحث في الآيات والتفاسير..."
+                          aria-label="ابحث في الآيات والتفاسير"
+                          className="w-full bg-[var(--bg-input)] border border-[var(--border-card)] rounded-xl pr-10 pl-3 py-2 text-xs text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--brand-primary)]"
+                        />
+                      </div>
+                      <button
+                        type="submit"
+                        className="flex min-h-[44px] items-center rounded-xl bg-[var(--brand-primary)] text-[var(--brand-primary-text)] px-4 text-xs font-bold transition-colors"
+                      >
+                        بحث
+                      </button>
+                    </form>
         </div>
 
         {/* Navigation Selector: Testament -> Book -> Chapter */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-md flex flex-wrap items-center justify-between gap-4">
+        <div className="bg-nav border border-line rounded-2xl p-4 shadow-md flex flex-wrap items-center justify-between gap-4">
           <div className="flex flex-wrap items-center gap-3">
             {/* Testament Toggle */}
-            <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800">
+            <div className="flex bg-nav p-1 rounded-xl border border-line">
               {testaments.map((t) => (
                 <button
                   key={t.id}
@@ -387,11 +388,16 @@ export default function BiblePage() {
                       setSelectedChapter(1);
                     }
                   }}
-                  className={`py-1.5 px-3.5 rounded-lg text-xs font-bold transition-all ${
-                    selectedTestamentId === t.id
-                      ? 'bg-amber-600 text-slate-950 shadow'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
+                  className={`flex min-h-[44px] items-center rounded-lg px-3.5 text-xs font-bold transition-colors ${
+                                      selectedTestamentId === t.id
+                                        ? 'text-[var(--brand-primary-text)] shadow'
+                                        : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                                    }`}
+                                    style={{
+                                      backgroundColor: selectedTestamentId === t.id
+                                        ? 'var(--brand-primary)'
+                                        : 'var(--bg-card-hover)',
+                                    }}
                 >
                   {t.name_ar}
                 </button>
@@ -405,7 +411,7 @@ export default function BiblePage() {
                 setSelectedBookId(parseInt(e.target.value));
                 setSelectedChapter(1);
               }}
-              className="bg-slate-950 border border-slate-700 text-white text-xs rounded-xl px-3.5 py-2 font-bold focus:outline-none focus:ring-1 focus:ring-amber-500"
+              className="bg-nav border border-line text-content text-xs rounded-xl px-3.5 py-2 font-bold focus:outline-none focus:ring-1 focus:ring-warning"
             >
               {filteredBooks.map((b) => (
                 <option key={b.id} value={b.id}>
@@ -418,7 +424,7 @@ export default function BiblePage() {
             <select
               value={selectedChapter}
               onChange={(e) => setSelectedChapter(parseInt(e.target.value))}
-              className="bg-slate-950 border border-slate-700 text-white text-xs rounded-xl px-3.5 py-2 font-bold focus:outline-none focus:ring-1 focus:ring-amber-500"
+              className="bg-nav border border-line text-content text-xs rounded-xl px-3.5 py-2 font-bold focus:outline-none focus:ring-1 focus:ring-warning"
             >
               {Array.from({ length: currentBook?.chapters_count || 1 }, (_, i) => i + 1).map(
                 (ch) => (
@@ -431,40 +437,48 @@ export default function BiblePage() {
           </div>
 
           {/* Chapter Quick Pagination */}
-          <div className="flex items-center gap-1.5">
-            <button
-              disabled={selectedChapter <= 1}
-              onClick={() => setSelectedChapter((prev) => prev - 1)}
-              className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold disabled:opacity-30 transition-colors flex items-center gap-1"
-            >
-              <ChevronRight className="w-4 h-4" />
-              <span>الإصحاح السابق</span>
-            </button>
-            <button
-              disabled={selectedChapter >= (currentBook?.chapters_count || 1)}
-              onClick={() => setSelectedChapter((prev) => prev + 1)}
-              className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold disabled:opacity-30 transition-colors flex items-center gap-1"
-            >
-              <span>الإصحاح التالي</span>
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-          </div>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        disabled={selectedChapter <= 1}
+                        onClick={() => setSelectedChapter((prev) => prev - 1)}
+                        className="flex min-h-[44px] items-center gap-1 rounded-xl px-3 text-xs font-bold transition-colors disabled:opacity-40"
+                        style={{
+                          backgroundColor: 'var(--btn-secondary-bg)',
+                          color: 'var(--btn-secondary-text)',
+                        }}
+                      >
+                        <ChevronRight className="w-4 h-4" aria-hidden="true" />
+                        <span>الإصحاح السابق</span>
+                      </button>
+                      <button
+                        disabled={selectedChapter >= (currentBook?.chapters_count || 1)}
+                        onClick={() => setSelectedChapter((prev) => prev + 1)}
+                        className="flex min-h-[44px] items-center gap-1 rounded-xl px-3 text-xs font-bold transition-colors disabled:opacity-40"
+                        style={{
+                          backgroundColor: 'var(--btn-secondary-bg)',
+                          color: 'var(--btn-secondary-text)',
+                        }}
+                      >
+                        <span>الإصحاح التالي</span>
+                        <ChevronLeft className="w-4 h-4" aria-hidden="true" />
+                      </button>
+                    </div>
         </div>
 
         {/* --- CHAPTER VERSES DISPLAY --- */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-md space-y-6">
-          <div className="text-center pb-4 border-b border-slate-800">
-            <h2 className="text-xl font-bold text-karooz-gold">
+        <div className="bg-nav border border-line rounded-2xl p-6 shadow-md space-y-6">
+          <div className="text-center pb-4 border-b border-line">
+            <h2 className="text-xl font-bold text-gold">
               سفر {currentBook?.name_ar} — الإصحاح {selectedChapter}
             </h2>
           </div>
 
           {loadingVerses ? (
-            <div className="py-16 text-center text-amber-500">
+            <div className="py-16 text-center text-warning">
               <Loader2 className="w-8 h-8 animate-spin mx-auto" />
             </div>
           ) : verses.length === 0 ? (
-            <div className="py-12 text-center text-slate-400 text-xs">
+            <div className="py-12 text-center text-content-muted text-xs">
               جاري تجهيز باقي إصحاحات السفر من خادم المحتوى.
             </div>
           ) : (
@@ -472,20 +486,20 @@ export default function BiblePage() {
               {verses.map((verse) => (
                 <div
                   key={verse.id}
-                  className="p-4 rounded-xl bg-slate-950/60 border border-slate-800/80 hover:border-slate-700 transition-all flex flex-col gap-2.5"
+                  className="p-4 rounded-xl bg-nav/60 border border-line/80 hover:border-line transition-all flex flex-col gap-2.5"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => handleVerseCommentaryClick(verse)}
-                        className="w-7 h-7 rounded-lg bg-amber-950/60 border border-amber-800/60 text-amber-300 font-mono font-bold text-xs flex items-center justify-center hover:bg-amber-900 transition-colors"
+                        className="w-7 h-7 rounded-lg bg-canvas/60 border border-warning/60 text-warning font-mono font-bold text-xs flex items-center justify-center hover:bg-canvas transition-colors"
                         title="عرض تفسير الآية كاملاً"
                       >
                         {verse.verse_number}
                       </button>
                       <button
                         onClick={() => handleVerseCommentaryClick(verse)}
-                        className="text-[11px] text-amber-400/80 hover:text-amber-300 flex items-center gap-1"
+                        className="text-[11px] text-warning/80 hover:text-warning flex items-center gap-1"
                       >
                         <MessageSquare className="w-3.5 h-3.5" />
                         <span>التفاسير ({verse.commentaries_count})</span>
@@ -496,7 +510,7 @@ export default function BiblePage() {
                   </div>
 
                   {/* Interactive Word Breakdown */}
-                  <div className="text-base leading-loose font-medium text-slate-100 flex flex-wrap gap-1.5">
+                  <div className="text-base leading-loose font-medium text-content flex flex-wrap gap-1.5">
                     {verse.words && verse.words.length > 0 ? (
                       verse.words.map((w) => (
                         <span
@@ -504,8 +518,8 @@ export default function BiblePage() {
                           onClick={() => handleWordClick(w)}
                           className={`cursor-pointer px-1 py-0.5 rounded transition-all ${
                             w.has_commentary
-                              ? 'bg-amber-950/40 text-amber-200 border-b-2 border-amber-500/80 hover:bg-amber-900/60 font-semibold'
-                              : 'hover:bg-slate-800 hover:text-white'
+                              ? 'bg-canvas/40 text-warning border-b-2 border-warning/80 hover:bg-canvas/60 font-semibold'
+                              : 'hover:bg-nav hover:text-content'
                           }`}
                           title={
                             w.has_commentary
@@ -529,11 +543,11 @@ export default function BiblePage() {
         {/* --- INTERACTIVE WORD DETAILS MODAL --- */}
         {selectedWordId !== null && (
           <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-lg w-full p-6 shadow-2xl max-h-[85vh] flex flex-col">
-              <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
+            <div className="bg-nav border border-line rounded-2xl max-w-lg w-full p-6 shadow-2xl max-h-[85vh] flex flex-col">
+              <div className="flex items-center justify-between pb-3 border-b border-line mb-4">
                 <div className="flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-amber-400" />
-                  <h3 className="font-bold text-base text-white">
+                  <Sparkles className="w-5 h-5 text-warning" />
+                  <h3 className="font-bold text-base text-content">
                     معنى وشرح الكلمة: «{wordDetails?.word_text}»
                   </h3>
                 </div>
@@ -542,14 +556,14 @@ export default function BiblePage() {
                     setSelectedWordId(null);
                     setWordDetails(null);
                   }}
-                  className="text-slate-400 hover:text-white"
+                  className="text-content-muted hover:text-content"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
               {loadingWordDetails ? (
-                <div className="py-12 text-center text-amber-500">
+                <div className="py-12 text-center text-warning">
                   <Loader2 className="w-6 h-6 animate-spin mx-auto" />
                 </div>
               ) : (
@@ -558,19 +572,19 @@ export default function BiblePage() {
                   {wordDetails?.word_commentaries &&
                   wordDetails.word_commentaries.length > 0 ? (
                     <div className="space-y-3">
-                      <span className="font-bold text-amber-400 block text-sm">
+                      <span className="font-bold text-warning block text-sm">
                         الشرح في سياق الآية:
                       </span>
                       {wordDetails.word_commentaries.map((wc) => (
                         <div
                           key={wc.id}
-                          className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2"
+                          className="bg-nav p-4 rounded-xl border border-line space-y-2"
                         >
-                          <h4 className="font-bold text-white text-xs">{wc.explanation_title}</h4>
-                          <p className="text-slate-300 leading-relaxed whitespace-pre-line">
+                          <h4 className="font-bold text-content text-xs">{wc.explanation_title}</h4>
+                          <p className="text-content-secondary leading-relaxed whitespace-pre-line">
                             {wc.explanation_text}
                           </p>
-                          <div className="pt-2 border-t border-slate-900 flex items-center justify-between text-[10px] text-slate-500">
+                          <div className="pt-2 border-t border-line-subtle flex items-center justify-between text-[10px] text-content-muted">
                             <span>المرجع: {wc.author_name || 'تفسير الكتاب المقدس'}</span>
                           </div>
                         </div>
@@ -582,19 +596,19 @@ export default function BiblePage() {
                   {wordDetails?.dictionary_entries &&
                   wordDetails.dictionary_entries.length > 0 ? (
                     <div className="space-y-3">
-                      <span className="font-bold text-emerald-400 block text-sm">
+                      <span className="font-bold text-success block text-sm">
                         قاموس الكتاب المقدس:
                       </span>
                       {wordDetails.dictionary_entries.map((de) => (
                         <div
                           key={de.id}
-                          className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2"
+                          className="bg-nav p-4 rounded-xl border border-line space-y-2"
                         >
-                          <h4 className="font-bold text-white text-xs">{de.title}</h4>
-                          <p className="text-slate-300 leading-relaxed whitespace-pre-line">
+                          <h4 className="font-bold text-content text-xs">{de.title}</h4>
+                          <p className="text-content-secondary leading-relaxed whitespace-pre-line">
                             {de.original_content}
                           </p>
-                          <div className="pt-2 border-t border-slate-900 flex items-center justify-between text-[10px] text-slate-500">
+                          <div className="pt-2 border-t border-line-subtle flex items-center justify-between text-[10px] text-content-muted">
                             <span>المرجع: {de.author_name || 'قاموس الكتاب المقدس'}</span>
                           </div>
                         </div>
@@ -606,7 +620,7 @@ export default function BiblePage() {
                     wordDetails.word_commentaries.length === 0) &&
                     (!wordDetails?.dictionary_entries ||
                       wordDetails.dictionary_entries.length === 0) && (
-                      <p className="text-slate-400 text-center py-6">
+                      <p className="text-content-muted text-center py-6">
                         لا يوجد شرح مسجل لهذه الكلمة في هذا الإصحاح.
                       </p>
                     )}
@@ -619,30 +633,30 @@ export default function BiblePage() {
         {/* --- VERSE FULL COMMENTARY PANEL --- */}
         {selectedVerseForCommentary && (
           <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full p-6 shadow-2xl max-h-[85vh] flex flex-col">
-              <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
+            <div className="bg-nav border border-line rounded-2xl max-w-2xl w-full p-6 shadow-2xl max-h-[85vh] flex flex-col">
+              <div className="flex items-center justify-between pb-3 border-b border-line mb-4">
                 <div>
-                  <h3 className="font-bold text-base text-white">
+                  <h3 className="font-bold text-base text-content">
                     تفسير الآية {selectedVerseForCommentary.verse_number} — سفر {currentBook?.name_ar}
                   </h3>
-                  <p className="text-xs text-amber-300 mt-1">
+                  <p className="text-xs text-warning mt-1">
                     «{selectedVerseForCommentary.text_ar}»
                   </p>
                 </div>
                 <button
                   onClick={() => setSelectedVerseForCommentary(null)}
-                  className="text-slate-400 hover:text-white"
+                  className="text-content-muted hover:text-content"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
               {loadingCommentary ? (
-                <div className="py-12 text-center text-amber-500">
+                <div className="py-12 text-center text-warning">
                   <Loader2 className="w-6 h-6 animate-spin mx-auto" />
                 </div>
               ) : verseCommentaries.length === 0 ? (
-                <p className="text-slate-400 text-center py-8 text-xs">
+                <p className="text-content-muted text-center py-8 text-xs">
                   لا توجد تفاسير مضافة لهذه الآية حالياً.
                 </p>
               ) : (
@@ -650,15 +664,15 @@ export default function BiblePage() {
                   {verseCommentaries.map((c) => (
                     <div
                       key={c.id}
-                      className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2.5"
+                      className="bg-nav p-4 rounded-xl border border-line space-y-2.5"
                     >
-                      <div className="flex items-center justify-between border-b border-slate-900 pb-2">
-                        <span className="font-bold text-amber-400 text-xs">
+                      <div className="flex items-center justify-between border-b border-line-subtle pb-2">
+                        <span className="font-bold text-warning text-xs">
                           {c.commentary_title || c.source?.author_name || 'تفسير الآية'}
                         </span>
                       </div>
 
-                      <p className="text-slate-200 leading-relaxed whitespace-pre-line text-sm">
+                      <p className="text-content leading-relaxed whitespace-pre-line text-sm">
                         {c.commentary_text}
                       </p>
                     </div>
@@ -672,14 +686,14 @@ export default function BiblePage() {
         {/* --- GLOBAL SEARCH RESULTS MODAL --- */}
         {showSearchModal && (
           <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full p-6 shadow-2xl max-h-[85vh] flex flex-col">
-              <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
-                <h3 className="font-bold text-base text-white">
+            <div className="bg-nav border border-line rounded-2xl max-w-2xl w-full p-6 shadow-2xl max-h-[85vh] flex flex-col">
+              <div className="flex items-center justify-between pb-3 border-b border-line mb-4">
+                <h3 className="font-bold text-base text-content">
                   نتائج البحث عن: «{searchQuery}» ({searchResults.length})
                 </h3>
                 <button
                   onClick={() => setShowSearchModal(false)}
-                  className="text-slate-400 hover:text-white"
+                  className="text-content-muted hover:text-content"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -687,7 +701,7 @@ export default function BiblePage() {
 
               <div className="flex-1 overflow-y-auto space-y-3 text-xs">
                 {searchResults.length === 0 ? (
-                  <p className="text-slate-400 text-center py-8">لا توجد نتائج مطابقة لبحثك.</p>
+                  <p className="text-content-muted text-center py-8">لا توجد نتائج مطابقة لبحثك.</p>
                 ) : (
                   searchResults.map((sr, idx) => (
                     <div
@@ -697,12 +711,12 @@ export default function BiblePage() {
                         setSelectedChapter(sr.chapter_number);
                         setShowSearchModal(false);
                       }}
-                      className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 hover:border-amber-500/60 cursor-pointer transition-all space-y-1.5"
+                      className="bg-nav p-3.5 rounded-xl border border-line hover:border-warning/60 cursor-pointer transition-all space-y-1.5"
                     >
-                      <span className="font-bold text-amber-400 text-xs">
+                      <span className="font-bold text-warning text-xs">
                         سفر {sr.book_name} — الإصحاح {sr.chapter_number} : الآية {sr.verse_number}
                       </span>
-                      <p className="text-slate-200 text-sm leading-relaxed">{sr.text_ar}</p>
+                      <p className="text-content text-sm leading-relaxed">{sr.text_ar}</p>
                     </div>
                   ))
                 )}
@@ -715,16 +729,16 @@ export default function BiblePage() {
           <div className="max-w-6xl mx-auto px-4 py-8 pb-24">
             <div className="flex items-center justify-between mb-8">
               <div>
-                <h1 className="text-3xl md:text-4xl font-black text-white mb-2" dir="rtl">
+                <h1 className="text-3xl md:text-4xl font-black text-content mb-2" dir="rtl">
                   موسوعة الكتاب المقدس
                 </h1>
-                <p className="text-slate-400 text-sm" dir="rtl">
+                <p className="text-content-muted text-sm" dir="rtl">
                   مكتبة شاملة تضم الأسفار، التفاسير، الأطلس، واللاهوتيات
                 </p>
               </div>
               <button
                 onClick={() => setEncyclopedia(prev => ({ ...prev, searchOpen: true }))}
-                className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-[#c29938] hover:bg-amber-400 text-slate-950 font-bold text-sm transition-all"
+                className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-gold hover:bg-warning text-content font-bold text-sm transition-all"
               >
                 <Search className="w-4 h-4" />
                 <span>بحث سريع</span>
@@ -733,8 +747,8 @@ export default function BiblePage() {
 
             {encyclopedia.loading ? (
               <div className="text-center py-24">
-                <Loader2 className="w-12 h-12 text-[#c29938] animate-spin mx-auto mb-4" />
-                <p className="text-slate-400">جاري تحميل الموسوعة...</p>
+                <Loader2 className="w-12 h-12 text-gold animate-spin mx-auto mb-4" />
+                <p className="text-content-muted">جاري تحميل الموسوعة...</p>
               </div>
             ) : (
               <WingSelector
@@ -752,7 +766,7 @@ export default function BiblePage() {
             <div className="flex items-center justify-between mb-6">
               <button
                 onClick={() => setViewMode('hub')}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800 text-slate-300 hover:text-white transition-all"
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-nav/60 hover:bg-nav/80 border border-line text-content-secondary hover:text-content transition-all"
                 dir="rtl"
               >
                 <ArrowRight className="w-4 h-4" />

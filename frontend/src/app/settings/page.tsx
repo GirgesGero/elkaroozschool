@@ -103,7 +103,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#070b14] text-slate-100 flex flex-col selection:bg-[#c29938] selection:text-slate-950" dir="rtl">
+    <div className="min-h-screen bg-canvas text-content flex flex-col selection:bg-gold selection:text-content" dir="rtl">
       {/* Smart Header */}
       <SmartHeader
         profile={profile}
@@ -128,40 +128,40 @@ export default function SettingsPage() {
       {/* Main Settings Content */}
       <main className="flex-1 max-w-4xl w-full mx-auto px-4 py-6 pb-28 md:pb-12 space-y-6">
         {/* Page Hero Header */}
-        <div className="flex items-center gap-3.5 p-5 rounded-3xl bg-gradient-to-r from-[#0e172a] via-[#101c36] to-[#7B0017]/30 border border-[#c29938]/30 shadow-xl">
-          <div className="w-12 h-12 rounded-2xl bg-[#c29938]/20 border border-[#c29938]/40 text-[#c29938] flex items-center justify-center shadow-lg shrink-0">
+        <div className="flex items-center gap-3.5 p-5 rounded-3xl bg-gradient-to-r from-canvas via-canvas to-brand/30 border border-gold/30 shadow-xl">
+          <div className="w-12 h-12 rounded-2xl bg-gold/20 border border-gold/40 text-gold flex items-center justify-center shadow-lg shrink-0">
             <SettingsIcon className="w-6 h-6 animate-spin-slow" />
           </div>
           <div>
-            <h1 className="text-xl font-black text-slate-100">لوحة الإعدادات والتحكم</h1>
-            <p className="text-xs text-slate-400 mt-0.5">
+            <h1 className="text-xl font-black text-content">لوحة الإعدادات والتحكم</h1>
+            <p className="text-xs text-content-muted mt-0.5">
               تخصيص المظهر وتصفح الأدوات والإعدادات المخصصة لصلاحيات حسابك
             </p>
           </div>
         </div>
 
         {/* 1. Appearance & Theme Settings (مظهر النظام والثيم الموحد) */}
-        <section className="p-5 rounded-3xl bg-[#0a101d] border border-slate-800 shadow-xl space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
+        <section className="p-5 rounded-3xl bg-canvas border border-line shadow-xl space-y-4">
+          <div className="flex items-center justify-between border-b border-line/80 pb-3">
             <div className="flex items-center gap-2.5">
-              <Palette className="w-5 h-5 text-[#c29938]" />
-              <h2 className="text-sm font-black text-slate-100">المظهر والهوية البصرية (Theme & Accents)</h2>
+              <Palette className="w-5 h-5 text-gold" />
+              <h2 className="text-sm font-black text-content">المظهر والهوية البصرية (Theme & Accents)</h2>
             </div>
-            <span className="text-[11px] font-bold text-[#c29938] bg-[#c29938]/10 px-2.5 py-0.5 rounded-full border border-[#c29938]/30">
+            <span className="text-[11px] font-bold text-gold bg-gold/10 px-2.5 py-0.5 rounded-full border border-gold/30">
               تطبيق مباشر
             </span>
           </div>
 
           {/* Theme Display Mode Selector */}
           <div>
-            <label className="text-xs font-bold text-slate-300 block mb-2.5">وضع العرض (Display Mode)</label>
+            <label className="text-xs font-bold text-content-secondary block mb-2.5">وضع العرض (Display Mode)</label>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
               <button
                 onClick={() => setTheme('luxury')}
                 className={`p-3.5 rounded-2xl border flex flex-col items-center gap-2 transition-all ${
                   theme === 'luxury'
-                    ? 'bg-[#c29938] text-slate-950 font-black border-[#c29938] shadow-lg shadow-[#c29938]/20 scale-102'
-                    : 'bg-[#0e1626] text-slate-300 border-slate-800 hover:border-slate-700'
+                    ? 'bg-gold text-content font-black border-gold shadow-lg shadow-gold/20 scale-102'
+                    : 'bg-canvas text-content-secondary border-line hover:border-line'
                 }`}
               >
                 <Crown className="w-5 h-5" />
@@ -172,8 +172,8 @@ export default function SettingsPage() {
                 onClick={() => setTheme('dark')}
                 className={`p-3.5 rounded-2xl border flex flex-col items-center gap-2 transition-all ${
                   theme === 'dark'
-                    ? 'bg-slate-800 text-white font-black border-slate-600 shadow-lg scale-102'
-                    : 'bg-[#0e1626] text-slate-300 border-slate-800 hover:border-slate-700'
+                    ? 'bg-nav text-content font-black border-line-subtle shadow-lg scale-102'
+                    : 'bg-canvas text-content-secondary border-line hover:border-line'
                 }`}
               >
                 <Moon className="w-5 h-5" />
@@ -184,8 +184,8 @@ export default function SettingsPage() {
                 onClick={() => setTheme('light')}
                 className={`p-3.5 rounded-2xl border flex flex-col items-center gap-2 transition-all ${
                   theme === 'light'
-                    ? 'bg-slate-200 text-slate-950 font-black border-slate-300 shadow-lg scale-102'
-                    : 'bg-[#0e1626] text-slate-300 border-slate-800 hover:border-slate-700'
+                    ? 'bg-card text-content font-black border-line-subtle shadow-lg scale-102'
+                    : 'bg-canvas text-content-secondary border-line hover:border-line'
                 }`}
               >
                 <Sun className="w-5 h-5" />
@@ -196,8 +196,8 @@ export default function SettingsPage() {
                 onClick={() => setTheme('system')}
                 className={`p-3.5 rounded-2xl border flex flex-col items-center gap-2 transition-all ${
                   theme === 'system'
-                    ? 'bg-blue-600 text-white font-black border-blue-500 shadow-lg scale-102'
-                    : 'bg-[#0e1626] text-slate-300 border-slate-800 hover:border-slate-700'
+                    ? 'bg-info text-content font-black border-info shadow-lg scale-102'
+                    : 'bg-canvas text-content-secondary border-line hover:border-line'
                 }`}
               >
                 <Laptop className="w-5 h-5" />
@@ -207,18 +207,18 @@ export default function SettingsPage() {
           </div>
 
           {/* Accent Color Palette Selector */}
-          <div className="pt-2 border-t border-slate-800/80">
-            <label className="text-xs font-bold text-slate-300 block mb-2.5">لون التمييز الكنسي (Brand Accent)</label>
+          <div className="pt-2 border-t border-line/80">
+            <label className="text-xs font-bold text-content-secondary block mb-2.5">لون التمييز الكنسي (Brand Accent)</label>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
               <button
                 onClick={() => setAccent('gold')}
                 className={`p-3 rounded-2xl border flex items-center gap-2.5 transition-all ${
                   accent === 'gold'
-                    ? 'bg-[#c29938]/20 border-[#c29938] text-white font-bold'
-                    : 'bg-[#0e1626] border-slate-800 text-slate-300 hover:border-slate-700'
+                    ? 'bg-gold/20 border-gold text-content font-bold'
+                    : 'bg-canvas border-line text-content-secondary hover:border-line'
                 }`}
               >
-                <div className="w-4 h-4 rounded-full bg-[#c29938] shadow-sm shrink-0" />
+                <div className="w-4 h-4 rounded-full bg-gold shadow-sm shrink-0" />
                 <span className="text-xs">الذهب القبطي</span>
               </button>
 
@@ -226,11 +226,11 @@ export default function SettingsPage() {
                 onClick={() => setAccent('burgundy')}
                 className={`p-3 rounded-2xl border flex items-center gap-2.5 transition-all ${
                   accent === 'burgundy'
-                    ? 'bg-[#7B0017]/30 border-[#7B0017] text-white font-bold'
-                    : 'bg-[#0e1626] border-slate-800 text-slate-300 hover:border-slate-700'
+                    ? 'bg-brand/30 border-brand text-content font-bold'
+                    : 'bg-canvas border-line text-content-secondary hover:border-line'
                 }`}
               >
-                <div className="w-4 h-4 rounded-full bg-[#7B0017] shadow-sm shrink-0" />
+                <div className="w-4 h-4 rounded-full bg-brand shadow-sm shrink-0" />
                 <span className="text-xs">العنابي الكنسي</span>
               </button>
 
@@ -238,11 +238,11 @@ export default function SettingsPage() {
                 onClick={() => setAccent('navy')}
                 className={`p-3 rounded-2xl border flex items-center gap-2.5 transition-all ${
                   accent === 'navy'
-                    ? 'bg-[#0B1B3D]/50 border-blue-400 text-white font-bold'
-                    : 'bg-[#0e1626] border-slate-800 text-slate-300 hover:border-slate-700'
+                    ? 'bg-nav/50 border-info text-content font-bold'
+                    : 'bg-canvas border-line text-content-secondary hover:border-line'
                 }`}
               >
-                <div className="w-4 h-4 rounded-full bg-[#0B1B3D] border border-blue-400 shadow-sm shrink-0" />
+                <div className="w-4 h-4 rounded-full bg-nav border border-info shadow-sm shrink-0" />
                 <span className="text-xs">الأزرق النيلي</span>
               </button>
 
@@ -250,11 +250,11 @@ export default function SettingsPage() {
                 onClick={() => setAccent('emerald')}
                 className={`p-3 rounded-2xl border flex items-center gap-2.5 transition-all ${
                   accent === 'emerald'
-                    ? 'bg-emerald-500/20 border-emerald-500 text-white font-bold'
-                    : 'bg-[#0e1626] border-slate-800 text-slate-300 hover:border-slate-700'
+                    ? 'bg-success/20 border-success text-content font-bold'
+                    : 'bg-canvas border-line text-content-secondary hover:border-line'
                 }`}
               >
-                <div className="w-4 h-4 rounded-full bg-[#10B981] shadow-sm shrink-0" />
+                <div className="w-4 h-4 rounded-full bg-success shadow-sm shrink-0" />
                 <span className="text-xs">الأخضر النخل</span>
               </button>
             </div>
@@ -263,10 +263,10 @@ export default function SettingsPage() {
 
         {/* 2. User Identity Summary Card */}
         {profile && (
-          <section className="p-5 rounded-3xl bg-[#0a101d] border border-slate-800 shadow-xl flex flex-col sm:flex-row items-center justify-between gap-4">
+          <section className="p-5 rounded-3xl bg-canvas border border-line shadow-xl flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-3.5">
-              <div className="w-14 h-14 rounded-full bg-gradient-to-tr from-[#c29938] via-amber-400 to-amber-600 p-0.5 shadow-lg overflow-hidden shrink-0">
-                <div className="w-full h-full rounded-full bg-slate-900 flex items-center justify-center font-black text-lg text-[#c29938] overflow-hidden">
+              <div className="w-14 h-14 rounded-full bg-gradient-to-tr from-gold via-amber-400 to-warning p-0.5 shadow-lg overflow-hidden shrink-0">
+                <div className="w-full h-full rounded-full bg-nav flex items-center justify-center font-black text-lg text-gold overflow-hidden">
                   {profile.avatar_url ? (
                     <Image src={profile.avatar_url} alt={profile.full_name} width={56} height={56} className="object-cover" />
                   ) : (
@@ -275,9 +275,9 @@ export default function SettingsPage() {
                 </div>
               </div>
               <div>
-                <h3 className="font-black text-base text-slate-100">{profile.full_name}</h3>
-                <div className="flex items-center gap-2 text-xs text-slate-400 mt-0.5">
-                  <span className="text-[#c29938] font-bold">{getRoleName(profile.role_id)}</span>
+                <h3 className="font-black text-base text-content">{profile.full_name}</h3>
+                <div className="flex items-center gap-2 text-xs text-content-muted mt-0.5">
+                  <span className="text-gold font-bold">{getRoleName(profile.role_id)}</span>
                   <span>•</span>
                   <span>{getGroupName(profile.group_id)}</span>
                 </div>
@@ -286,7 +286,7 @@ export default function SettingsPage() {
 
             <button
               onClick={() => setSelectedProfileId(profile.id)}
-              className="w-full sm:w-auto px-4 py-2 rounded-2xl bg-[#0e1626] hover:bg-[#c29938] hover:text-slate-950 border border-slate-800 text-xs font-bold text-slate-300 transition-all"
+              className="w-full sm:w-auto px-4 py-2 rounded-2xl bg-canvas hover:bg-gold hover:text-content border border-line text-xs font-bold text-content-secondary transition-all"
             >
               تعديل الصورة والبيانات الشخصية
             </button>
@@ -299,13 +299,13 @@ export default function SettingsPage() {
         {/* SECTION A: Admin & Super User Control Hub */}
         {/* ========================================== */}
         {isAdminOrSuper && (
-          <section className="p-5 rounded-3xl bg-[#0a101d] border border-[#c29938]/30 shadow-xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+          <section className="p-5 rounded-3xl bg-canvas border border-gold/30 shadow-xl space-y-4">
+            <div className="flex items-center justify-between border-b border-line pb-3">
               <div className="flex items-center gap-2.5">
-                <Shield className="w-5 h-5 text-emerald-400" />
-                <h2 className="text-sm font-black text-slate-100">أدوات إدارة النظام (System Administration)</h2>
+                <Shield className="w-5 h-5 text-success" />
+                <h2 className="text-sm font-black text-content">أدوات إدارة النظام (System Administration)</h2>
               </div>
-              <span className="text-[10px] font-black text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/30">
+              <span className="text-[10px] font-black text-success bg-success/10 px-2.5 py-0.5 rounded-full border border-success/30">
                 صلاحية كاملة (Full Access)
               </span>
             </div>
@@ -314,85 +314,85 @@ export default function SettingsPage() {
               {/* Backups Hub */}
               <Link
                 href="/admin/backups"
-                className="p-4 rounded-2xl bg-[#0e1626] hover:bg-[#131f37] border border-slate-800 hover:border-emerald-500/50 flex items-start justify-between group transition-all"
+                className="p-4 rounded-2xl bg-canvas hover:bg-card border border-line hover:border-success/50 flex items-start justify-between group transition-all"
               >
                 <div className="flex items-start gap-3">
-                  <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 group-hover:scale-110 transition-transform">
+                  <div className="p-2.5 rounded-xl bg-success/10 text-success group-hover:scale-110 transition-transform">
                     <Database className="w-5 h-5" />
                   </div>
                   <div>
-                    <span className="text-xs font-black text-slate-100 group-hover:text-emerald-400 block">
+                    <span className="text-xs font-black text-content group-hover:text-success block">
                       النسخ الاحتياطي السحابي
                     </span>
-                    <span className="text-[11px] text-slate-400 mt-0.5 block">
+                    <span className="text-[11px] text-content-muted mt-0.5 block">
                       إنشاء، تحميل، واستعادة أرشيف النظام وقاعدة البيانات وGoogle Drive
                     </span>
                   </div>
                 </div>
-                <ChevronLeft className="w-4 h-4 text-slate-500 group-hover:text-emerald-400 transition-transform shrink-0" />
+                <ChevronLeft className="w-4 h-4 text-content-muted group-hover:text-success transition-transform shrink-0" />
               </Link>
 
               {/* Data Imports Hub */}
               <Link
                 href="/admin/imports"
-                className="p-4 rounded-2xl bg-[#0e1626] hover:bg-[#131f37] border border-slate-800 hover:border-blue-500/50 flex items-start justify-between group transition-all"
+                className="p-4 rounded-2xl bg-canvas hover:bg-card border border-line hover:border-info/50 flex items-start justify-between group transition-all"
               >
                 <div className="flex items-start gap-3">
-                  <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-400 group-hover:scale-110 transition-transform">
+                  <div className="p-2.5 rounded-xl bg-info/10 text-info group-hover:scale-110 transition-transform">
                     <Upload className="w-5 h-5" />
                   </div>
                   <div>
-                    <span className="text-xs font-black text-slate-100 group-hover:text-blue-400 block">
+                    <span className="text-xs font-black text-content group-hover:text-info block">
                       استيراد وتغذية البيانات
                     </span>
-                    <span className="text-[11px] text-slate-400 mt-0.5 block">
+                    <span className="text-[11px] text-content-muted mt-0.5 block">
                       استيراد دفعات الطلاب والخدام عبر ملفات Excel وCSV المعتمدة
                     </span>
                   </div>
                 </div>
-                <ChevronLeft className="w-4 h-4 text-slate-500 group-hover:text-blue-400 transition-transform shrink-0" />
+                <ChevronLeft className="w-4 h-4 text-content-muted group-hover:text-info transition-transform shrink-0" />
               </Link>
 
               {/* Notifications & Pastoral Dispatch */}
               <Link
                 href="/admin/notifications"
-                className="p-4 rounded-2xl bg-[#0e1626] hover:bg-[#131f37] border border-slate-800 hover:border-amber-500/50 flex items-start justify-between group transition-all"
+                className="p-4 rounded-2xl bg-canvas hover:bg-card border border-line hover:border-warning/50 flex items-start justify-between group transition-all"
               >
                 <div className="flex items-start gap-3">
-                  <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-400 group-hover:scale-110 transition-transform">
+                  <div className="p-2.5 rounded-xl bg-warning/10 text-warning group-hover:scale-110 transition-transform">
                     <BellRing className="w-5 h-5" />
                   </div>
                   <div>
-                    <span className="text-xs font-black text-slate-100 group-hover:text-amber-400 block">
+                    <span className="text-xs font-black text-content group-hover:text-warning block">
                       إدارة الإشعارات والافتقاد
                     </span>
-                    <span className="text-[11px] text-slate-400 mt-0.5 block">
+                    <span className="text-[11px] text-content-muted mt-0.5 block">
                       تعديل رسائل أعياد الميلاد، قوالب الغياب، وبث الآيات اليومية
                     </span>
                   </div>
                 </div>
-                <ChevronLeft className="w-4 h-4 text-slate-500 group-hover:text-amber-400 transition-transform shrink-0" />
+                <ChevronLeft className="w-4 h-4 text-content-muted group-hover:text-warning transition-transform shrink-0" />
               </Link>
 
               {/* Group & Secretariat Assignment */}
               <Link
                 href="/groups"
-                className="p-4 rounded-2xl bg-[#0e1626] hover:bg-[#131f37] border border-slate-800 hover:border-purple-500/50 flex items-start justify-between group transition-all"
+                className="p-4 rounded-2xl bg-canvas hover:bg-card border border-line hover:border-info/50 flex items-start justify-between group transition-all"
               >
                 <div className="flex items-start gap-3">
-                  <div className="p-2.5 rounded-xl bg-purple-500/10 text-purple-400 group-hover:scale-110 transition-transform">
+                  <div className="p-2.5 rounded-xl bg-info/10 text-purple-400 group-hover:scale-110 transition-transform">
                     <Users className="w-5 h-5" />
                   </div>
                   <div>
-                    <span className="text-xs font-black text-slate-100 group-hover:text-purple-400 block">
+                    <span className="text-xs font-black text-content group-hover:text-purple-400 block">
                       إدارة الفرق وتعيين السكرتارية
                     </span>
-                    <span className="text-[11px] text-slate-400 mt-0.5 block">
+                    <span className="text-[11px] text-content-muted mt-0.5 block">
                       قفل جلسات الحضور، توزيع الخدام، وتفويض الصلاحيات
                     </span>
                   </div>
                 </div>
-                <ChevronLeft className="w-4 h-4 text-slate-500 group-hover:text-purple-400 transition-transform shrink-0" />
+                <ChevronLeft className="w-4 h-4 text-content-muted group-hover:text-purple-400 transition-transform shrink-0" />
               </Link>
             </div>
           </section>
@@ -402,13 +402,13 @@ export default function SettingsPage() {
         {/* SECTION B: Servant & Academic Section Hub  */}
         {/* ========================================== */}
         {(isServant || isAdminOrSuper) && (
-          <section className="p-5 rounded-3xl bg-[#0a101d] border border-slate-800 shadow-xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+          <section className="p-5 rounded-3xl bg-canvas border border-line shadow-xl space-y-4">
+            <div className="flex items-center justify-between border-b border-line pb-3">
               <div className="flex items-center gap-2.5">
-                <BookOpen className="w-5 h-5 text-amber-400" />
-                <h2 className="text-sm font-black text-slate-100">الأقسام الأكاديمية والخدمية (Academic & Ministry)</h2>
+                <BookOpen className="w-5 h-5 text-warning" />
+                <h2 className="text-sm font-black text-content">الأقسام الأكاديمية والخدمية (Academic & Ministry)</h2>
               </div>
-              <span className="text-[10px] font-bold text-amber-400 bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/30">
+              <span className="text-[10px] font-bold text-warning bg-warning/10 px-2.5 py-0.5 rounded-full border border-warning/30">
                 صلاحيات الخدمة
               </span>
             </div>
@@ -416,82 +416,82 @@ export default function SettingsPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Link
                 href="/curriculum"
-                className="p-4 rounded-2xl bg-[#0e1626] hover:bg-[#131f37] border border-slate-800 hover:border-amber-500/50 flex items-start justify-between group transition-all"
+                className="p-4 rounded-2xl bg-canvas hover:bg-card border border-line hover:border-warning/50 flex items-start justify-between group transition-all"
               >
                 <div className="flex items-start gap-3">
-                  <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-400 group-hover:scale-110 transition-transform">
+                  <div className="p-2.5 rounded-xl bg-warning/10 text-warning group-hover:scale-110 transition-transform">
                     <BookOpen className="w-5 h-5" />
                   </div>
                   <div>
-                    <span className="text-xs font-black text-slate-100 group-hover:text-amber-400 block">
+                    <span className="text-xs font-black text-content group-hover:text-warning block">
                       المناهج والمحاضرات الدراسية
                     </span>
-                    <span className="text-[11px] text-slate-400 mt-0.5 block">
+                    <span className="text-[11px] text-content-muted mt-0.5 block">
                       عرض وإدارة مواد المحاضرات ومحاضري الفرقة
                     </span>
                   </div>
                 </div>
-                <ChevronLeft className="w-4 h-4 text-slate-500 group-hover:text-amber-400 transition-transform shrink-0" />
+                <ChevronLeft className="w-4 h-4 text-content-muted group-hover:text-warning transition-transform shrink-0" />
               </Link>
 
               <Link
                 href="/marathon/manage"
-                className="p-4 rounded-2xl bg-[#0e1626] hover:bg-[#131f37] border border-slate-800 hover:border-rose-500/50 flex items-start justify-between group transition-all"
+                className="p-4 rounded-2xl bg-canvas hover:bg-card border border-line hover:border-danger/50 flex items-start justify-between group transition-all"
               >
                 <div className="flex items-start gap-3">
-                  <div className="p-2.5 rounded-xl bg-rose-500/10 text-rose-400 group-hover:scale-110 transition-transform">
+                  <div className="p-2.5 rounded-xl bg-danger/10 text-danger group-hover:scale-110 transition-transform">
                     <Flame className="w-5 h-5" />
                   </div>
                   <div>
-                    <span className="text-xs font-black text-slate-100 group-hover:text-rose-400 block">
+                    <span className="text-xs font-black text-content group-hover:text-danger block">
                       إدارة أسئلة الماراثون
                     </span>
-                    <span className="text-[11px] text-slate-400 mt-0.5 block">
+                    <span className="text-[11px] text-content-muted mt-0.5 block">
                       متابعة إجابات وتصحيح ماراثون الآيات الأسبوعي
                     </span>
                   </div>
                 </div>
-                <ChevronLeft className="w-4 h-4 text-slate-500 group-hover:text-rose-400 transition-transform shrink-0" />
+                <ChevronLeft className="w-4 h-4 text-content-muted group-hover:text-danger transition-transform shrink-0" />
               </Link>
 
               <Link
                 href="/exams"
-                className="p-4 rounded-2xl bg-[#0e1626] hover:bg-[#131f37] border border-slate-800 hover:border-purple-500/50 flex items-start justify-between group transition-all"
+                className="p-4 rounded-2xl bg-canvas hover:bg-card border border-line hover:border-info/50 flex items-start justify-between group transition-all"
               >
                 <div className="flex items-start gap-3">
-                  <div className="p-2.5 rounded-xl bg-purple-500/10 text-purple-400 group-hover:scale-110 transition-transform">
+                  <div className="p-2.5 rounded-xl bg-info/10 text-purple-400 group-hover:scale-110 transition-transform">
                     <Award className="w-5 h-5" />
                   </div>
                   <div>
-                    <span className="text-xs font-black text-slate-100 group-hover:text-purple-400 block">
+                    <span className="text-xs font-black text-content group-hover:text-purple-400 block">
                       رصد درجات الامتحانات
                     </span>
-                    <span className="text-[11px] text-slate-400 mt-0.5 block">
+                    <span className="text-[11px] text-content-muted mt-0.5 block">
                       تسجيل درجات الترم والامتحانات النهائية للطلاب
                     </span>
                   </div>
                 </div>
-                <ChevronLeft className="w-4 h-4 text-slate-500 group-hover:text-purple-400 transition-transform shrink-0" />
+                <ChevronLeft className="w-4 h-4 text-content-muted group-hover:text-purple-400 transition-transform shrink-0" />
               </Link>
 
               <Link
                 href="/trainees"
-                className="p-4 rounded-2xl bg-[#0e1626] hover:bg-[#131f37] border border-slate-800 hover:border-cyan-500/50 flex items-start justify-between group transition-all"
+                className="p-4 rounded-2xl bg-canvas hover:bg-card border border-line hover:border-cyan-500/50 flex items-start justify-between group transition-all"
               >
                 <div className="flex items-start gap-3">
-                  <div className="p-2.5 rounded-xl bg-cyan-500/10 text-cyan-400 group-hover:scale-110 transition-transform">
+                  <div className="p-2.5 rounded-xl bg-info/10 text-info group-hover:scale-110 transition-transform">
                     <Users className="w-5 h-5" />
                   </div>
                   <div>
-                    <span className="text-xs font-black text-slate-100 group-hover:text-cyan-400 block">
+                    <span className="text-xs font-black text-content group-hover:text-info block">
                       سجل طلاب الفرقة والافتقاد
                     </span>
-                    <span className="text-[11px] text-slate-400 mt-0.5 block">
+                    <span className="text-[11px] text-content-muted mt-0.5 block">
                       عرض بيانات الطلاب والمتابعة الدورية لأب الاعتراف
                     </span>
                   </div>
                 </div>
-                <ChevronLeft className="w-4 h-4 text-slate-500 group-hover:text-cyan-400 transition-transform shrink-0" />
+                <ChevronLeft className="w-4 h-4 text-content-muted group-hover:text-info transition-transform shrink-0" />
               </Link>
             </div>
           </section>
@@ -501,13 +501,13 @@ export default function SettingsPage() {
         {/* SECTION C: Secretariat & Attendance Hub    */}
         {/* ========================================== */}
         {(isSecretariat || isAdminOrSuper) && (
-          <section className="p-5 rounded-3xl bg-[#0a101d] border border-slate-800 shadow-xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+          <section className="p-5 rounded-3xl bg-canvas border border-line shadow-xl space-y-4">
+            <div className="flex items-center justify-between border-b border-line pb-3">
               <div className="flex items-center gap-2.5">
-                <CalendarCheck className="w-5 h-5 text-emerald-400" />
-                <h2 className="text-sm font-black text-slate-100">أعمال السكرتارية والغياب (Secretariat & Attendance)</h2>
+                <CalendarCheck className="w-5 h-5 text-success" />
+                <h2 className="text-sm font-black text-content">أعمال السكرتارية والغياب (Secretariat & Attendance)</h2>
               </div>
-              <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/30">
+              <span className="text-[10px] font-bold text-success bg-success/10 px-2.5 py-0.5 rounded-full border border-success/30">
                 إدارة الحضور
               </span>
             </div>
@@ -515,22 +515,22 @@ export default function SettingsPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Link
                 href="/attendance"
-                className="p-4 rounded-2xl bg-[#0e1626] hover:bg-[#131f37] border border-slate-800 hover:border-emerald-500/50 flex items-start justify-between group transition-all"
+                className="p-4 rounded-2xl bg-canvas hover:bg-card border border-line hover:border-success/50 flex items-start justify-between group transition-all"
               >
                 <div className="flex items-start gap-3">
-                  <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 group-hover:scale-110 transition-transform">
+                  <div className="p-2.5 rounded-xl bg-success/10 text-success group-hover:scale-110 transition-transform">
                     <CalendarCheck className="w-5 h-5" />
                   </div>
                   <div>
-                    <span className="text-xs font-black text-slate-100 group-hover:text-emerald-400 block">
+                    <span className="text-xs font-black text-content group-hover:text-success block">
                       تسجيل الحضور الأسبوعي للفرقة
                     </span>
-                    <span className="text-[11px] text-slate-400 mt-0.5 block">
+                    <span className="text-[11px] text-content-muted mt-0.5 block">
                       رصد الحضور والغياب المباشر لجلسات يوم الجمعة
                     </span>
                   </div>
                 </div>
-                <ChevronLeft className="w-4 h-4 text-slate-500 group-hover:text-emerald-400 transition-transform shrink-0" />
+                <ChevronLeft className="w-4 h-4 text-content-muted group-hover:text-success transition-transform shrink-0" />
               </Link>
             </div>
           </section>
@@ -540,13 +540,13 @@ export default function SettingsPage() {
         {/* SECTION D: Trainee Student Shortcuts       */}
         {/* ========================================== */}
         {isTrainee && (
-          <section className="p-5 rounded-3xl bg-[#0a101d] border border-slate-800 shadow-xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+          <section className="p-5 rounded-3xl bg-canvas border border-line shadow-xl space-y-4">
+            <div className="flex items-center justify-between border-b border-line pb-3">
               <div className="flex items-center gap-2.5">
-                <Award className="w-5 h-5 text-[#c29938]" />
-                <h2 className="text-sm font-black text-slate-100">خدمات الطالب (Trainee Services)</h2>
+                <Award className="w-5 h-5 text-gold" />
+                <h2 className="text-sm font-black text-content">خدمات الطالب (Trainee Services)</h2>
               </div>
-              <span className="text-[10px] font-bold text-[#c29938] bg-[#c29938]/10 px-2.5 py-0.5 rounded-full border border-[#c29938]/30">
+              <span className="text-[10px] font-bold text-gold bg-gold/10 px-2.5 py-0.5 rounded-full border border-gold/30">
                 ملفي الدراسي
               </span>
             </div>
@@ -554,42 +554,42 @@ export default function SettingsPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Link
                 href="/marathon"
-                className="p-4 rounded-2xl bg-[#0e1626] hover:bg-[#131f37] border border-slate-800 hover:border-[#c29938]/50 flex items-start justify-between group transition-all"
+                className="p-4 rounded-2xl bg-canvas hover:bg-card border border-line hover:border-gold/50 flex items-start justify-between group transition-all"
               >
                 <div className="flex items-start gap-3">
-                  <div className="p-2.5 rounded-xl bg-rose-500/10 text-rose-400 group-hover:scale-110 transition-transform">
+                  <div className="p-2.5 rounded-xl bg-danger/10 text-danger group-hover:scale-110 transition-transform">
                     <Flame className="w-5 h-5" />
                   </div>
                   <div>
-                    <span className="text-xs font-black text-slate-100 group-hover:text-[#c29938] block">
+                    <span className="text-xs font-black text-content group-hover:text-gold block">
                       ماراثون الآيات الأسبوعي
                     </span>
-                    <span className="text-[11px] text-slate-400 mt-0.5 block">
+                    <span className="text-[11px] text-content-muted mt-0.5 block">
                       حل أسئلة الحفظ الأسبوعية ومتابعة تقييمك
                     </span>
                   </div>
                 </div>
-                <ChevronLeft className="w-4 h-4 text-slate-500 group-hover:text-[#c29938] transition-transform shrink-0" />
+                <ChevronLeft className="w-4 h-4 text-content-muted group-hover:text-gold transition-transform shrink-0" />
               </Link>
 
               <Link
                 href="/notifications"
-                className="p-4 rounded-2xl bg-[#0e1626] hover:bg-[#131f37] border border-slate-800 hover:border-[#c29938]/50 flex items-start justify-between group transition-all"
+                className="p-4 rounded-2xl bg-canvas hover:bg-card border border-line hover:border-gold/50 flex items-start justify-between group transition-all"
               >
                 <div className="flex items-start gap-3">
-                  <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-400 group-hover:scale-110 transition-transform">
+                  <div className="p-2.5 rounded-xl bg-warning/10 text-warning group-hover:scale-110 transition-transform">
                     <BellRing className="w-5 h-5" />
                   </div>
                   <div>
-                    <span className="text-xs font-black text-slate-100 group-hover:text-[#c29938] block">
+                    <span className="text-xs font-black text-content group-hover:text-gold block">
                       تنبيهات ورسائل الافتقاد
                     </span>
-                    <span className="text-[11px] text-slate-400 mt-0.5 block">
+                    <span className="text-[11px] text-content-muted mt-0.5 block">
                       متابعة رسائل الافتقاد وأعياد الميلاد وتنبيهات المدرسة
                     </span>
                   </div>
                 </div>
-                <ChevronLeft className="w-4 h-4 text-slate-500 group-hover:text-[#c29938] transition-transform shrink-0" />
+                <ChevronLeft className="w-4 h-4 text-content-muted group-hover:text-gold transition-transform shrink-0" />
               </Link>
             </div>
           </section>

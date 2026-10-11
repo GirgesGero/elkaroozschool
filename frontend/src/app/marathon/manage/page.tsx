@@ -260,7 +260,7 @@ export default function MarathonManagePage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#070b14] text-slate-100 flex flex-col selection:bg-[#c29938] selection:text-slate-950 pb-20" dir="rtl">
+    <div className="min-h-screen bg-canvas text-content flex flex-col selection:bg-gold selection:text-content" dir="rtl">
       {/* Smart Unified Header */}
       <SmartHeader
         profile={profile}
@@ -285,15 +285,15 @@ export default function MarathonManagePage() {
       {/* Main Content */}
       <main className="max-w-5xl w-full mx-auto px-4 py-6 flex-1 flex flex-col gap-6 pb-28 md:pb-12">
         {/* Controls Header */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="bg-nav border border-line rounded-2xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <label className="block text-xs font-bold text-slate-400 mb-1.5">
+            <label className="block text-xs font-bold text-content-muted mb-1.5">
               اختر الماراثون للإدارة:
             </label>
             <select
               value={selectedMarathonId}
               onChange={(e) => setSelectedMarathonId(e.target.value)}
-              className="bg-slate-950 border border-slate-700 text-white text-sm rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-500 font-bold"
+              className="bg-nav border border-line text-content text-sm rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-warning font-bold"
             >
               {marathons.map((m) => (
                 <option key={m.id} value={m.id}>
@@ -303,13 +303,13 @@ export default function MarathonManagePage() {
             </select>
           </div>
 
-          <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800">
+          <div className="flex bg-nav p-1 rounded-xl border border-line">
             <button
               onClick={() => setActiveTab('editor')}
               className={`py-2 px-4 rounded-lg text-xs font-bold transition-all ${
                 activeTab === 'editor'
-                  ? 'bg-amber-600 text-slate-950 shadow'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'bg-warning text-content shadow'
+                  : 'text-content-muted hover:text-content'
               }`}
             >
               الأسئلة والأقسام ({selectedMarathon?.questions.length || 0})
@@ -318,8 +318,8 @@ export default function MarathonManagePage() {
               onClick={() => setActiveTab('submissions')}
               className={`py-2 px-4 rounded-lg text-xs font-bold transition-all ${
                 activeTab === 'submissions'
-                  ? 'bg-amber-600 text-slate-950 shadow'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'bg-warning text-content shadow'
+                  : 'text-content-muted hover:text-content'
               }`}
             >
               نتائج المتدربين ({submissions.length})
@@ -328,8 +328,8 @@ export default function MarathonManagePage() {
         </div>
 
         {notice && (
-          <div className="p-3.5 bg-blue-950/60 border border-blue-800/60 text-blue-200 rounded-xl text-xs flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 text-blue-400 flex-shrink-0" />
+          <div className="p-3.5 bg-canvas/60 border border-line-subtle/60 text-info rounded-xl text-xs flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-info flex-shrink-0" />
             <span>{notice}</span>
           </div>
         )}
@@ -339,7 +339,7 @@ export default function MarathonManagePage() {
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="text-xs text-amber-400 font-bold bg-amber-950/50 border border-amber-800/40 px-3 py-1 rounded-lg">
+                <span className="text-xs text-warning font-bold bg-canvas/50 border border-warning/40 px-3 py-1 rounded-lg">
                   القانون: 100 درجة موزعة بالتساوي (
                   {selectedMarathon?.questions.length
                     ? (100 / selectedMarathon.questions.length).toFixed(2)
@@ -351,14 +351,14 @@ export default function MarathonManagePage() {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setShowAddSecModal(true)}
-                  className="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors border border-slate-700"
+                  className="bg-nav hover:bg-input text-content px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors border border-line"
                 >
-                  <FolderPlus className="w-4 h-4 text-amber-400" />
+                  <FolderPlus className="w-4 h-4 text-warning" />
                   <span>إضافة قسم</span>
                 </button>
                 <button
                   onClick={() => setShowAddQModal(true)}
-                  className="bg-amber-600 hover:bg-amber-500 text-slate-950 px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow transition-colors"
+                  className="bg-warning hover:bg-warning text-content px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow transition-colors"
                 >
                   <Plus className="w-4 h-4" />
                   <span>إضافة سؤال</span>
@@ -371,16 +371,16 @@ export default function MarathonManagePage() {
               {selectedMarathon?.questions.map((q, qIdx) => (
                 <div
                   key={q.id}
-                  className="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-sm"
+                  className="bg-nav border border-line rounded-xl p-4 shadow-sm"
                 >
                   <div className="flex items-start justify-between gap-3 mb-3">
                     <div className="flex items-center gap-2">
-                      <span className="w-6 h-6 rounded-lg bg-slate-800 text-amber-400 text-xs font-bold flex items-center justify-center font-mono">
+                      <span className="w-6 h-6 rounded-lg bg-nav text-warning text-xs font-bold flex items-center justify-center font-mono">
                         {qIdx + 1}
                       </span>
-                      <h4 className="font-bold text-sm text-white">{q.question_text}</h4>
+                      <h4 className="font-bold text-sm text-content">{q.question_text}</h4>
                     </div>
-                    <span className="text-[11px] font-mono text-slate-400 bg-slate-950 px-2.5 py-0.5 rounded border border-slate-800">
+                    <span className="text-[11px] font-mono text-content-muted bg-nav px-2.5 py-0.5 rounded border border-line">
                       {q.score_weight.toFixed(2)} درجة
                     </span>
                   </div>
@@ -391,15 +391,15 @@ export default function MarathonManagePage() {
                         key={opt.id}
                         className={`p-2.5 rounded-lg border flex items-center justify-between ${
                           opt.is_correct
-                            ? 'bg-emerald-950/40 border-emerald-700/60 text-emerald-300 font-semibold'
-                            : 'bg-slate-950/60 border-slate-800 text-slate-400'
+                            ? 'bg-canvas/40 border-success/60 text-success font-semibold'
+                            : 'bg-nav/60 border-line text-content-muted'
                         }`}
                       >
                         <span>
                           {oIdx + 1}. {opt.answer_text}
                         </span>
                         {opt.is_correct && (
-                          <span className="text-[10px] bg-emerald-900/60 text-emerald-300 px-1.5 py-0.5 rounded">
+                          <span className="text-[10px] bg-canvas/60 text-success px-1.5 py-0.5 rounded">
                             الصحيحة
                           </span>
                         )}
@@ -414,15 +414,15 @@ export default function MarathonManagePage() {
 
         {/* --- TAB 2: SUBMISSIONS & SELECTIVE REOPEN --- */}
         {activeTab === 'submissions' && (
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-md">
-            <h3 className="font-bold text-base text-white mb-4 flex items-center gap-2">
-              <Users className="w-5 h-5 text-amber-400" />
+          <div className="bg-nav border border-line rounded-2xl p-5 shadow-md">
+            <h3 className="font-bold text-base text-content mb-4 flex items-center gap-2">
+              <Users className="w-5 h-5 text-warning" />
               <span>نتائج ودرجات متدربي الفرقة ({submissions.length})</span>
             </h3>
 
             <div className="overflow-x-auto">
               <table className="w-full text-right text-xs">
-                <thead className="bg-slate-950/80 text-slate-400 border-b border-slate-800 font-semibold">
+                <thead className="bg-nav/80 text-content-muted border-b border-line font-semibold">
                   <tr>
                     <th className="p-3">اسم المتدرب</th>
                     <th className="p-3">اسم المستخدم</th>
@@ -432,24 +432,24 @@ export default function MarathonManagePage() {
                     <th className="p-3 text-center">إعادة فتح أسئلة</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/60">
+                <tbody className="divide-y divide-line-subtle/60">
                   {submissions.map((sub) => (
-                    <tr key={sub.id} className="hover:bg-slate-950/40 transition-colors">
-                      <td className="p-3 font-bold text-white text-sm">{sub.trainee_name}</td>
-                      <td className="p-3 text-slate-400 font-mono">@{sub.username}</td>
-                      <td className="p-3 text-center font-bold text-base text-white">
+                    <tr key={sub.id} className="hover:bg-nav/40 transition-colors">
+                      <td className="p-3 font-bold text-content text-sm">{sub.trainee_name}</td>
+                      <td className="p-3 text-content-muted font-mono">@{sub.username}</td>
+                      <td className="p-3 text-center font-bold text-base text-content">
                         {sub.total_score}
                       </td>
                       <td className="p-3 text-center">
-                        <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-950/60 text-amber-300 border border-amber-800/50">
+                        <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-canvas/60 text-warning border border-warning/50">
                           {sub.appreciation_grade}
                         </span>
                       </td>
                       <td className="p-3 text-center">
                         {sub.is_submitted ? (
-                          <span className="text-emerald-400 font-semibold">مكتمل</span>
+                          <span className="text-success font-semibold">مكتمل</span>
                         ) : (
-                          <span className="text-amber-400 font-semibold">جاري الحل</span>
+                          <span className="text-warning font-semibold">جاري الحل</span>
                         )}
                       </td>
                       <td className="p-3 text-center">
@@ -459,10 +459,10 @@ export default function MarathonManagePage() {
                               handleSelectiveReopen(sub.id, selectedMarathon.questions[0].id);
                             }
                           }}
-                          className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-semibold inline-flex items-center gap-1 transition-colors"
+                          className="p-1.5 bg-nav hover:bg-input text-content-secondary rounded-lg text-xs font-semibold inline-flex items-center gap-1 transition-colors"
                           title="إعادة فتح سؤال محدد"
                         >
-                          <RotateCcw className="w-3.5 h-3.5 text-amber-400" />
+                          <RotateCcw className="w-3.5 h-3.5 text-warning" />
                           <span>إعادة فتح</span>
                         </button>
                       </td>
@@ -477,16 +477,16 @@ export default function MarathonManagePage() {
         {/* Modal: Add Question */}
         {showAddQModal && (
           <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-lg w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
-              <h3 className="text-lg font-bold text-white mb-4">إضافة سؤال جديد للماراثون</h3>
+            <div className="bg-nav border border-line rounded-2xl max-w-lg w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+              <h3 className="text-lg font-bold text-content mb-4">إضافة سؤال جديد للماراثون</h3>
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">القسم</label>
+                  <label className="block text-xs font-semibold text-content-secondary mb-1">القسم</label>
                   <select
                     value={newQSectionId}
                     onChange={(e) => setNewQSectionId(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white"
+                    className="w-full bg-nav border border-line rounded-xl px-3.5 py-2 text-sm text-content"
                   >
                     <option value="">بدون قسم</option>
                     {selectedMarathon?.sections.map((s) => (
@@ -498,26 +498,26 @@ export default function MarathonManagePage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">نص السؤال</label>
+                  <label className="block text-xs font-semibold text-content-secondary mb-1">نص السؤال</label>
                   <textarea
                     rows={2}
                     value={newQText}
                     onChange={(e) => setNewQText(e.target.value)}
                     placeholder="اكتب نص السؤال هنا..."
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-sm text-white focus:ring-2 focus:ring-amber-500"
+                    className="w-full bg-nav border border-line rounded-xl p-3 text-sm text-content focus:ring-2 focus:ring-warning"
                   />
                 </div>
 
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <label className="text-xs font-semibold text-slate-300">
+                    <label className="text-xs font-semibold text-content-secondary">
                       الخيارات (اختر الإجابة الصحيحة)
                     </label>
                     {newQOptions.length === 4 && (
                       <button
                         type="button"
                         onClick={() => setNewQOptions([...newQOptions, ''])}
-                        className="text-xs text-amber-400 hover:text-amber-300"
+                        className="text-xs text-warning hover:text-warning"
                       >
                         + خيار خامس
                       </button>
@@ -532,7 +532,7 @@ export default function MarathonManagePage() {
                           name="correct_option"
                           checked={newQCorrectIdx === idx}
                           onChange={() => setNewQCorrectIdx(idx)}
-                          className="w-4 h-4 text-amber-500 bg-slate-900 border-slate-700"
+                          className="w-4 h-4 text-warning bg-nav border-line"
                           title="تحديد كإجابة صحيحة"
                         />
                         <input
@@ -544,7 +544,7 @@ export default function MarathonManagePage() {
                             setNewQOptions(updated);
                           }}
                           placeholder={`الخيار ${idx + 1}`}
-                          className="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white"
+                          className="flex-1 bg-nav border border-line rounded-xl px-3 py-2 text-xs text-content"
                         />
                       </div>
                     ))}
@@ -552,18 +552,18 @@ export default function MarathonManagePage() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-3 mt-6 pt-4 border-t border-slate-800">
+              <div className="flex items-center justify-end gap-3 mt-6 pt-4 border-t border-line">
                 <button
                   type="button"
                   onClick={() => setShowAddQModal(false)}
-                  className="px-4 py-2 rounded-xl bg-slate-800 text-slate-400 text-xs font-bold"
+                  className="px-4 py-2 rounded-xl bg-nav text-content-muted text-xs font-bold"
                 >
                   إلغاء
                 </button>
                 <button
                   type="button"
                   onClick={handleAddQuestion}
-                  className="px-5 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-slate-950 text-xs font-bold"
+                  className="px-5 py-2 rounded-xl bg-warning hover:bg-warning text-content text-xs font-bold"
                 >
                   حفظ السؤال
                 </button>
@@ -575,27 +575,27 @@ export default function MarathonManagePage() {
         {/* Modal: Add Section */}
         {showAddSecModal && (
           <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-sm w-full p-6 shadow-2xl">
-              <h3 className="text-lg font-bold text-white mb-3">إضافة قسم جديد</h3>
+            <div className="bg-nav border border-line rounded-2xl max-w-sm w-full p-6 shadow-2xl">
+              <h3 className="text-lg font-bold text-content mb-3">إضافة قسم جديد</h3>
               <input
                 type="text"
                 value={newSecTitle}
                 onChange={(e) => setNewSecTitle(e.target.value)}
                 placeholder="عنوان القسم (مثال: أولاً: أسئلة العهد القديم)"
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-sm text-white mb-4"
+                className="w-full bg-nav border border-line rounded-xl p-3 text-sm text-content mb-4"
               />
               <div className="flex items-center justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setShowAddSecModal(false)}
-                  className="px-4 py-2 rounded-xl bg-slate-800 text-slate-400 text-xs font-bold"
+                  className="px-4 py-2 rounded-xl bg-nav text-content-muted text-xs font-bold"
                 >
                   إلغاء
                 </button>
                 <button
                   type="button"
                   onClick={handleAddSection}
-                  className="px-5 py-2 rounded-xl bg-amber-600 text-slate-950 text-xs font-bold"
+                  className="px-5 py-2 rounded-xl bg-warning text-content text-xs font-bold"
                 >
                   حفظ
                 </button>

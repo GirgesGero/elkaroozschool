@@ -115,7 +115,7 @@ export default function MarathonListPage() {
   }, [router]);
 
   return (
-    <div className="min-h-screen bg-[#070b14] text-slate-100 flex flex-col selection:bg-[#c29938] selection:text-slate-950 pb-20" dir="rtl">
+    <div className="min-h-screen bg-canvas text-content flex flex-col selection:bg-gold selection:text-content" dir="rtl">
       {/* Smart Unified Header */}
       <SmartHeader
         profile={profile}
@@ -140,9 +140,9 @@ export default function MarathonListPage() {
       {/* Main Content */}
       <main className="max-w-5xl w-full mx-auto px-4 py-6 flex-1 flex flex-col gap-6 pb-28 md:pb-12">
         {/* Banner */}
-        <div className="bg-gradient-to-r from-amber-950/70 via-slate-900 to-slate-900 border border-amber-900/40 rounded-2xl p-5 shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="bg-gradient-to-r from-warning/70 via-canvas to-canvas border border-warning/40 rounded-2xl p-5 shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2 text-amber-400 mb-1 text-xs font-semibold">
+            <div className="flex items-center gap-2 text-warning mb-1 text-xs font-semibold">
               <Trophy className="w-4 h-4" />
               <span>
                 {profile?.group_id === 1 && 'الفرقة الأولى'}
@@ -150,8 +150,8 @@ export default function MarathonListPage() {
                 {profile?.group_id === 3 && 'الفرقة الثالثة'}
               </span>
             </div>
-            <h1 className="text-xl font-bold text-white">ماراثون الكتاب المقدس التفاعلي</h1>
-            <p className="text-xs text-slate-400 mt-1 max-w-xl leading-relaxed">
+            <h1 className="text-xl font-bold text-content">ماراثون الكتاب المقدس التفاعلي</h1>
+            <p className="text-xs text-content-muted mt-1 max-w-xl leading-relaxed">
               إجابة متتالية ومحفوظة بنسبة 100 درجة موزعة بالتساوي. يمكنك الإجابة على مراحل والعودة في أي وقت.
             </p>
           </div>
@@ -159,7 +159,7 @@ export default function MarathonListPage() {
           {canManage && (
             <Link
               href="/marathon/manage"
-              className="bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-800/60 font-bold px-4 py-2.5 rounded-xl text-xs flex items-center gap-2 transition-all"
+              className="bg-nav hover:bg-input text-warning border border-warning/60 font-bold px-4 py-2.5 rounded-xl text-xs flex items-center gap-2 transition-all"
             >
               <Settings className="w-4 h-4" />
               <span>إدارة الماراثون والأسئلة</span>
@@ -170,48 +170,48 @@ export default function MarathonListPage() {
         {/* Marathons List */}
         <div className="space-y-4">
           {marathons.length === 0 ? (
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 text-center text-slate-400 text-xs">
+            <div className="bg-nav border border-line rounded-2xl p-8 text-center text-content-muted text-xs">
               لا توجد مسابقات ماراثون نشطة حالياً لفرقتك الدراسية.
             </div>
           ) : (
             marathons.map((m) => (
               <div
                 key={m.id}
-                className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-5 hover:border-slate-700 transition-all"
+                className="bg-nav border border-line rounded-2xl p-5 shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-5 hover:border-line transition-all"
               >
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-950/60 text-amber-300 border border-amber-800/50">
+                    <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-canvas/60 text-warning border border-warning/50">
                       100 درجة متساوية
                     </span>
                     {m.is_completed ? (
-                      <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-950/60 text-emerald-300 border border-emerald-800/50 flex items-center gap-1">
+                      <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-canvas/60 text-success border border-success/50 flex items-center gap-1">
                         <CheckCircle2 className="w-3 h-3" />
                         <span>تم إكمال الماراثون</span>
                       </span>
                     ) : (
-                      <span className="text-xs text-slate-400">
+                      <span className="text-xs text-content-muted">
                         {m.questions_count} أسئلة
                       </span>
                     )}
                   </div>
 
-                  <h3 className="text-lg font-bold text-white mb-1">{m.title}</h3>
-                  <p className="text-xs text-slate-300 line-clamp-2 leading-relaxed mb-3">
+                  <h3 className="text-lg font-bold text-content mb-1">{m.title}</h3>
+                  <p className="text-xs text-content-secondary line-clamp-2 leading-relaxed mb-3">
                     {m.description || 'ماراثون دراسي تنافسي لمدرسة الكاروز للكتاب المقدس.'}
                   </p>
 
                   {/* Progress Bar */}
                   <div className="max-w-md">
-                    <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
+                    <div className="flex items-center justify-between text-xs text-content-muted mb-1">
                       <span>نسبة الإنجاز</span>
-                      <span className="font-mono font-bold text-amber-400">
+                      <span className="font-mono font-bold text-warning">
                         {m.trainee_progress}%
                       </span>
                     </div>
-                    <div className="w-full h-2.5 bg-slate-950 rounded-full overflow-hidden border border-slate-800">
+                    <div className="w-full h-2.5 bg-nav rounded-full overflow-hidden border border-line">
                       <div
-                        className="h-full bg-gradient-to-r from-amber-500 to-emerald-500 rounded-full transition-all duration-500"
+                        className="h-full bg-gradient-to-r from-warning to-success rounded-full transition-all duration-500"
                         style={{ width: `${m.trainee_progress}%` }}
                       />
                     </div>
@@ -223,10 +223,10 @@ export default function MarathonListPage() {
                     href={`/marathon/${m.id}`}
                     className={`w-full md:w-auto px-5 py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${
                       m.is_completed
-                        ? 'bg-slate-800 text-slate-200 hover:bg-slate-700'
+                        ? 'bg-nav text-content hover:bg-input'
                         : m.trainee_progress && m.trainee_progress > 0
-                        ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-950/40'
-                        : 'bg-amber-600 hover:bg-amber-500 text-slate-950 shadow-lg shadow-amber-950/40'
+                        ? 'bg-success hover:bg-success text-content shadow-lg shadow-emerald-950/40'
+                        : 'bg-warning hover:bg-warning text-content shadow-lg shadow-amber-950/40'
                     }`}
                   >
                     <Play className="w-4 h-4" />

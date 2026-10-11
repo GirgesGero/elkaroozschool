@@ -35,7 +35,7 @@ export default function MediaCollage({ images }: MediaCollageProps) {
 
   return (
     <>
-      <div className="my-2.5 rounded-2xl overflow-hidden border border-slate-800 bg-[#090f1d]">
+      <div className="my-2.5 rounded-2xl overflow-hidden border border-line bg-canvas">
         {/* 1 Image: Full Width */}
         {count === 1 && (
           <div
@@ -126,7 +126,7 @@ export default function MediaCollage({ images }: MediaCollageProps) {
                 />
                 {idx === 3 && count > 4 && (
                   <div className="absolute inset-0 bg-black/60 flex items-center justify-center backdrop-blur-xs">
-                    <span className="text-xl font-black text-white">+{count - 3}</span>
+                    <span className="text-xl font-black text-content">+{count - 3}</span>
                   </div>
                 )}
               </div>
@@ -141,7 +141,7 @@ export default function MediaCollage({ images }: MediaCollageProps) {
           {/* Close Button */}
           <button
             onClick={closeLightbox}
-            className="absolute top-4 right-4 p-2.5 rounded-full bg-slate-900/80 text-white hover:bg-[#c29938] hover:text-slate-950 transition-colors z-50"
+            className="absolute top-4 right-4 p-2.5 rounded-full bg-nav/80 text-content hover:bg-gold hover:text-content transition-colors z-50"
           >
             <X className="w-6 h-6" />
           </button>
@@ -151,13 +151,13 @@ export default function MediaCollage({ images }: MediaCollageProps) {
             <>
               <button
                 onClick={prevImage}
-                className="absolute right-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-slate-900/70 text-white hover:bg-[#c29938] hover:text-slate-950 transition-colors z-50"
+                className="absolute right-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-nav/70 text-content hover:bg-gold hover:text-content transition-colors z-50"
               >
                 <ChevronRight className="w-6 h-6" />
               </button>
               <button
                 onClick={nextImage}
-                className="absolute left-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-slate-900/70 text-white hover:bg-[#c29938] hover:text-slate-950 transition-colors z-50"
+                className="absolute left-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-nav/70 text-content hover:bg-gold hover:text-content transition-colors z-50"
               >
                 <ChevronLeft className="w-6 h-6" />
               </button>
@@ -176,7 +176,7 @@ export default function MediaCollage({ images }: MediaCollageProps) {
 
           {/* Counter Badge */}
           <div className="absolute bottom-6 inset-x-0 flex justify-center">
-            <span className="px-4 py-1.5 rounded-full bg-slate-900/80 border border-slate-800 text-xs font-bold text-slate-200">
+            <span className="px-4 py-1.5 rounded-full bg-nav/80 border border-line text-xs font-bold text-content">
               {activeLightboxIndex + 1} من {count}
             </span>
           </div>

@@ -1,149 +1,441 @@
-@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap');
+/* =============================================================================
+   EL KAROOZ SCHOOL — design tokens & primitives
+   -----------------------------------------------------------------------------
+   ONE brand identity: Coptic navy + gold. Gold is the single action colour in
+   every theme (darkened per theme for contrast). The previous file had three
+   themes with three different primary colours — crimson in light, crimson in
+   dark, gold in luxury — so the same button meant different things per theme.
+
+   RULE: never write a literal hex in a component. Add a token here instead.
+   ========================================================================== */
+
+/* The font is injected as --font-cairo by next/font in app/layout.tsx. Do NOT
+   re-add an @import for it here: a CSS @import of a webfont is render-blocking
+   and is exactly how the Cairo face silently failed to load before. The
+   fallback stack keeps Arabic readable if the variable is ever missing. */
+:root {
+  --font-cairo: 'Cairo', 'Tajawal', 'Segoe UI', system-ui, sans-serif;
+  --duration-smooth: 260ms;
+  --bar-height: 56px;
+}
+
+/* ---------------- THEME 1: LIGHT (paper, default) ---------------- */
+:root, .theme-light {
+  color-scheme: light;
+
+  --bg-canvas: #F7F5F0;
+  --bg-nav: #FFFFFF;
+  --bg-card: #FFFFFF;
+  --bg-card-hover: #FBFAF7;
+  --bg-card-raised: #FDFCFA;
+  --bg-input: #F2F0EA;
+  --bg-active-tab: #FBF3DC;
+  --bg-scrim: rgba(20, 27, 45, 0.45);
+
+  --border-card: #E2DED4;
+  --border-subtle: #EFECE4;
+
+  --text-primary: #141B2D;
+  --text-secondary: #4A5573;
+  /* Was #8A8D91 -> 3.1:1 on white. #6B7387 gives 4.35:1 on the cream canvas,
+     which is still under AA 4.5 for body text. #616A80 clears it at 5.1:1. */
+  --text-muted: #616A80;
+  --text-active-tab: #8A6A12;
+
+  --brand-primary: #8A6A12;
+  --brand-primary-hover: #6E5410;
+  --brand-primary-text: #FFFFFF;
+  --brand-gold: #8A6A12;
+  --brand-gold-bright: #C5A059;
+  --brand-gold-text: #6E5410;
+  --brand-navy: #0B1B3D;
+
+  --btn-secondary-bg: #EFECE4;
+  --btn-secondary-text: #141B2D;
+  --btn-secondary-hover: #E4E0D6;
+
+  --color-success: #1F7A4D;
+  --color-warning: #9A6400;
+  --color-danger: #B42318;
+  --color-info: #1F5FA8;
+
+  --selection-bg: #F0DFA8;
+  --selection-text: #141B2D;
+
+  --watermark-opacity: 0.04;
+  --shadow-card: 0 1px 2px rgba(11, 27, 61, 0.06);
+  --shadow-card-elevated: 0 6px 20px rgba(11, 27, 61, 0.1), 0 1px 3px rgba(11, 27, 61, 0.05);
+  --shadow-overlay: 0 16px 48px rgba(11, 27, 61, 0.18);
+  --shadow-gold: 0 4px 16px rgba(138, 106, 18, 0.18);
+  /* RGB channel triplets. Tailwind's <alpha-value> needs channels to
+     implement `bg-nav/80`; a hex var() cannot express alpha, so the modifier
+     was silently dropped and the class produced no CSS at all. */
+  --rgb-canvas: 247 245 240;
+  --rgb-nav: 255 255 255;
+  --rgb-card: 255 255 255;
+  --rgb-card-hover: 251 250 247;
+  --rgb-input: 242 240 234;
+  --rgb-line: 226 222 212;
+  --rgb-line-subtle: 239 236 228;
+  --rgb-text: 20 27 45;
+  --rgb-text-secondary: 74 85 115;
+  --rgb-text-muted: 97 106 128;
+  --rgb-brand: 138 106 18;
+  --rgb-gold: 138 106 18;
+}
+
+/* ---------------- THEME 2: DARK (graphite) ---------------- */
+.theme-dark {
+  color-scheme: dark;
+
+  --bg-canvas: #14161A;
+  --bg-nav: #1D1F24;
+  --bg-card: #1D1F24;
+  --bg-card-hover: #2A2D33;
+  --bg-card-raised: #24272D;
+  --bg-input: #2A2D33;
+  --bg-active-tab: #33301F;
+  --bg-scrim: rgba(0, 0, 0, 0.62);
+
+  --border-card: #34373E;
+  --border-subtle: #2A2D33;
+
+  --text-primary: #EDEEF0;
+  --text-secondary: #B6BAC2;
+  /* Was #8A8D91 -> 4.6:1, borderline. Now 6.4:1. */
+  --text-muted: #9AA0AA;
+  --text-active-tab: #E5C158;
+
+  --brand-primary: #E5C158;
+  --brand-primary-hover: #F0D27A;
+  --brand-primary-text: #14161A;
+  --brand-gold: #E5C158;
+  --brand-gold-bright: #F0D27A;
+  --brand-gold-text: #E5C158;
+  --brand-navy: #1E2D4A;
+
+  --btn-secondary-bg: #2A2D33;
+  --btn-secondary-text: #EDEEF0;
+  --btn-secondary-hover: #3A3E45;
+
+  --color-success: #4ADE80;
+  --color-warning: #FBBF24;
+  --color-danger: #F87171;
+  --color-info: #60A5FA;
+
+  --selection-bg: #4A3F1A;
+  --selection-text: #F0D27A;
+
+  --watermark-opacity: 0.06;
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.5);
+  --shadow-card-elevated: 0 6px 24px rgba(0, 0, 0, 0.6);
+  --shadow-overlay: 0 16px 48px rgba(0, 0, 0, 0.7);
+  --shadow-gold: 0 4px 16px rgba(229, 193, 88, 0.12);
+  --rgb-canvas: 20 22 26;
+  --rgb-nav: 29 31 36;
+  --rgb-card: 29 31 36;
+  --rgb-card-hover: 42 45 51;
+  --rgb-input: 42 45 51;
+  --rgb-line: 52 55 62;
+  --rgb-line-subtle: 42 45 51;
+  --rgb-text: 237 238 240;
+  --rgb-text-secondary: 182 186 194;
+  --rgb-text-muted: 154 160 170;
+  --rgb-brand: 229 193 88;
+  --rgb-gold: 229 193 88;
+}
+
+/* ---------------- THEME 3: COPTIC LUXURY (navy + gold, flagship) ---------------- */
+.theme-luxury {
+  color-scheme: dark;
+
+  --bg-canvas: #070B14;
+  --bg-nav: #0B1324;
+  --bg-card: #0E182D;
+  --bg-card-hover: #16233F;
+  --bg-card-raised: #16233F;
+  --bg-input: #131F37;
+  --bg-active-tab: #1F2D4B;
+  --bg-scrim: rgba(3, 6, 12, 0.72);
+
+  --border-card: #253556;
+  --border-subtle: #1A2844;
+
+  --text-primary: #F5F7FA;
+  --text-secondary: #9EABCA;
+  /* Was #607196 -> 4.03:1 on #070B14. Now 6.1:1. */
+  --text-muted: #8494BC;
+  --text-active-tab: #D4AF37;
+
+  --brand-primary: #D4AF37;
+  --brand-primary-hover: #E5C158;
+  --brand-primary-text: #070B14;
+  --brand-gold: #D4AF37;
+  --brand-gold-bright: #E5C158;
+  --brand-gold-text: #D4AF37;
+  --brand-navy: #0B1324;
+
+  --btn-secondary-bg: #182744;
+  --btn-secondary-text: #D4AF37;
+  --btn-secondary-hover: #223459;
+
+  --color-success: #4ADE80;
+  --color-warning: #FBBF24;
+  --color-danger: #F87171;
+  --color-info: #7FA9E8;
+
+  --selection-bg: #4A3F1A;
+  --selection-text: #F0D27A;
+
+  --watermark-opacity: 0.09;
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.5), 0 0 12px rgba(212, 175, 55, 0.05);
+  --shadow-card-elevated: 0 8px 30px rgba(0, 0, 0, 0.6), 0 0 20px rgba(212, 175, 55, 0.1);
+  --shadow-overlay: 0 20px 56px rgba(0, 0, 0, 0.75);
+  --shadow-gold: 0 4px 20px rgba(212, 175, 55, 0.18);
+  --rgb-canvas: 7 11 20;
+  --rgb-nav: 11 19 36;
+  --rgb-card: 14 24 45;
+  --rgb-card-hover: 22 35 63;
+  --rgb-input: 19 31 55;
+  --rgb-line: 37 53 86;
+  --rgb-line-subtle: 26 40 68;
+  --rgb-text: 245 247 250;
+  --rgb-text-secondary: 158 171 202;
+  --rgb-text-muted: 132 148 188;
+  --rgb-brand: 212 175 55;
+  --rgb-gold: 212 175 55;
+}
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* ---------------- THEME 1: CLASSIC FACEBOOK LIGHT (DEFAULT) ---------------- */
-:root, .theme-light {
-  --font-cairo: 'Cairo', Tajawal, sans-serif;
-  --bg-canvas: #F0F2F5;
-  --bg-nav: #FFFFFF;
-  --bg-card: #FFFFFF;
-  --bg-card-hover: #F7F8FA;
-  --border-card: #E4E6EB;
-  --border-subtle: #ECEFF3;
-  --bg-input: #F0F2F5;
-  --bg-active-tab: #FDF3F4;
-  --text-active-tab: #7B0017;
-  --text-primary: #050505;
-  --text-secondary: #65676B;
-  --text-muted: #8A8D91;
-  --brand-primary: #7B0017;
-  --brand-primary-hover: #600012;
-  --brand-primary-text: #FFFFFF;
-  --brand-gold: #C5A059;
-  --brand-navy: #0B1B3D;
-  --btn-secondary-bg: #E4E6EB;
-  --btn-secondary-text: #050505;
-  --btn-secondary-hover: #D8DADF;
-  --watermark-opacity: 0.04;
-  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.08);
-  --shadow-card-elevated: 0 4px 16px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
+/* =============================================================================
+   BASE
+   ========================================================================== */
+
+@layer base {
+  html {
+    /* Set on <html>, not <body>: Tailwind's `font-sans` utility on <body>
+       previously overrode the stylesheet here, so the imported Arabic face
+       never applied and Arabic fell back to a different face per device. */
+    font-family: var(--font-cairo);
+    /* 1.85, not 1.5: Arabic descenders (ج، ح، خ، ص) and stacked marks collide
+       at Latin leading. */
+    line-height: 1.85;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  body {
+    font-family: var(--font-cairo);
+    direction: rtl;
+    text-align: right;
+    background-color: var(--bg-canvas);
+    color: var(--text-primary);
+    -webkit-tap-highlight-color: transparent;
+    /* Kills the 300ms tap delay on touch devices. */
+    touch-action: manipulation;
+    overflow-wrap: break-word;
+    transition: background-color var(--duration-smooth) cubic-bezier(0.4, 0, 0.2, 1),
+      color var(--duration-smooth) cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Long-form Arabic must not run the full width of a tablet. */
+  .app-prose {
+    max-width: 68ch;
+    line-height: 1.9;
+  }
+
+  ::selection {
+    background-color: var(--selection-bg);
+    color: var(--selection-text);
+  }
+
+  /* One visible focus ring everywhere. :focus-visible only, so it never
+     appears on mouse clicks but always does for keyboard users. */
+  :focus-visible {
+    outline: 2px solid var(--brand-primary);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  /* A fixed bottom nav must never cover the last item of a scrolled list. */
+  body.has-bottom-nav {
+    padding-bottom: calc(var(--bar-height) + env(safe-area-inset-bottom, 0px) + 16px);
+  }
 }
 
-/* ---------------- THEME 2: MODERN FACEBOOK DARK ---------------- */
-.theme-dark {
-  --bg-canvas: #18191A;
-  --bg-nav: #242526;
-  --bg-card: #242526;
-  --bg-card-hover: #3A3B3C;
-  --border-card: #393A3B;
-  --border-subtle: #2F3031;
-  --bg-input: #3A3B3C;
-  --bg-active-tab: #38171E;
-  --text-active-tab: #FA383E;
-  --text-primary: #E4E6EB;
-  --text-secondary: #B0B3B8;
-  --text-muted: #8A8D91;
-  --brand-primary: #9E1B32;
-  --brand-primary-hover: #7B0017;
-  --brand-primary-text: #FFFFFF;
-  --brand-gold: #D4AF37;
-  --brand-navy: #1E2D4A;
-  --btn-secondary-bg: #3A3B3C;
-  --btn-secondary-text: #E4E6EB;
-  --btn-secondary-hover: #4E4F50;
-  --watermark-opacity: 0.06;
-  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3);
-  --shadow-card-elevated: 0 4px 20px rgba(0, 0, 0, 0.45);
-}
+/* =============================================================================
+   PRIMITIVES
+   Two shapes only. Circles for authentication/round actions, rectangles for
+   content and work. The old UI applied 9999px to nearly everything, which
+   erased hierarchy and read as a generic pill-card kit.
+   ========================================================================== */
 
-/* ---------------- THEME 3: COPTIC LUXURY NAVY & GOLD ---------------- */
-.theme-luxury {
-  --bg-canvas: #070B14;
-  --bg-nav: #0B1324;
-  --bg-card: #0E182D;
-  --bg-card-hover: #16233F;
-  --border-card: #253556;
-  --border-subtle: #1A2844;
-  --bg-input: #131F37;
-  --bg-active-tab: #1F2D4B;
-  --text-active-tab: #D4AF37;
-  --text-primary: #F5F7FA;
-  --text-secondary: #9EABCA;
-  --text-muted: #607196;
-  --brand-primary: #D4AF37;
-  --brand-primary-hover: #B89428;
-  --brand-primary-text: #070B14;
-  --brand-gold: #E5C158;
-  --brand-navy: #0B1324;
-  --btn-secondary-bg: #182744;
-  --btn-secondary-text: #D4AF37;
-  --btn-secondary-hover: #223459;
-  --watermark-opacity: 0.09;
-  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.5), 0 0 12px rgba(212, 175, 55, 0.05);
-  --shadow-card-elevated: 0 8px 30px rgba(0, 0, 0, 0.6), 0 0 20px rgba(212, 175, 55, 0.1);
-}
+@layer components {
+  .app-card {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-card);
+    border-radius: 14px;
+    box-shadow: var(--shadow-card);
+    transition: background-color 180ms cubic-bezier(0.4, 0, 0.2, 1),
+      border-color 180ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
 
-body {
-  font-family: var(--font-cairo);
-  direction: rtl;
-  text-align: right;
-  background-color: var(--bg-canvas);
-  color: var(--text-primary);
-  -webkit-tap-highlight-color: transparent;
-  transition: background-color 0.25s ease, color 0.25s ease;
-}
+  .app-card-elevated {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-card);
+    border-radius: 20px;
+    box-shadow: var(--shadow-card-elevated);
+  }
 
-/* App surface elements */
-.app-card {
-  background-color: var(--bg-card);
-  border: 1px solid var(--border-card);
-  box-shadow: var(--shadow-card);
-  border-radius: 12px;
-}
+  .app-card-interactive {
+    cursor: pointer;
+    min-height: 44px;
+  }
 
-.app-card-elevated {
-  background-color: var(--bg-card);
-  border: 1px solid var(--border-card);
-  box-shadow: var(--shadow-card-elevated);
-  border-radius: 16px;
-}
+  .app-card-interactive:hover {
+    background-color: var(--bg-card-hover);
+    border-color: var(--brand-primary);
+  }
 
-.app-input {
-  background-color: var(--bg-input);
-  border: 1px solid var(--border-card);
-  color: var(--text-primary);
-}
+  /* Press feedback must not move the element — no scale/translate, which used
+     to shift surrounding content and cause visible jitter. */
+  .app-card-interactive:active {
+    background-color: var(--bg-card-hover);
+  }
 
-.app-input:focus {
-  border-color: var(--brand-primary);
-  outline: none;
-}
+  .app-input {
+    width: 100%;
+    min-height: 48px;
+    padding-inline: 16px;
+    background-color: var(--bg-input);
+    border: 1px solid var(--border-card);
+    border-radius: 12px;
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 16px; /* < 16px triggers iOS zoom-on-focus */
+    line-height: 1.6;
+    transition: border-color 180ms cubic-bezier(0.4, 0, 0.2, 1),
+      box-shadow 180ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
 
-.app-btn-primary {
-  background-color: var(--brand-primary);
-  color: var(--brand-primary-text);
-  font-weight: 700;
-  border-radius: 10px;
-  transition: all 0.15s ease;
-}
+  .app-input::placeholder {
+    color: var(--text-muted);
+  }
 
-.app-btn-primary:hover {
-  background-color: var(--brand-primary-hover);
-}
+  .app-input:focus {
+    outline: none;
+    border-color: var(--brand-primary);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-primary) 22%, transparent);
+  }
 
-.app-btn-secondary {
-  background-color: var(--btn-secondary-bg);
-  color: var(--btn-secondary-text);
-  font-weight: 600;
-  border-radius: 10px;
-  transition: all 0.15s ease;
-}
+  .app-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 44px;
+    padding-inline: 20px;
+    border-radius: 12px;
+    font-weight: 700;
+    font-family: inherit;
+    font-size: 0.9375rem;
+    cursor: pointer;
+    transition: background-color 180ms cubic-bezier(0.4, 0, 0.2, 1),
+      color 180ms cubic-bezier(0.4, 0, 0.2, 1), opacity 180ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
 
-.app-btn-secondary:hover {
-  background-color: var(--btn-secondary-hover);
+  .app-btn-primary {
+    background-color: var(--brand-primary);
+    color: var(--brand-primary-text);
+    box-shadow: var(--shadow-gold);
+  }
+
+  .app-btn-primary:hover {
+    background-color: var(--brand-primary-hover);
+  }
+
+  .app-btn-secondary {
+    background-color: var(--btn-secondary-bg);
+    color: var(--btn-secondary-text);
+  }
+
+  .app-btn-secondary:hover {
+    background-color: var(--btn-secondary-hover);
+  }
+
+  .app-btn-ghost {
+    background-color: transparent;
+    color: var(--text-secondary);
+  }
+
+  .app-btn-ghost:hover {
+    background-color: var(--bg-card-hover);
+    color: var(--text-primary);
+  }
+
+  /* Disabled must look disabled and stop responding. */
+  .app-btn:disabled,
+  .app-btn[aria-disabled='true'] {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+    box-shadow: none;
+  }
+
+  /* Every icon-only control gets this: 44px hit area regardless of glyph
+     size, with the icon optically centred. */
+  .tap-target {
+    min-width: 44px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    color: var(--text-secondary);
+    transition: background-color 180ms cubic-bezier(0.4, 0, 0.2, 1),
+      color 180ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .tap-target:hover {
+    background-color: var(--bg-card-hover);
+    color: var(--text-primary);
+  }
+
+  .tap-target:active {
+    background-color: var(--bg-active-tab);
+    color: var(--text-active-tab);
+  }
+
+  .app-section-title {
+    font-size: 1.1875rem;
+    font-weight: 700;
+    line-height: 1.5;
+    color: var(--text-primary);
+  }
+
+  .app-label {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--text-secondary);
+  }
+
+  .app-meta {
+    font-size: 0.75rem;
+    font-weight: 500;
+    line-height: 1.4;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+  }
+
+  /* Divider that stays visible in every theme. */
+  .app-divider {
+    border: 0;
+    border-top: 1px solid var(--border-card);
+  }
 }
 
 /* Custom scrollbars */
@@ -163,4 +455,21 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--text-muted);
+}
+
+/* =============================================================================
+   REDUCED MOTION
+   Transitions answer an action (open, expand, confirm). When the user asks for
+   less motion they are removed, not merely shortened.
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

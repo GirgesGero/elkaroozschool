@@ -274,7 +274,7 @@ export default function AttendancePage() {
   });
 
   return (
-    <div className="min-h-screen bg-[#070b14] text-slate-100 flex flex-col selection:bg-[#c29938] selection:text-slate-950 pb-20" dir="rtl">
+    <div className="min-h-screen bg-canvas text-content flex flex-col selection:bg-gold selection:text-content" dir="rtl">
       {/* Smart Unified Header */}
       <SmartHeader
         profile={profile}
@@ -299,7 +299,7 @@ export default function AttendancePage() {
       {/* Main Content */}
       <main className="max-w-6xl w-full mx-auto px-4 py-6 flex-1 flex flex-col gap-6 pb-28 md:pb-12">
         {/* Top Control Bar with Group Selector */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-3xl bg-[#0a101d] border border-slate-800 shadow-xl">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-3xl bg-canvas border border-line shadow-xl">
           <div className="flex items-center gap-3">
             {isAdminOrSuper && (
               <GroupSelector
@@ -309,29 +309,29 @@ export default function AttendancePage() {
               />
             )}
             <div>
-              <span className="font-bold text-base text-[#c29938] block">الحضور والافتقاد الأسبوعي</span>
-              <span className="text-[11px] text-slate-400">
+              <span className="font-bold text-base text-gold block">الحضور والافتقاد الأسبوعي</span>
+              <span className="text-[11px] text-content-muted">
                 {selectedGroupId === 1 ? 'الفرقة الأولى' : selectedGroupId === 2 ? 'الفرقة الثانية' : 'الفرقة الثالثة'}
               </span>
             </div>
           </div>
         </div>
         {/* Banner */}
-        <div className="bg-gradient-to-r from-emerald-950/60 via-slate-900 to-slate-900 border border-emerald-900/40 rounded-2xl p-5 shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="bg-gradient-to-r from-success/60 via-canvas to-canvas border border-success/40 rounded-2xl p-5 shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <div className="flex items-center gap-2 text-emerald-400 mb-1 text-xs font-semibold">
+            <div className="flex items-center gap-2 text-success mb-1 text-xs font-semibold">
               <Calendar className="w-4 h-4" />
               <span>دورة الجمعة الأسبوعية</span>
             </div>
-            <h1 className="text-xl font-bold text-white">نظام الحضور والافتقاد الكنسي</h1>
-            <p className="text-xs text-slate-400 mt-1">
+            <h1 className="text-xl font-bold text-content">نظام الحضور والافتقاد الكنسي</h1>
+            <p className="text-xs text-content-muted mt-1">
               تفتح جلسة الجمعة وتغلق نهائياً بنهاية يوم الأربعاء (قفل الخميس الإجباري).
             </p>
           </div>
 
           <Link
             href={`/groups/${selectedGroupId}`}
-            className="px-4 py-2 rounded-xl bg-karooz-gold text-slate-950 text-xs font-bold hover:bg-karooz-gold-light transition-colors self-start sm:self-auto flex items-center gap-1.5"
+            className="px-4 py-2 rounded-xl bg-gold text-content text-xs font-bold hover:bg-gold-light transition-colors self-start sm:self-auto flex items-center gap-1.5"
           >
             <span>عرض تفاصيل الفرقة كاملة</span>
             <ChevronLeft className="w-4 h-4" />
@@ -339,8 +339,8 @@ export default function AttendancePage() {
         </div>
 
         {notice && (
-          <div className="p-3.5 bg-blue-950/60 border border-blue-800/60 text-blue-200 rounded-xl text-xs flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 text-blue-400 flex-shrink-0" />
+          <div className="p-3.5 bg-canvas/60 border border-line-subtle/60 text-info rounded-xl text-xs flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-info flex-shrink-0" />
             <span>{notice}</span>
           </div>
         )}
@@ -349,44 +349,44 @@ export default function AttendancePage() {
         {profile?.role_id === 'trainee' && (
           <div className="space-y-6">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
-              <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl text-center">
-                <span className="text-xs text-slate-400 block mb-1">نسبة الحضور</span>
-                <span className="text-2xl font-bold text-white">
+              <div className="bg-nav border border-line p-4 rounded-xl text-center">
+                <span className="text-xs text-content-muted block mb-1">نسبة الحضور</span>
+                <span className="text-2xl font-bold text-content">
                   {personalSummary?.percentage || 0}%
                 </span>
               </div>
 
-              <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl text-center">
-                <span className="text-xs text-slate-400 block mb-1">التقدير العام</span>
-                <span className="text-lg font-bold text-emerald-400">
+              <div className="bg-nav border border-line p-4 rounded-xl text-center">
+                <span className="text-xs text-content-muted block mb-1">التقدير العام</span>
+                <span className="text-lg font-bold text-success">
                   {personalSummary?.appreciation_grade || '—'}
                 </span>
               </div>
 
-              <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl text-center">
-                <span className="text-xs text-slate-400 block mb-1">حاضر</span>
-                <span className="text-2xl font-bold text-emerald-400">
+              <div className="bg-nav border border-line p-4 rounded-xl text-center">
+                <span className="text-xs text-content-muted block mb-1">حاضر</span>
+                <span className="text-2xl font-bold text-success">
                   {personalSummary?.present_count || 0}
                 </span>
               </div>
 
-              <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl text-center">
-                <span className="text-xs text-slate-400 block mb-1">غياب</span>
-                <span className="text-2xl font-bold text-rose-400">
+              <div className="bg-nav border border-line p-4 rounded-xl text-center">
+                <span className="text-xs text-content-muted block mb-1">غياب</span>
+                <span className="text-2xl font-bold text-danger">
                   {personalSummary?.absent_count || 0}
                 </span>
               </div>
             </div>
 
             {/* Attendance History */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-md">
-              <h3 className="font-bold text-base text-white mb-4 flex items-center gap-2">
-                <Award className="w-5 h-5 text-karooz-gold" />
+            <div className="bg-nav border border-line rounded-2xl p-5 shadow-md">
+              <h3 className="font-bold text-base text-content mb-4 flex items-center gap-2">
+                <Award className="w-5 h-5 text-gold" />
                 <span>سجل الحضور الأسبوعي</span>
               </h3>
 
               {personalRecords.length === 0 ? (
-                <div className="text-center py-6 text-slate-500 text-xs bg-slate-950/50 rounded-xl border border-slate-800/60">
+                <div className="text-center py-6 text-content-muted text-xs bg-nav/50 rounded-xl border border-line/60">
                   لا توجد سجلات حضور مسجلة حتى الآن.
                 </div>
               ) : (
@@ -394,29 +394,29 @@ export default function AttendancePage() {
                   {personalRecords.map((rec) => (
                     <div
                       key={rec.id}
-                      className="bg-slate-950/80 border border-slate-800/80 p-3.5 rounded-xl flex items-center justify-between"
+                      className="bg-nav/80 border border-line/80 p-3.5 rounded-xl flex items-center justify-between"
                     >
                       <div className="flex items-center gap-2.5">
-                        <Calendar className="w-4 h-4 text-slate-400" />
-                        <span className="text-sm font-semibold text-white">
+                        <Calendar className="w-4 h-4 text-content-muted" />
+                        <span className="text-sm font-semibold text-content">
                           جمعة {rec.attendance_sessions?.session_date}
                         </span>
                       </div>
                       <div>
                         {rec.status === 'PRESENT' && (
-                          <span className="px-3 py-1 bg-emerald-950/60 text-emerald-300 border border-emerald-800/50 text-xs font-bold rounded-lg flex items-center gap-1.5">
+                          <span className="px-3 py-1 bg-canvas/60 text-success border border-success/50 text-xs font-bold rounded-lg flex items-center gap-1.5">
                             <CheckCircle2 className="w-3.5 h-3.5" />
                             <span>حاضر</span>
                           </span>
                         )}
                         {rec.status === 'ABSENT' && (
-                          <span className="px-3 py-1 bg-rose-950/60 text-rose-300 border border-rose-800/50 text-xs font-bold rounded-lg flex items-center gap-1.5">
+                          <span className="px-3 py-1 bg-canvas/60 text-danger border border-danger/50 text-xs font-bold rounded-lg flex items-center gap-1.5">
                             <UserX className="w-3.5 h-3.5" />
                             <span>غائب</span>
                           </span>
                         )}
                         {rec.status === 'LATE' && (
-                          <span className="px-3 py-1 bg-amber-950/60 text-amber-300 border border-amber-800/50 text-xs font-bold rounded-lg flex items-center gap-1.5">
+                          <span className="px-3 py-1 bg-canvas/60 text-warning border border-warning/50 text-xs font-bold rounded-lg flex items-center gap-1.5">
                             <Clock className="w-3.5 h-3.5" />
                             <span>متأخر</span>
                           </span>
@@ -434,16 +434,16 @@ export default function AttendancePage() {
         {profile?.role_id !== 'trainee' && (
           <div className="space-y-6">
             {/* Session Selector & Stats Bar */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4 shadow-lg">
+            <div className="bg-nav border border-line rounded-2xl p-5 space-y-4 shadow-lg">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-slate-400 mb-1.5">
+                  <label className="block text-xs font-bold text-content-muted mb-1.5">
                     اختر جلسة الجمعة لرصد الحضور:
                   </label>
                   <select
                     value={selectedSessionId}
                     onChange={(e) => handleSessionChange(e.target.value)}
-                    className="bg-slate-950 border border-slate-700 text-karooz-gold text-sm rounded-xl px-4 py-2.5 focus:outline-none focus:border-karooz-gold font-bold"
+                    className="bg-nav border border-line text-gold text-sm rounded-xl px-4 py-2.5 focus:outline-none focus:border-gold font-bold"
                   >
                     {sessions.map((sess) => (
                       <option key={sess.id} value={sess.id}>
@@ -457,7 +457,7 @@ export default function AttendancePage() {
                   <button
                     onClick={() => setIsQRScannerOpen(true)}
                     disabled={!selectedSessionId || isSessionLocked}
-                    className="px-4 py-2.5 rounded-xl bg-[#c29938] hover:bg-amber-400 disabled:opacity-40 disabled:hover:bg-[#c29938] text-slate-950 text-xs font-black transition-all shadow-md flex items-center gap-2"
+                    className="px-4 py-2.5 rounded-xl bg-gold hover:bg-warning disabled:opacity-40 disabled:hover:bg-gold text-content text-xs font-black transition-all shadow-md flex items-center gap-2"
                   >
                     <QrCode className="w-4 h-4" />
                     <span>مسح رمز QR</span>
@@ -465,7 +465,7 @@ export default function AttendancePage() {
                   </button>
 
                   {isSessionLocked && (
-                    <div className="flex items-center gap-2 bg-rose-950/50 border border-rose-800/60 text-rose-300 px-3.5 py-2 rounded-xl text-xs font-semibold">
+                    <div className="flex items-center gap-2 bg-canvas/50 border border-danger/60 text-danger px-3.5 py-2 rounded-xl text-xs font-semibold">
                       <Lock className="w-4 h-4" />
                       <span>الجلسة مغلقة نهائياً</span>
                     </div>
@@ -474,96 +474,96 @@ export default function AttendancePage() {
               </div>
 
               {/* Live Count Pills (Clickable Filter) */}
-              <div className="grid grid-cols-4 gap-2 pt-3 border-t border-slate-800 text-center">
+              <div className="grid grid-cols-4 gap-2 pt-3 border-t border-line text-center">
                 <button
                   onClick={() => setStatusFilter('all')}
                   className={`p-2.5 rounded-xl border transition-all ${
                     statusFilter === 'all'
-                      ? 'bg-slate-800 border-slate-600 text-white font-bold'
-                      : 'bg-slate-950/40 border-slate-800 text-slate-400 hover:bg-slate-800'
+                      ? 'bg-nav border-line-subtle text-content font-bold'
+                      : 'bg-nav/40 border-line text-content-muted hover:bg-nav'
                   }`}
                 >
                   <span className="block text-[11px]">الكل</span>
-                  <span className="text-sm font-bold text-slate-100">{traineeRows.length}</span>
+                  <span className="text-sm font-bold text-content">{traineeRows.length}</span>
                 </button>
 
                 <button
                   onClick={() => setStatusFilter('PRESENT')}
                   className={`p-2.5 rounded-xl border transition-all ${
                     statusFilter === 'PRESENT'
-                      ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300 font-bold'
-                      : 'bg-slate-950/40 border-slate-800 text-slate-400 hover:bg-emerald-500/10'
+                      ? 'bg-success/20 border-success text-success font-bold'
+                      : 'bg-nav/40 border-line text-content-muted hover:bg-success/10'
                   }`}
                 >
-                  <span className="block text-[11px] text-emerald-400">حاضر</span>
-                  <span className="text-sm font-bold text-emerald-300">{presentCount}</span>
+                  <span className="block text-[11px] text-success">حاضر</span>
+                  <span className="text-sm font-bold text-success">{presentCount}</span>
                 </button>
 
                 <button
                   onClick={() => setStatusFilter('ABSENT')}
                   className={`p-2.5 rounded-xl border transition-all ${
                     statusFilter === 'ABSENT'
-                      ? 'bg-rose-500/20 border-rose-500 text-rose-300 font-bold'
-                      : 'bg-slate-950/40 border-slate-800 text-slate-400 hover:bg-rose-500/10'
+                      ? 'bg-danger/20 border-danger text-danger font-bold'
+                      : 'bg-nav/40 border-line text-content-muted hover:bg-danger/10'
                   }`}
                 >
-                  <span className="block text-[11px] text-rose-400">غائب (الافتقاد)</span>
-                  <span className="text-sm font-bold text-rose-300">{absentCount}</span>
+                  <span className="block text-[11px] text-danger">غائب (الافتقاد)</span>
+                  <span className="text-sm font-bold text-danger">{absentCount}</span>
                 </button>
 
                 <button
                   onClick={() => setStatusFilter('LATE')}
                   className={`p-2.5 rounded-xl border transition-all ${
                     statusFilter === 'LATE'
-                      ? 'bg-amber-500/20 border-amber-500 text-amber-300 font-bold'
-                      : 'bg-slate-950/40 border-slate-800 text-slate-400 hover:bg-amber-500/10'
+                      ? 'bg-warning/20 border-warning text-warning font-bold'
+                      : 'bg-nav/40 border-line text-content-muted hover:bg-warning/10'
                   }`}
                 >
-                  <span className="block text-[11px] text-amber-400">متأخر</span>
-                  <span className="text-sm font-bold text-amber-300">{lateCount}</span>
+                  <span className="block text-[11px] text-warning">متأخر</span>
+                  <span className="text-sm font-bold text-warning">{lateCount}</span>
                 </button>
               </div>
             </div>
 
             {/* Trainees Checklist */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
+            <div className="bg-nav border border-line rounded-2xl p-5 shadow-xl space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <h3 className="font-bold text-base text-white flex items-center gap-2">
-                  <Users className="w-5 h-5 text-karooz-gold" />
+                <h3 className="font-bold text-base text-content flex items-center gap-2">
+                  <Users className="w-5 h-5 text-gold" />
                   <span>قائمة متدربي الفرقة ({filteredRows.length})</span>
                 </h3>
 
                 <div className="relative w-full sm:w-64">
-                  <Search className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2" />
+                  <Search className="w-4 h-4 text-content-muted absolute right-3 top-1/2 -translate-y-1/2" />
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="بحث في القائمة..."
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl pr-9 pl-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-karooz-gold"
+                    className="w-full bg-nav border border-line rounded-xl pr-9 pl-3 py-1.5 text-xs text-content placeholder-content-muted focus:outline-none focus:border-gold"
                   />
                 </div>
               </div>
 
               {filteredRows.length > 0 ? (
-                <div className="divide-y divide-slate-800/80">
+                <div className="divide-y divide-line-subtle/80">
                   {filteredRows.map((t) => (
                     <div
                       key={t.trainee_id}
-                      className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-950/30 px-2 rounded-xl transition-colors"
+                      className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-nav/30 px-2 rounded-xl transition-colors"
                     >
                       <div
                         onClick={() => openDrawer(t.trainee_id)}
                         className="flex items-center gap-3 cursor-pointer flex-1"
                       >
-                        <div className="w-9 h-9 rounded-xl bg-slate-800 text-karooz-gold flex items-center justify-center font-bold text-sm">
+                        <div className="w-9 h-9 rounded-xl bg-nav text-gold flex items-center justify-center font-bold text-sm">
                           {t.full_name.charAt(0)}
                         </div>
                         <div>
-                          <span className="font-bold text-sm text-slate-100 hover:text-karooz-gold transition-colors block">
+                          <span className="font-bold text-sm text-content hover:text-gold transition-colors block">
                             {t.full_name}
                           </span>
-                          <span className="text-xs text-slate-400 font-mono">@{t.username} • {t.phone || 'بدون هاتف'}</span>
+                          <span className="text-xs text-content-muted font-mono">@{t.username} • {t.phone || 'بدون هاتف'}</span>
                         </div>
                       </div>
 
@@ -574,8 +574,8 @@ export default function AttendancePage() {
                           onClick={() => handleMarkAttendance(t.trainee_id, 'PRESENT')}
                           className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
                             t.status === 'PRESENT'
-                              ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
-                              : 'bg-slate-800 text-slate-400 hover:bg-emerald-500/20 hover:text-emerald-300'
+                              ? 'bg-success text-content shadow-md shadow-emerald-500/20'
+                              : 'bg-nav text-content-muted hover:bg-success/20 hover:text-success'
                           } disabled:opacity-50`}
                         >
                           حاضر ✓
@@ -585,8 +585,8 @@ export default function AttendancePage() {
                           onClick={() => handleMarkAttendance(t.trainee_id, 'ABSENT')}
                           className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
                             t.status === 'ABSENT'
-                              ? 'bg-rose-500 text-slate-950 shadow-md shadow-rose-500/20'
-                              : 'bg-slate-800 text-slate-400 hover:bg-rose-500/20 hover:text-rose-300'
+                              ? 'bg-danger text-content shadow-md shadow-rose-500/20'
+                              : 'bg-nav text-content-muted hover:bg-danger/20 hover:text-danger'
                           } disabled:opacity-50`}
                         >
                           غائب ✕
@@ -596,8 +596,8 @@ export default function AttendancePage() {
                           onClick={() => handleMarkAttendance(t.trainee_id, 'LATE')}
                           className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
                             t.status === 'LATE'
-                              ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
-                              : 'bg-slate-800 text-slate-400 hover:bg-amber-500/20 hover:text-amber-300'
+                              ? 'bg-warning text-content shadow-md shadow-amber-500/20'
+                              : 'bg-nav text-content-muted hover:bg-warning/20 hover:text-warning'
                           } disabled:opacity-50`}
                         >
                           متأخر ⏱
@@ -605,7 +605,7 @@ export default function AttendancePage() {
 
                         <button
                           onClick={() => openDrawer(t.trainee_id)}
-                          className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
+                          className="p-2 rounded-xl bg-nav hover:bg-input text-content-secondary transition-colors"
                           title="عرض ملف الطالب"
                         >
                           <Eye className="w-4 h-4" />
@@ -615,7 +615,7 @@ export default function AttendancePage() {
                   ))}
                 </div>
               ) : (
-                <div className="p-8 text-center text-xs text-slate-400 bg-slate-950/40 rounded-xl border border-slate-800">
+                <div className="p-8 text-center text-xs text-content-muted bg-nav/40 rounded-xl border border-line">
                   لا توجد نتائج مطابقة للتصفية.
                 </div>
               )}

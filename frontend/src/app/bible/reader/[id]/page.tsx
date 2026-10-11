@@ -48,10 +48,10 @@ export default function ArticleReaderPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#070b14] flex items-center justify-center" dir="rtl">
+      <div className="min-h-screen bg-canvas flex items-center justify-center" dir="rtl">
         <div className="text-center">
-          <Loader2 className="w-12 h-12 text-[#c29938] animate-spin mx-auto mb-4" />
-          <p className="text-slate-400">جاري جلب الوثيقة من الموسوعة...</p>
+          <Loader2 className="w-12 h-12 text-gold animate-spin mx-auto mb-4" />
+          <p className="text-content-muted">جاري جلب الوثيقة من الموسوعة...</p>
         </div>
       </div>
     );
@@ -59,14 +59,14 @@ export default function ArticleReaderPage() {
 
   if (error || !article) {
     return (
-      <div className="min-h-screen bg-[#070b14] flex items-center justify-center p-4" dir="rtl">
-        <div className="text-center max-w-md bg-slate-900/60 p-8 rounded-3xl border border-slate-800">
-          <BookOpen className="w-12 h-12 text-slate-600 mx-auto mb-4" />
-          <h2 className="text-lg font-bold text-white mb-2">تعذر العثور على المقال</h2>
-          <p className="text-slate-400 text-sm mb-6">{error || 'المقال المطلوب غير متاح في الموسوعة'}</p>
+      <div className="min-h-screen bg-canvas flex items-center justify-center p-4" dir="rtl">
+        <div className="text-center max-w-md bg-nav/60 p-8 rounded-3xl border border-line">
+          <BookOpen className="w-12 h-12 text-content-muted mx-auto mb-4" />
+          <h2 className="text-lg font-bold text-content mb-2">تعذر العثور على المقال</h2>
+          <p className="text-content-muted text-sm mb-6">{error || 'المقال المطلوب غير متاح في الموسوعة'}</p>
           <button
             onClick={() => router.push('/bible')}
-            className="px-6 py-2.5 rounded-xl bg-[#c29938] text-slate-950 font-bold text-sm hover:bg-amber-400 transition-all"
+            className="px-6 py-2.5 rounded-xl bg-gold text-content font-bold text-sm hover:bg-warning transition-all"
           >
             العودة للموسوعة
           </button>
@@ -76,7 +76,7 @@ export default function ArticleReaderPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#070b14]" dir="rtl">
+    <div className="min-h-screen bg-canvas" dir="rtl">
       <SmartHeader 
         profile={null}
         onOpenSearch={() => setIsSearchOpen(true)}
@@ -85,16 +85,16 @@ export default function ArticleReaderPage() {
 
       <main className="max-w-4xl mx-auto px-4 py-8 pb-28">
         {/* Breadcrumbs */}
-        <div className="flex items-center justify-between gap-2 text-xs text-slate-400 mb-6 overflow-x-auto pb-2">
+        <div className="flex items-center justify-between gap-2 text-xs text-content-muted mb-6 overflow-x-auto pb-2">
           <div className="flex items-center gap-1.5 shrink-0">
-            <button onClick={() => router.push('/bible')} className="hover:text-[#c29938] transition-colors">
+            <button onClick={() => router.push('/bible')} className="hover:text-gold transition-colors">
               الموسوعة
             </button>
             <ChevronLeft className="w-3.5 h-3.5" />
             {article.section_code ? (
               <button 
                 onClick={() => router.push(`/bible/section/${article.section_code}`)}
-                className="hover:text-[#c29938] transition-colors"
+                className="hover:text-gold transition-colors"
               >
                 {article.section_title || 'القسم'}
               </button>
@@ -102,37 +102,37 @@ export default function ArticleReaderPage() {
               <span>{article.section_title || 'القسم'}</span>
             )}
             <ChevronLeft className="w-3.5 h-3.5" />
-            <span className="text-white font-medium truncate max-w-[200px]">{article.title}</span>
+            <span className="text-content font-medium truncate max-w-[200px]">{article.title}</span>
           </div>
 
           <button
             onClick={handleCopyLink}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:text-white shrink-0 transition-all text-xs"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-nav border border-line text-content-secondary hover:text-content shrink-0 transition-all text-xs"
           >
-            {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+            {copied ? <Check className="w-3.5 h-3.5 text-success" /> : <Copy className="w-3.5 h-3.5" />}
             <span>{copied ? 'تم النسخ' : 'مشاركة'}</span>
           </button>
         </div>
 
         {/* Article Header Card */}
-        <div className="p-6 md:p-8 rounded-3xl bg-slate-900/40 border border-slate-800/80 mb-8 backdrop-blur-sm">
-          <div className="flex items-center gap-2 text-xs text-[#c29938] font-bold mb-3">
+        <div className="p-6 md:p-8 rounded-3xl bg-nav/40 border border-line/80 mb-8 backdrop-blur-sm">
+          <div className="flex items-center gap-2 text-xs text-gold font-bold mb-3">
             <span>مقال #{article.id}</span>
             {article.section_title && <span>• {article.section_title}</span>}
           </div>
 
-          <h1 className="text-2xl md:text-4xl font-black text-white mb-4 leading-tight">
+          <h1 className="text-2xl md:text-4xl font-black text-content mb-4 leading-tight">
             {article.title}
           </h1>
 
           {article.subtitle && (
-            <p className="text-base text-slate-300 mb-4 leading-relaxed">{article.subtitle}</p>
+            <p className="text-base text-content-secondary mb-4 leading-relaxed">{article.subtitle}</p>
           )}
 
-          <div className="flex flex-wrap items-center gap-4 text-xs text-slate-400 pt-4 border-t border-slate-800/60">
+          <div className="flex flex-wrap items-center gap-4 text-xs text-content-muted pt-4 border-t border-line/60">
             {article.book_name && (
-              <span className="flex items-center gap-1.5 text-slate-300">
-                <BookOpen className="w-4 h-4 text-[#c29938]" />
+              <span className="flex items-center gap-1.5 text-content-secondary">
+                <BookOpen className="w-4 h-4 text-gold" />
                 {article.book_name} {article.chapter_num > 0 && `- الإصحاح ${article.chapter_num}`}
               </span>
             )}
@@ -143,21 +143,21 @@ export default function ArticleReaderPage() {
         </div>
 
         {/* Article Content */}
-        <article className="p-6 md:p-10 rounded-3xl bg-[#0a101d] border border-slate-800/80 shadow-xl leading-loose text-slate-200 text-base md:text-lg font-normal mb-8 select-text">
+        <article className="p-6 md:p-10 rounded-3xl bg-canvas border border-line/80 shadow-xl leading-loose text-content text-base md:text-lg font-normal mb-8 select-text">
           <div 
-            className="bible-article-body space-y-4 prose prose-invert max-w-none prose-headings:text-white prose-p:text-slate-200 prose-a:text-[#c29938]"
+            className="bible-article-body space-y-4 prose prose-invert max-w-none prose-headings:text-content prose-p:text-content prose-a:text-gold"
             dangerouslySetInnerHTML={{ __html: article.content }}
           />
         </article>
 
         {/* Navigation Prev / Next */}
-        <div className="flex items-center justify-between gap-4 pt-4 border-t border-slate-800/80">
+        <div className="flex items-center justify-between gap-4 pt-4 border-t border-line/80">
           {article.prev_id ? (
             <button
               onClick={() => router.push(`/bible/reader/${article.prev_id}`)}
-              className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-slate-900/80 border border-slate-800 text-slate-300 hover:text-white hover:border-[#c29938]/40 transition-all text-xs font-bold"
+              className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-nav/80 border border-line text-content-secondary hover:text-content hover:border-gold/40 transition-all text-xs font-bold"
             >
-              <ArrowRight className="w-4 h-4 text-[#c29938]" />
+              <ArrowRight className="w-4 h-4 text-gold" />
               <span>المقال السابق</span>
             </button>
           ) : (
@@ -166,7 +166,7 @@ export default function ArticleReaderPage() {
 
           <button
             onClick={() => router.push('/bible')}
-            className="px-4 py-2.5 rounded-xl text-xs text-slate-400 hover:text-white transition-colors"
+            className="px-4 py-2.5 rounded-xl text-xs text-content-muted hover:text-content transition-colors"
           >
             فهرس الموسوعة
           </button>
@@ -174,10 +174,10 @@ export default function ArticleReaderPage() {
           {article.next_id ? (
             <button
               onClick={() => router.push(`/bible/reader/${article.next_id}`)}
-              className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-slate-900/80 border border-slate-800 text-slate-300 hover:text-white hover:border-[#c29938]/40 transition-all text-xs font-bold"
+              className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-nav/80 border border-line text-content-secondary hover:text-content hover:border-gold/40 transition-all text-xs font-bold"
             >
               <span>المقال التالي</span>
-              <ArrowLeft className="w-4 h-4 text-[#c29938]" />
+              <ArrowLeft className="w-4 h-4 text-gold" />
             </button>
           ) : (
             <div />

@@ -248,30 +248,30 @@ export default function ServantProfileDrawer({
   return (
     <div className="fixed inset-0 z-50 overflow-hidden bg-black/80 backdrop-blur-md animate-fade-in flex justify-end">
       <div
-        className="w-full max-w-xl bg-[#070b14] border-r border-[#c29938]/30 h-full flex flex-col shadow-2xl shadow-black/80 overflow-hidden animate-slide-in-left relative"
+        className="w-full max-w-xl bg-canvas border-r border-gold/30 h-full flex flex-col shadow-2xl shadow-black/80 overflow-hidden animate-slide-in-left relative"
         dir="rtl"
       >
         {/* Ambient Top Glow */}
-        <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-br from-[#c29938]/10 to-transparent rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-br from-gold/10 to-transparent rounded-full blur-3xl pointer-events-none" />
 
         {/* Top Header */}
-        <div className="p-4 sm:p-5 bg-[#070b14]/90 border-b border-[#c29938]/20 flex items-center justify-between sticky top-0 z-20 backdrop-blur-xl">
+        <div className="p-4 sm:p-5 bg-canvas/90 border-b border-gold/20 flex items-center justify-between sticky top-0 z-20 backdrop-blur-xl">
           <div className="flex items-center gap-3">
             <button
               onClick={onClose}
-              className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/80 transition-colors border border-transparent hover:border-slate-700"
+              className="p-2 rounded-xl text-content-muted hover:text-content hover:bg-nav/80 transition-colors border border-transparent hover:border-line"
               title="إغلاق"
             >
               <X className="w-5 h-5" />
             </button>
             <div>
-              <h2 className="font-black text-lg text-slate-100 flex items-center gap-2">
+              <h2 className="font-black text-lg text-content flex items-center gap-2">
                 <span>ملف وصلاحيات الخادم</span>
-                <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-[#c29938]/15 text-[#c29938] border border-[#c29938]/30">
+                <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-gold/15 text-gold border border-gold/30">
                   {servant ? getGroupName(servant.group_id) : 'الفرقة'}
                 </span>
               </h2>
-              <p className="text-xs text-slate-400 mt-0.5">إدارة الصلاحيات المفوضة والبيانات التنظيمية</p>
+              <p className="text-xs text-content-muted mt-0.5">إدارة الصلاحيات المفوضة والبيانات التنظيمية</p>
             </div>
           </div>
 
@@ -279,9 +279,9 @@ export default function ServantProfileDrawer({
             {isAdminOrSuper && !isEditing && (
               <button
                 onClick={() => setIsEditing(true)}
-                className="px-3.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 text-xs font-bold flex items-center gap-1.5 transition-all border border-[#c29938]/30 hover:border-[#c29938]/60 shadow-sm"
+                className="px-3.5 py-1.5 rounded-xl bg-nav hover:bg-nav text-content text-xs font-bold flex items-center gap-1.5 transition-all border border-gold/30 hover:border-gold/60 shadow-sm"
               >
-                <Edit3 className="w-3.5 h-3.5 text-[#c29938]" />
+                <Edit3 className="w-3.5 h-3.5 text-gold" />
                 <span>تعديل</span>
               </button>
             )}
@@ -291,8 +291,8 @@ export default function ServantProfileDrawer({
                 disabled={saving}
                 className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all border shadow-sm ${
                   servant.is_active
-                    ? 'bg-rose-500/10 text-rose-300 border-rose-500/30 hover:bg-rose-500/20'
-                    : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/20'
+                    ? 'bg-danger/10 text-danger border-danger/30 hover:bg-danger/20'
+                    : 'bg-success/10 text-success border-success/30 hover:bg-success/20'
                 }`}
               >
                 {servant.is_active ? (
@@ -316,57 +316,57 @@ export default function ServantProfileDrawer({
           <div
             className={`px-4 py-3 text-xs flex items-center justify-between border-b ${
               notice.type === 'success'
-                ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
-                : 'bg-rose-500/10 text-rose-300 border-rose-500/30'
+                ? 'bg-success/10 text-success border-success/30'
+                : 'bg-danger/10 text-danger border-danger/30'
             }`}
           >
             <div className="flex items-center gap-2">
               {notice.type === 'success' ? <CheckCircle2 className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
               <span>{notice.text}</span>
             </div>
-            <button onClick={() => setNotice(null)} className="text-slate-400 hover:text-white">✕</button>
+            <button onClick={() => setNotice(null)} className="text-content-muted hover:text-content">✕</button>
           </div>
         )}
 
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
           {loading ? (
-            <div className="flex flex-col items-center justify-center py-24 gap-3 text-slate-400">
-              <Loader2 className="w-8 h-8 animate-spin text-[#c29938]" />
+            <div className="flex flex-col items-center justify-center py-24 gap-3 text-content-muted">
+              <Loader2 className="w-8 h-8 animate-spin text-gold" />
               <p className="text-sm">جاري تحميل بيانات الخادم والصلاحيات...</p>
             </div>
           ) : servant ? (
             <>
               {/* Servant Card */}
-              <div className="bg-gradient-to-b from-[#0e1626] to-[#070b14] border border-[#c29938]/30 rounded-3xl p-5 sm:p-6 relative overflow-hidden backdrop-blur-xl shadow-xl shadow-black/40">
+              <div className="bg-gradient-to-b from-canvas to-canvas border border-gold/30 rounded-3xl p-5 sm:p-6 relative overflow-hidden backdrop-blur-xl shadow-xl shadow-black/40">
                 <div className="flex items-center gap-4">
-                  <div className="relative w-18 h-18 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-tr from-[#c29938]/30 via-slate-800 to-[#c29938]/10 border-2 border-[#c29938] p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-lg shadow-[#c29938]/10">
+                  <div className="relative w-18 h-18 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-tr from-gold/30 via-canvas to-gold/10 border-2 border-gold p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-lg shadow-gold/10">
                     {servant.avatar_url ? (
                       <Image src={servant.avatar_url} alt={servant.full_name} fill sizes="80px" className="object-cover rounded-xl" />
                     ) : (
-                      <User className="w-10 h-10 text-[#c29938]" />
+                      <User className="w-10 h-10 text-gold" />
                     )}
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="text-xl font-black text-slate-100">{servant.full_name}</h3>
+                      <h3 className="text-xl font-black text-content">{servant.full_name}</h3>
                       <span
                         className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${
                           servant.is_active
-                            ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
-                            : 'bg-rose-500/10 text-rose-300 border-rose-500/30'
+                            ? 'bg-success/10 text-success border-success/30'
+                            : 'bg-danger/10 text-danger border-danger/30'
                         }`}
                       >
                         {servant.is_active ? 'نشط ✓' : 'موقوف ✕'}
                       </span>
                       {isSecretariat && (
-                        <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-purple-500/10 text-purple-300 border border-purple-500/30">
+                        <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-info/10 text-purple-300 border border-info/30">
                           عضو سكرتارية
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-slate-400 mt-1.5 flex items-center gap-2">
-                      <span className="text-[#c29938] font-mono">@{servant.username}</span>
+                    <p className="text-xs text-content-muted mt-1.5 flex items-center gap-2">
+                      <span className="text-gold font-mono">@{servant.username}</span>
                       <span>•</span>
                       <span>{servant.phone || 'بدون هاتف مسجل'}</span>
                     </p>
@@ -374,51 +374,51 @@ export default function ServantProfileDrawer({
                 </div>
 
                 {/* Quick Stats */}
-                <div className="grid grid-cols-2 gap-3 mt-6 pt-5 border-t border-slate-800/80 text-center">
-                  <div className="bg-[#070b14]/70 rounded-2xl p-3 border border-slate-800">
-                    <span className="block text-slate-400 text-xs font-semibold">طلبة الفرقة المتابعون</span>
-                    <span className="text-xl font-black text-[#c29938] mt-0.5 block">{groupTraineesCount} طالب</span>
+                <div className="grid grid-cols-2 gap-3 mt-6 pt-5 border-t border-line/80 text-center">
+                  <div className="bg-canvas/70 rounded-2xl p-3 border border-line">
+                    <span className="block text-content-muted text-xs font-semibold">طلبة الفرقة المتابعون</span>
+                    <span className="text-xl font-black text-gold mt-0.5 block">{groupTraineesCount} طالب</span>
                   </div>
-                  <div className="bg-[#070b14]/70 rounded-2xl p-3 border border-slate-800">
-                    <span className="block text-slate-400 text-xs font-semibold">الصلاحيات المفوضة</span>
-                    <span className="text-xl font-black text-emerald-400 mt-0.5 block">{permissions.length} / 5</span>
+                  <div className="bg-canvas/70 rounded-2xl p-3 border border-line">
+                    <span className="block text-content-muted text-xs font-semibold">الصلاحيات المفوضة</span>
+                    <span className="text-xl font-black text-success mt-0.5 block">{permissions.length} / 5</span>
                   </div>
                 </div>
               </div>
 
               {/* Edit Form (if editing) */}
               {isEditing && (
-                <div className="bg-[#0e1626]/80 border border-[#c29938]/30 rounded-3xl p-5 sm:p-6 space-y-4">
-                  <h4 className="text-sm font-bold text-[#c29938] flex items-center gap-2">
+                <div className="bg-canvas/80 border border-gold/30 rounded-3xl p-5 sm:p-6 space-y-4">
+                  <h4 className="text-sm font-bold text-gold flex items-center gap-2">
                     <Edit3 className="w-4 h-4" />
                     <span>تعديل البيانات الأساسية</span>
                   </h4>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1">اسم الخادم الكامل</label>
+                    <label className="block text-xs font-semibold text-content-secondary mb-1">اسم الخادم الكامل</label>
                     <input
                       type="text"
                       value={editFullName}
                       onChange={(e) => setEditFullName(e.target.value)}
-                      className="w-full bg-[#070b14] border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-[#c29938]"
+                      className="w-full bg-canvas border border-line rounded-xl px-3.5 py-2.5 text-sm text-content focus:outline-none focus:border-gold"
                     />
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                     <div>
-                      <label className="block text-xs font-semibold text-slate-300 mb-1">رقم الهاتف</label>
+                      <label className="block text-xs font-semibold text-content-secondary mb-1">رقم الهاتف</label>
                       <input
                         type="text"
                         value={editPhone}
                         onChange={(e) => setEditPhone(e.target.value)}
-                        className="w-full bg-[#070b14] border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-[#c29938]"
+                        className="w-full bg-canvas border border-line rounded-xl px-3.5 py-2.5 text-sm text-content focus:outline-none focus:border-gold"
                         placeholder="01xxxxxxxxx"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-slate-300 mb-1">الفرقة الدراسية (نقل الخادم)</label>
+                      <label className="block text-xs font-semibold text-content-secondary mb-1">الفرقة الدراسية (نقل الخادم)</label>
                       <select
                         value={editGroupId}
                         onChange={(e) => setEditGroupId(Number(e.target.value))}
-                        className="w-full bg-[#070b14] border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-[#c29938]"
+                        className="w-full bg-canvas border border-line rounded-xl px-3.5 py-2.5 text-sm text-content focus:outline-none focus:border-gold"
                       >
                         <option value={1}>الفرقة الأولى</option>
                         <option value={2}>الفرقة الثانية</option>
@@ -431,10 +431,10 @@ export default function ServantProfileDrawer({
 
               {/* Secretariat Management Action */}
               {isAdminOrSuper && (
-                <div className="bg-[#0e1626]/70 border border-purple-500/30 rounded-3xl p-5 flex items-center justify-between gap-4">
+                <div className="bg-canvas/70 border border-info/30 rounded-3xl p-5 flex items-center justify-between gap-4">
                   <div>
-                    <span className="font-black text-sm text-slate-100 block">عضوية سكرتارية الفرقة</span>
-                    <span className="text-xs text-slate-400 mt-0.5 block">
+                    <span className="font-black text-sm text-content block">عضوية سكرتارية الفرقة</span>
+                    <span className="text-xs text-content-muted mt-0.5 block">
                       {isSecretariat
                         ? 'الخادم معين حالياً كسكرتارية للفرقة وله صلاحيات الرصد وإدارة الحضور.'
                         : 'يمكن تعيين الخادم كسكرتارية للفرقة (بحد أقصى 3 سكرتارية لكل فرقة).'}
@@ -445,8 +445,8 @@ export default function ServantProfileDrawer({
                     disabled={saving}
                     className={`px-4 py-2 rounded-xl text-xs font-bold transition-all shrink-0 shadow-md ${
                       isSecretariat
-                        ? 'bg-rose-500/10 text-rose-300 border border-rose-500/30 hover:bg-rose-500/20'
-                        : 'bg-purple-600 hover:bg-purple-500 text-white'
+                        ? 'bg-danger/10 text-danger border border-danger/30 hover:bg-danger/20'
+                        : 'bg-info hover:bg-info text-content'
                     }`}
                   >
                     {isSecretariat ? 'إزالة السكرتارية' : 'تعيين كسكرتارية'}
@@ -458,11 +458,11 @@ export default function ServantProfileDrawer({
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h4 className="font-bold text-sm text-slate-200 flex items-center gap-2">
-                      <Shield className="w-4 h-4 text-[#c29938]" />
+                    <h4 className="font-bold text-sm text-content flex items-center gap-2">
+                      <Shield className="w-4 h-4 text-gold" />
                       <span>مصفوفة الصلاحيات المفوضة (Independent Permissions)</span>
                     </h4>
-                    <p className="text-xs text-slate-400 mt-0.5">
+                    <p className="text-xs text-content-muted mt-0.5">
                       كل صلاحية مستقلة بذاتها وتمنح الخادم حق إدارة الموديول الخاص بها داخل فرقته.
                     </p>
                   </div>
@@ -480,33 +480,33 @@ export default function ServantProfileDrawer({
                           isAdminOrSuper ? 'cursor-pointer' : ''
                         } ${
                           isGranted
-                            ? 'bg-[#c29938]/10 border-[#c29938]/50 shadow-sm'
-                            : 'bg-[#0e1626]/40 border-slate-800/80 opacity-60'
+                            ? 'bg-gold/10 border-gold/50 shadow-sm'
+                            : 'bg-canvas/40 border-line/80 opacity-60'
                         }`}
                       >
                         <div
                           className={`p-2.5 rounded-xl shrink-0 ${
-                            isGranted ? 'bg-[#c29938] text-slate-950 font-bold' : 'bg-slate-800 text-slate-400'
+                            isGranted ? 'bg-gold text-content font-bold' : 'bg-nav text-content-muted'
                           }`}
                         >
                           <Icon className="w-4 h-4" />
                         </div>
                         <div className="flex-1">
                           <div className="flex items-center justify-between">
-                            <span className={`font-bold text-sm ${isGranted ? 'text-[#c29938]' : 'text-slate-300'}`}>
+                            <span className={`font-bold text-sm ${isGranted ? 'text-gold' : 'text-content-secondary'}`}>
                               {perm.label}
                             </span>
                             <span
                               className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${
                                 isGranted
-                                  ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
-                                  : 'bg-slate-800 text-slate-400 border-slate-700'
+                                  ? 'bg-success/10 text-success border-success/30'
+                                  : 'bg-nav text-content-muted border-line'
                               }`}
                             >
                               {isGranted ? 'مفوضة ✓' : 'غير مفوضة ✕'}
                             </span>
                           </div>
-                          <p className="text-xs text-slate-400 mt-1">{perm.desc}</p>
+                          <p className="text-xs text-content-muted mt-1">{perm.desc}</p>
                         </div>
                       </div>
                     );
@@ -516,17 +516,17 @@ export default function ServantProfileDrawer({
 
               {/* Action Buttons for Admin */}
               {isAdminOrSuper && (
-                <div className="pt-4 border-t border-slate-800 flex items-center justify-end gap-2.5">
+                <div className="pt-4 border-t border-line flex items-center justify-end gap-2.5">
                   <button
                     onClick={onClose}
-                    className="px-4 py-2.5 rounded-xl bg-slate-800 text-slate-300 text-xs font-bold hover:bg-slate-700 transition-colors"
+                    className="px-4 py-2.5 rounded-xl bg-nav text-content-secondary text-xs font-bold hover:bg-input transition-colors"
                   >
                     إغلاق
                   </button>
                   <button
                     onClick={handleSavePermissions}
                     disabled={saving}
-                    className="px-6 py-2.5 rounded-xl bg-[#c29938] text-slate-950 font-black text-xs hover:bg-[#c29938]/90 transition-all shadow-lg flex items-center gap-2"
+                    className="px-6 py-2.5 rounded-xl bg-gold text-content font-black text-xs hover:bg-gold/90 transition-all shadow-lg flex items-center gap-2"
                   >
                     {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                     <span>حفظ الصلاحيات والتعديلات</span>
@@ -535,7 +535,7 @@ export default function ServantProfileDrawer({
               )}
             </>
           ) : (
-            <div className="p-8 text-center text-slate-400 text-sm">لم يتم العثور على بيانات الخادم.</div>
+            <div className="p-8 text-center text-content-muted text-sm">لم يتم العثور على بيانات الخادم.</div>
           )}
         </div>
       </div>
