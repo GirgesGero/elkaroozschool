@@ -43,7 +43,29 @@ export default function LoginPage() {
 
     try {
       const supabase = createClient();
-      const email = `${userToLogin.trim().toLowerCase()}@elkarooz-school.com`;
+      const identifier = userToLogin.trim();
+
+      // Accept either a username or a real email address.
+      //
+      // The form used to fabricate `${username}@elkarooz-school.com` and hand
+      // that to signInWithPassword. That only ever matched accounts whose auth
+      // email really used that domain, so anyone provisioned with their own
+      // mailbox could not sign in at all. An input containing '@' is already an
+      // address and is sent as-is; otherwise it is resolved as a username.
+      let email = identifier.toLowerCase();
+      if (!identifier.includes('@')) {
+        const { data: resolved, error: lookupError } = await supabase.rpc(
+          'username_to_email',
+          { p_identifier: identifier }
+        );
+
+        if (lookupError || !resolved) {
+          setError('اسم المستخدم أو كلمة المرور غير صحيحة');
+          setLoading(false);
+          return;
+        }
+        email = String(resolved).toLowerCase();
+      }
 
       const { data, error: authError } = await supabase.auth.signInWithPassword({
         email,
@@ -202,7 +224,7 @@ export default function LoginPage() {
               <form onSubmit={handleLogin} className="space-y-4">
                 <div className="space-y-1.5">
                   <label className="block text-xs font-bold opacity-80">
-                    اسم المستخدم (Username)
+                    اسم المستخدم أو البريد الإلكتروني
                   </label>
                   <div className="relative">
                     <input
