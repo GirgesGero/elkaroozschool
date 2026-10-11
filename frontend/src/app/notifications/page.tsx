@@ -180,7 +180,7 @@ export default function NotificationsPage() {
             onClick={() => setActiveFilter('ALL')}
             className={`px-3.5 py-1.5 rounded-xl transition-all ${
               activeFilter === 'ALL'
-                ? 'bg-gold text-content font-black'
+                ? 'bg-gold text-brand-on font-black'
                 : 'text-content-muted hover:text-content'
             }`}
           >
@@ -190,7 +190,7 @@ export default function NotificationsPage() {
             onClick={() => setActiveFilter('UNREAD')}
             className={`px-3.5 py-1.5 rounded-xl transition-all ${
               activeFilter === 'UNREAD'
-                ? 'bg-gold text-content font-black'
+                ? 'bg-gold text-brand-on font-black'
                 : 'text-content-muted hover:text-content'
             }`}
           >
@@ -200,7 +200,7 @@ export default function NotificationsPage() {
             onClick={() => setActiveFilter('PASTORAL')}
             className={`px-3.5 py-1.5 rounded-xl transition-all ${
               activeFilter === 'PASTORAL'
-                ? 'bg-gold text-content font-black'
+                ? 'bg-gold text-brand-on font-black'
                 : 'text-content-muted hover:text-content'
             }`}
           >
@@ -210,7 +210,7 @@ export default function NotificationsPage() {
             onClick={() => setActiveFilter('SYSTEM')}
             className={`px-3.5 py-1.5 rounded-xl transition-all ${
               activeFilter === 'SYSTEM'
-                ? 'bg-gold text-content font-black'
+                ? 'bg-gold text-brand-on font-black'
                 : 'text-content-muted hover:text-content'
             }`}
           >

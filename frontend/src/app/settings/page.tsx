@@ -160,7 +160,7 @@ export default function SettingsPage() {
                 onClick={() => setTheme('luxury')}
                 className={`p-3.5 rounded-2xl border flex flex-col items-center gap-2 transition-all ${
                   theme === 'luxury'
-                    ? 'bg-gold text-content font-black border-gold shadow-lg shadow-gold/20 scale-102'
+                    ? 'bg-gold text-brand-on font-black border-gold shadow-lg shadow-gold/20 scale-102'
                     : 'bg-canvas text-content-secondary border-line hover:border-line'
                 }`}
               >
@@ -214,7 +214,7 @@ export default function SettingsPage() {
                 onClick={() => setAccent('gold')}
                 className={`p-3 rounded-2xl border flex items-center gap-2.5 transition-all ${
                   accent === 'gold'
-                    ? 'bg-gold/20 border-gold text-content font-bold'
+                    ? 'bg-gold/20 border-gold text-brand-on font-bold'
                     : 'bg-canvas border-line text-content-secondary hover:border-line'
                 }`}
               >
@@ -226,7 +226,7 @@ export default function SettingsPage() {
                 onClick={() => setAccent('burgundy')}
                 className={`p-3 rounded-2xl border flex items-center gap-2.5 transition-all ${
                   accent === 'burgundy'
-                    ? 'bg-brand/30 border-brand text-content font-bold'
+                    ? 'bg-brand/30 border-brand text-brand-on font-bold'
                     : 'bg-canvas border-line text-content-secondary hover:border-line'
                 }`}
               >

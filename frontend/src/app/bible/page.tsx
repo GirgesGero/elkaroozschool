@@ -738,7 +738,7 @@ export default function BiblePage() {
               </div>
               <button
                 onClick={() => setEncyclopedia(prev => ({ ...prev, searchOpen: true }))}
-                className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-gold hover:bg-warning text-content font-bold text-sm transition-all"
+                className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-gold hover:bg-warning text-brand-on font-bold text-sm transition-all"
               >
                 <Search className="w-4 h-4" />
                 <span>بحث سريع</span>

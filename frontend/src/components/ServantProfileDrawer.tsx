@@ -486,7 +486,7 @@ export default function ServantProfileDrawer({
                       >
                         <div
                           className={`p-2.5 rounded-xl shrink-0 ${
-                            isGranted ? 'bg-gold text-content font-bold' : 'bg-nav text-content-muted'
+                            isGranted ? 'bg-gold text-brand-on font-bold' : 'bg-nav text-content-muted'
                           }`}
                         >
                           <Icon className="w-4 h-4" />
@@ -526,7 +526,7 @@ export default function ServantProfileDrawer({
                   <button
                     onClick={handleSavePermissions}
                     disabled={saving}
-                    className="px-6 py-2.5 rounded-xl bg-gold text-content font-black text-xs hover:bg-gold/90 transition-all shadow-lg flex items-center gap-2"
+                    className="px-6 py-2.5 rounded-xl bg-gold text-brand-on font-black text-xs hover:bg-gold/90 transition-all shadow-lg flex items-center gap-2"
                   >
                     {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                     <span>حفظ الصلاحيات والتعديلات</span>

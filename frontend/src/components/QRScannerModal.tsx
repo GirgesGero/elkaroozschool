@@ -342,7 +342,7 @@ export default function QRScannerModal({
               <button
                 type="submit"
                 disabled={!manualInput.trim() || processing}
-                className="px-4 py-2 rounded-xl bg-gold hover:bg-warning disabled:opacity-50 text-content font-bold text-xs transition-all shadow-md"
+                className="px-4 py-2 rounded-xl bg-gold hover:bg-warning disabled:opacity-50 text-brand-on font-bold text-xs transition-all shadow-md"
               >
                 {processing ? 'جاري الرصد...' : 'رصد'}
               </button>

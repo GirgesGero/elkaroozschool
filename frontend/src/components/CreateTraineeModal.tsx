@@ -340,7 +340,7 @@ export default function CreateTraineeModal({
             <button
               type="submit"
               disabled={saving}
-              className="px-5 py-2.5 rounded-xl bg-gold hover:bg-warning disabled:opacity-50 text-content text-xs font-black transition-all shadow-lg flex items-center gap-2"
+              className="px-5 py-2.5 rounded-xl bg-gold hover:bg-warning disabled:opacity-50 text-brand-on text-xs font-black transition-all shadow-lg flex items-center gap-2"
             >
               {saving ? (
                 <>

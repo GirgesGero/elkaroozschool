@@ -217,7 +217,7 @@ export default function TraineesDirectoryPage() {
             {canAddTrainee && (
               <button
                 onClick={() => setIsCreateModalOpen(true)}
-                className="px-3.5 py-1.5 rounded-xl bg-gold hover:bg-warning text-content font-black text-xs transition-all shadow-md flex items-center gap-1.5"
+                className="px-3.5 py-1.5 rounded-xl bg-gold hover:bg-warning text-brand-on font-black text-xs transition-all shadow-md flex items-center gap-1.5"
               >
                 <UserPlus className="w-3.5 h-3.5" />
                 <span>إضافة متدرب جديد</span>

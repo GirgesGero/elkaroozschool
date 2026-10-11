@@ -33,6 +33,8 @@ const config: Config = {
         brand: {
           DEFAULT: "rgb(var(--rgb-brand) / <alpha-value>)",
           hover: "var(--brand-primary-hover)",
+          // Text that sits ON the brand fill. Gold is a light colour, so
+          // `text-content` on a gold button gives ~2:1 and is unreadable.
           on: "var(--brand-primary-text)",
         },
         gold: {
@@ -44,10 +46,13 @@ const config: Config = {
           bg: "var(--bg-active-tab)",
           fg: "var(--text-active-tab)",
         },
-        success: "var(--color-success)",
-        warning: "var(--color-warning)",
-        danger: "var(--color-danger)",
-        info: "var(--color-info)",
+        // Status colours also need channel triplets: a `/NN` modifier (bg-success/20,
+        // from-info/20) silently produces NO css against a plain var(). These were
+        // plain vars while the surfaces were triplets, so status tints rendered blank.
+        success: "rgb(var(--rgb-success) / <alpha-value>)",
+        warning: "rgb(var(--rgb-warning) / <alpha-value>)",
+        danger: "rgb(var(--rgb-danger) / <alpha-value>)",
+        info: "rgb(var(--rgb-info) / <alpha-value>)",
       },
       fontFamily: {
         // Overriding `sans` makes Cairo the app default. Tailwind's stock

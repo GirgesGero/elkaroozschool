@@ -66,7 +66,7 @@ export default function ArticleReaderPage() {
           <p className="text-content-muted text-sm mb-6">{error || 'المقال المطلوب غير متاح في الموسوعة'}</p>
           <button
             onClick={() => router.push('/bible')}
-            className="px-6 py-2.5 rounded-xl bg-gold text-content font-bold text-sm hover:bg-warning transition-all"
+            className="px-6 py-2.5 rounded-xl bg-gold text-brand-on font-bold text-sm hover:bg-warning transition-all"
           >
             العودة للموسوعة
           </button>

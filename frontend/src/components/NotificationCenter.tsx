@@ -259,7 +259,7 @@ export default function NotificationCenter() {
               onClick={() => setFilter('ALL')}
               className={`px-3 py-1 rounded-full transition font-bold text-[11px] ${
                 filter === 'ALL'
-                  ? 'bg-brand text-content shadow-sm'
+                  ? 'bg-brand text-brand-on shadow-sm'
                   : 'text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)]'
               }`}
             >

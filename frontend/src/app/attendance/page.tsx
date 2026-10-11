@@ -331,7 +331,7 @@ export default function AttendancePage() {
 
           <Link
             href={`/groups/${selectedGroupId}`}
-            className="px-4 py-2 rounded-xl bg-gold text-content text-xs font-bold hover:bg-gold-light transition-colors self-start sm:self-auto flex items-center gap-1.5"
+            className="px-4 py-2 rounded-xl bg-gold text-brand-on text-xs font-bold hover:bg-gold-light transition-colors self-start sm:self-auto flex items-center gap-1.5"
           >
             <span>عرض تفاصيل الفرقة كاملة</span>
             <ChevronLeft className="w-4 h-4" />
@@ -457,7 +457,7 @@ export default function AttendancePage() {
                   <button
                     onClick={() => setIsQRScannerOpen(true)}
                     disabled={!selectedSessionId || isSessionLocked}
-                    className="px-4 py-2.5 rounded-xl bg-gold hover:bg-warning disabled:opacity-40 disabled:hover:bg-gold text-content text-xs font-black transition-all shadow-md flex items-center gap-2"
+                    className="px-4 py-2.5 rounded-xl bg-gold hover:bg-warning disabled:opacity-40 disabled:hover:bg-gold text-brand-on text-xs font-black transition-all shadow-md flex items-center gap-2"
                   >
                     <QrCode className="w-4 h-4" />
                     <span>مسح رمز QR</span>

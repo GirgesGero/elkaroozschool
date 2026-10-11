@@ -757,7 +757,7 @@ export default function GroupDetailsPage({ params }: PageProps) {
 
                     <button
                       onClick={() => setActiveTab('attendance')}
-                      className="px-4 py-1.5 rounded-xl bg-gold text-content font-bold text-xs hover:bg-gold-light transition-colors self-start sm:self-auto"
+                      className="px-4 py-1.5 rounded-xl bg-gold text-brand-on font-bold text-xs hover:bg-gold-light transition-colors self-start sm:self-auto"
                     >
                       تسجيل الحضور الآن ←
                     </button>
@@ -888,7 +888,7 @@ export default function GroupDetailsPage({ params }: PageProps) {
                   {isAdminOrSuper && (
                     <button
                       onClick={openAssignServantModal}
-                      className="px-4 py-2 rounded-2xl bg-gold text-content font-black text-xs hover:bg-gold/90 transition-all shadow-md flex items-center gap-1.5 self-start sm:self-auto"
+                      className="px-4 py-2 rounded-2xl bg-gold text-brand-on font-black text-xs hover:bg-gold/90 transition-all shadow-md flex items-center gap-1.5 self-start sm:self-auto"
                     >
                       <Plus className="w-4 h-4" />
                       <span>إضافة / نقل خادم للفرقة</span>
@@ -1104,7 +1104,7 @@ export default function GroupDetailsPage({ params }: PageProps) {
                     {canMarkAttendance && (
                       <button
                         onClick={() => setIsCreateTraineeOpen(true)}
-                        className="px-3.5 py-2 rounded-xl bg-gold hover:bg-warning text-content font-black text-xs transition-all shadow-md flex items-center gap-1.5 shrink-0"
+                        className="px-3.5 py-2 rounded-xl bg-gold hover:bg-warning text-brand-on font-black text-xs transition-all shadow-md flex items-center gap-1.5 shrink-0"
                       >
                         <UserPlus className="w-3.5 h-3.5" />
                         <span>إضافة متدرب للفرقة</span>
@@ -1241,7 +1241,7 @@ export default function GroupDetailsPage({ params }: PageProps) {
                           <button
                             onClick={() => setIsQRScannerOpen(true)}
                             disabled={!selectedSessionId || currentSession?.status === 'LOCKED'}
-                            className="px-3.5 py-2 rounded-xl bg-gold hover:bg-warning disabled:opacity-40 disabled:hover:bg-gold text-content font-black text-xs transition-all shadow-md flex items-center gap-1.5"
+                            className="px-3.5 py-2 rounded-xl bg-gold hover:bg-warning disabled:opacity-40 disabled:hover:bg-gold text-brand-on font-black text-xs transition-all shadow-md flex items-center gap-1.5"
                           >
                             <QrCode className="w-3.5 h-3.5" />
                             <span>مسح رمز QR</span>
@@ -1420,7 +1420,7 @@ export default function GroupDetailsPage({ params }: PageProps) {
                   </div>
                   <Link
                     href="/curriculum"
-                    className="px-4 py-2 rounded-xl bg-gold text-content font-bold text-xs hover:bg-gold-light transition-colors"
+                    className="px-4 py-2 rounded-xl bg-gold text-brand-on font-bold text-xs hover:bg-gold-light transition-colors"
                   >
                     الانتقال للمقررات كاملة ←
                   </Link>
@@ -1461,7 +1461,7 @@ export default function GroupDetailsPage({ params }: PageProps) {
                   </div>
                   <Link
                     href="/marathon"
-                    className="px-4 py-2 rounded-xl bg-gold text-content font-bold text-xs hover:bg-gold-light transition-colors"
+                    className="px-4 py-2 rounded-xl bg-gold text-brand-on font-bold text-xs hover:bg-gold-light transition-colors"
                   >
                     الانتقال للماراثون ←
                   </Link>
@@ -1575,7 +1575,7 @@ export default function GroupDetailsPage({ params }: PageProps) {
               <button
                 onClick={handleCreateSession}
                 disabled={creatingSession || !newSessionDate}
-                className="px-5 py-2 rounded-xl bg-gold text-content font-black text-xs hover:bg-gold/90 transition-all flex items-center gap-1.5 shadow-md"
+                className="px-5 py-2 rounded-xl bg-gold text-brand-on font-black text-xs hover:bg-gold/90 transition-all flex items-center gap-1.5 shadow-md"
               >
                 {creatingSession ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
                 <span>إنشاء وتفعيل الجلسة</span>
@@ -1693,7 +1693,7 @@ export default function GroupDetailsPage({ params }: PageProps) {
                       key={s.id}
                       className={`flex items-center justify-between p-3 rounded-2xl border cursor-pointer transition-all ${
                         selectedAssignServantId === s.id
-                          ? 'bg-gold/15 border-gold text-content'
+                          ? 'bg-gold/15 border-gold text-brand-on'
                           : 'bg-canvas border-line text-content-secondary hover:border-line'
                       }`}
                     >
@@ -1733,7 +1733,7 @@ export default function GroupDetailsPage({ params }: PageProps) {
               <button
                 onClick={handleAssignServant}
                 disabled={assigningServant || !selectedAssignServantId}
-                className="px-5 py-2 rounded-xl bg-gold text-content font-black text-xs hover:bg-gold/90 transition-all flex items-center gap-1.5 shadow-md disabled:opacity-50"
+                className="px-5 py-2 rounded-xl bg-gold text-brand-on font-black text-xs hover:bg-gold/90 transition-all flex items-center gap-1.5 shadow-md disabled:opacity-50"
               >
                 {assigningServant ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                 <span>نقل الخادم للفرقة</span>

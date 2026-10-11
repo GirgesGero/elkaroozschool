@@ -82,6 +82,10 @@
   --rgb-text-muted: 97 106 128;
   --rgb-brand: 138 106 18;
   --rgb-gold: 138 106 18;
+  --rgb-success: 31 122 77;
+  --rgb-warning: 154 100 0;
+  --rgb-danger: 180 35 24;
+  --rgb-info: 31 95 168;
 }
 
 /* ---------------- THEME 2: DARK (graphite) ---------------- */
@@ -143,6 +147,10 @@
   --rgb-text-muted: 154 160 170;
   --rgb-brand: 229 193 88;
   --rgb-gold: 229 193 88;
+  --rgb-success: 74 222 128;
+  --rgb-warning: 251 191 36;
+  --rgb-danger: 248 113 113;
+  --rgb-info: 96 165 250;
 }
 
 /* ---------------- THEME 3: COPTIC LUXURY (navy + gold, flagship) ---------------- */
@@ -204,6 +212,10 @@
   --rgb-text-muted: 132 148 188;
   --rgb-brand: 212 175 55;
   --rgb-gold: 212 175 55;
+  --rgb-success: 74 222 128;
+  --rgb-warning: 251 191 36;
+  --rgb-danger: 248 113 113;
+  --rgb-info: 127 169 232;
 }
 
 @tailwind base;

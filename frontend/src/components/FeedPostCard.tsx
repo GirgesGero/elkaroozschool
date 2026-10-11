@@ -340,7 +340,7 @@ export default function FeedPostCard({
             <button
               type="submit"
               disabled={!commentText.trim() || isSubmittingComment}
-              className="p-2.5 rounded-2xl bg-gold text-content hover:bg-warning disabled:opacity-50 transition-all shadow-md"
+              className="p-2.5 rounded-2xl bg-gold text-brand-on hover:bg-warning disabled:opacity-50 transition-all shadow-md"
             >
               <Send className="w-4 h-4" />
             </button>

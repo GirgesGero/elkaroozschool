@@ -159,7 +159,7 @@ export default function FeedPage() {
                 </span>
                 <button
                   onClick={() => handleOpenProfile(profile.id)}
-                  className="w-full mt-3 py-1.5 rounded-xl bg-nav hover:bg-gold hover:text-content border border-line text-xs font-bold text-content-secondary transition-all"
+                  className="w-full mt-3 py-1.5 rounded-xl bg-nav hover:bg-gold hover:text-brand-on border border-line text-xs font-bold text-brand-on-secondary transition-all"
                 >
                   عرض ملفي الشخصي
                 </button>

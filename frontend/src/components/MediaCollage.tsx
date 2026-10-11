@@ -141,7 +141,7 @@ export default function MediaCollage({ images }: MediaCollageProps) {
           {/* Close Button */}
           <button
             onClick={closeLightbox}
-            className="absolute top-4 right-4 p-2.5 rounded-full bg-nav/80 text-content hover:bg-gold hover:text-content transition-colors z-50"
+            className="absolute top-4 right-4 p-2.5 rounded-full bg-nav/80 text-brand-on hover:bg-gold hover:text-brand-on transition-colors z-50"
           >
             <X className="w-6 h-6" />
           </button>
@@ -151,13 +151,13 @@ export default function MediaCollage({ images }: MediaCollageProps) {
             <>
               <button
                 onClick={prevImage}
-                className="absolute right-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-nav/70 text-content hover:bg-gold hover:text-content transition-colors z-50"
+                className="absolute right-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-nav/70 text-brand-on hover:bg-gold hover:text-brand-on transition-colors z-50"
               >
                 <ChevronRight className="w-6 h-6" />
               </button>
               <button
                 onClick={nextImage}
-                className="absolute left-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-nav/70 text-content hover:bg-gold hover:text-content transition-colors z-50"
+                className="absolute left-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-nav/70 text-brand-on hover:bg-gold hover:text-brand-on transition-colors z-50"
               >
                 <ChevronLeft className="w-6 h-6" />
               </button>

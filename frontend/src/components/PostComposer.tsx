@@ -129,7 +129,7 @@ export default function PostComposer({ currentUser, onPostCreated }: PostCompose
             <button
               type="button"
               onClick={handleAddImage}
-              className="px-3 py-1.5 rounded-xl bg-gold text-content font-bold text-xs hover:bg-warning"
+              className="px-3 py-1.5 rounded-xl bg-gold text-brand-on font-bold text-xs hover:bg-warning"
             >
               إضافة
             </button>
@@ -173,7 +173,7 @@ export default function PostComposer({ currentUser, onPostCreated }: PostCompose
           <button
             type="submit"
             disabled={(!content.trim() && images.length === 0) || isSubmitting}
-            className="flex items-center gap-2 px-5 py-2 rounded-2xl bg-gold hover:bg-warning text-content font-black text-xs shadow-lg disabled:opacity-40 transition-all"
+            className="flex items-center gap-2 px-5 py-2 rounded-2xl bg-gold hover:bg-warning text-brand-on font-black text-xs shadow-lg disabled:opacity-40 transition-all"
           >
             <Send className="w-3.5 h-3.5" />
             <span>نشر الآن</span>

@@ -80,7 +80,7 @@ export default function AboutPage() {
           <div className="flex items-center justify-center gap-3">
             <Link
               href="/bible"
-              className="bg-gold hover:bg-gold text-content font-bold py-2.5 px-5 rounded-xl text-sm transition-all"
+              className="bg-gold hover:bg-gold text-brand-on font-bold py-2.5 px-5 rounded-xl text-sm transition-all"
             >
               تصفح الكتاب المقدس
             </Link>

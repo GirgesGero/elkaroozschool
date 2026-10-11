@@ -149,7 +149,7 @@ export default function GlobalSearchModal({
             onClick={() => setActiveTab('all')}
             className={`px-3 py-1 rounded-xl transition-all ${
               activeTab === 'all'
-                ? 'bg-gold text-content font-black'
+                ? 'bg-gold text-brand-on font-black'
                 : 'text-content-muted hover:text-content'
             }`}
           >
@@ -159,7 +159,7 @@ export default function GlobalSearchModal({
             onClick={() => setActiveTab('people')}
             className={`px-3 py-1 rounded-xl transition-all ${
               activeTab === 'people'
-                ? 'bg-gold text-content font-black'
+                ? 'bg-gold text-brand-on font-black'
                 : 'text-content-muted hover:text-content'
             }`}
           >
@@ -169,7 +169,7 @@ export default function GlobalSearchModal({
             onClick={() => setActiveTab('groups')}
             className={`px-3 py-1 rounded-xl transition-all ${
               activeTab === 'groups'
-                ? 'bg-gold text-content font-black'
+                ? 'bg-gold text-brand-on font-black'
                 : 'text-content-muted hover:text-content'
             }`}
           >
@@ -179,7 +179,7 @@ export default function GlobalSearchModal({
             onClick={() => setActiveTab('books')}
             className={`px-3 py-1 rounded-xl transition-all ${
               activeTab === 'books'
-                ? 'bg-gold text-content font-black'
+                ? 'bg-gold text-brand-on font-black'
                 : 'text-content-muted hover:text-content'
             }`}
           >
@@ -189,7 +189,7 @@ export default function GlobalSearchModal({
             onClick={() => setActiveTab('posts')}
             className={`px-3 py-1 rounded-xl transition-all ${
               activeTab === 'posts'
-                ? 'bg-gold text-content font-black'
+                ? 'bg-gold text-brand-on font-black'
                 : 'text-content-muted hover:text-content'
             }`}
           >

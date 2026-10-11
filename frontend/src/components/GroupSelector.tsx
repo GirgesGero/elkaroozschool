@@ -47,7 +47,7 @@ export default function GroupSelector({
                 }}
                 className={`w-full text-right px-3.5 py-2.5 rounded-2xl text-xs font-bold flex items-center justify-between transition-colors mb-1 ${
                   selectedGroupId === 0
-                    ? 'bg-gold text-content font-black shadow-sm'
+                    ? 'bg-gold text-brand-on font-black shadow-sm'
                     : 'text-content-secondary hover:bg-nav/60'
                 }`}
               >
@@ -65,7 +65,7 @@ export default function GroupSelector({
                 }}
                 className={`w-full text-right px-3.5 py-2.5 rounded-2xl text-xs font-bold flex items-center justify-between transition-colors mb-1 ${
                   selectedGroupId === grp.id
-                    ? 'bg-gold text-content font-black shadow-sm'
+                    ? 'bg-gold text-brand-on font-black shadow-sm'
                     : 'text-content-secondary hover:bg-nav/60'
                 }`}
               >

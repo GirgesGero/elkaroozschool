@@ -371,7 +371,7 @@ export default function TraineeProfileDrawer({
                   onClick={() => setActiveTab('profile')}
                   className={`flex-1 min-w-[110px] py-2 px-3 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 ${
                     activeTab === 'profile'
-                      ? 'bg-gold text-content shadow-md font-black'
+                      ? 'bg-gold text-brand-on shadow-md font-black'
                       : 'text-content-muted hover:text-content hover:bg-nav/50'
                   }`}
                 >
@@ -382,7 +382,7 @@ export default function TraineeProfileDrawer({
                   onClick={() => setActiveTab('attendance')}
                   className={`flex-1 min-w-[120px] py-2 px-3 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 ${
                     activeTab === 'attendance'
-                      ? 'bg-gold text-content shadow-md font-black'
+                      ? 'bg-gold text-brand-on shadow-md font-black'
                       : 'text-content-muted hover:text-content hover:bg-nav/50'
                   }`}
                 >
@@ -393,7 +393,7 @@ export default function TraineeProfileDrawer({
                   onClick={() => setActiveTab('marathon')}
                   className={`flex-1 min-w-[100px] py-2 px-3 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 ${
                     activeTab === 'marathon'
-                      ? 'bg-gold text-content shadow-md font-black'
+                      ? 'bg-gold text-brand-on shadow-md font-black'
                       : 'text-content-muted hover:text-content hover:bg-nav/50'
                   }`}
                 >
@@ -404,7 +404,7 @@ export default function TraineeProfileDrawer({
                   onClick={() => setActiveTab('exams')}
                   className={`flex-1 min-w-[100px] py-2 px-3 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 ${
                     activeTab === 'exams'
-                      ? 'bg-gold text-content shadow-md font-black'
+                      ? 'bg-gold text-brand-on shadow-md font-black'
                       : 'text-content-muted hover:text-content hover:bg-nav/50'
                   }`}
                 >
@@ -517,7 +517,7 @@ export default function TraineeProfileDrawer({
                         <button
                           onClick={handleSaveProfile}
                           disabled={saving}
-                          className="px-5 py-2 rounded-xl bg-gold text-content font-black text-xs hover:bg-gold/90 transition-all flex items-center gap-1.5 shadow-md"
+                          className="px-5 py-2 rounded-xl bg-gold text-brand-on font-black text-xs hover:bg-gold/90 transition-all flex items-center gap-1.5 shadow-md"
                         >
                           {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                           <span>حفظ التعديلات</span>

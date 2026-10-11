@@ -125,7 +125,7 @@ export default function SectionBrowserPage() {
                 onClick={() => setViewMode('grid')}
                 className={`p-2 rounded-lg transition-all ${
                   viewMode === 'grid'
-                    ? 'bg-gold text-content font-bold'
+                    ? 'bg-gold text-brand-on font-bold'
                     : 'text-content-muted hover:text-content'
                 }`}
                 title="عرض شبكي"
@@ -136,7 +136,7 @@ export default function SectionBrowserPage() {
                 onClick={() => setViewMode('list')}
                 className={`p-2 rounded-lg transition-all ${
                   viewMode === 'list'
-                    ? 'bg-gold text-content font-bold'
+                    ? 'bg-gold text-brand-on font-bold'
                     : 'text-content-muted hover:text-content'
                 }`}
                 title="عرض قائمة"
@@ -157,7 +157,7 @@ export default function SectionBrowserPage() {
                 onClick={() => handleSelectSection(sec)}
                 className={`px-4 py-2.5 rounded-xl font-bold text-xs whitespace-nowrap transition-all flex items-center gap-2 shrink-0 ${
                   isSelected
-                    ? 'bg-gold text-content shadow-lg shadow-gold/20'
+                    ? 'bg-gold text-brand-on shadow-lg shadow-gold/20'
                     : 'bg-nav/60 border border-line text-content-secondary hover:border-line hover:text-content'
                 }`}
               >

@@ -266,7 +266,7 @@ export default function UnifiedProfileModal({
 
           <button
             onClick={onClose}
-            className="p-2 rounded-full bg-black/60 text-content hover:bg-gold hover:text-content transition-colors shadow-lg"
+            className="p-2 rounded-full bg-black/60 text-brand-on hover:bg-gold hover:text-brand-on transition-colors shadow-lg"
           >
             <X className="w-5 h-5" />
           </button>
@@ -287,7 +287,7 @@ export default function UnifiedProfileModal({
                 <button
                   type="button"
                   onClick={() => setIsChangingAvatar(!isChangingAvatar)}
-                  className="absolute bottom-0 left-0 p-2 rounded-full bg-gold hover:bg-warning text-content shadow-xl border-2 border-canvas transition-transform group-hover:scale-110 active:scale-95"
+                  className="absolute bottom-0 left-0 p-2 rounded-full bg-gold hover:bg-warning text-brand-on shadow-xl border-2 border-canvas transition-transform group-hover:scale-110 active:scale-95"
                   title="تغيير الصورة الشخصية"
                 >
                   <Camera className="w-4 h-4" />
@@ -324,7 +324,7 @@ export default function UnifiedProfileModal({
                   type="button"
                   onClick={() => handleSaveAvatarUrl(avatarUrlInput)}
                   disabled={isUploadingAvatar}
-                  className="px-4 py-2 rounded-xl bg-gold text-content font-bold text-xs hover:bg-warning disabled:opacity-50 transition-all shadow-md flex items-center gap-1"
+                  className="px-4 py-2 rounded-xl bg-gold text-brand-on font-bold text-xs hover:bg-warning disabled:opacity-50 transition-all shadow-md flex items-center gap-1"
                 >
                   {isUploadingAvatar ? <Loader2 className="w-4 h-4 animate-spin" /> : 'حفظ'}
                 </button>
@@ -402,7 +402,7 @@ export default function UnifiedProfileModal({
             onClick={() => setActiveTab('overview')}
             className={`px-3.5 py-1.5 rounded-xl transition-all ${
               activeTab === 'overview'
-                ? 'bg-gold text-content font-black'
+                ? 'bg-gold text-brand-on font-black'
                 : 'text-content-muted hover:text-content'
             }`}
           >
@@ -415,7 +415,7 @@ export default function UnifiedProfileModal({
                 onClick={() => setActiveTab('attendance')}
                 className={`px-3.5 py-1.5 rounded-xl transition-all ${
                   activeTab === 'attendance'
-                    ? 'bg-gold text-content font-black'
+                    ? 'bg-gold text-brand-on font-black'
                     : 'text-content-muted hover:text-content'
                 }`}
               >
@@ -425,7 +425,7 @@ export default function UnifiedProfileModal({
                 onClick={() => setActiveTab('academic')}
                 className={`px-3.5 py-1.5 rounded-xl transition-all ${
                   activeTab === 'academic'
-                    ? 'bg-gold text-content font-black'
+                    ? 'bg-gold text-brand-on font-black'
                     : 'text-content-muted hover:text-content'
                 }`}
               >
@@ -439,7 +439,7 @@ export default function UnifiedProfileModal({
               onClick={() => setActiveTab('permissions')}
               className={`px-3.5 py-1.5 rounded-xl transition-all ${
                 activeTab === 'permissions'
-                  ? 'bg-gold text-content font-black'
+                  ? 'bg-gold text-brand-on font-black'
                   : 'text-content-muted hover:text-content'
               }`}
             >
@@ -537,7 +537,7 @@ export default function UnifiedProfileModal({
                         <button
                           type="submit"
                           disabled={isSavingProfile}
-                          className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-gold text-content text-xs font-black hover:bg-warning transition-all shadow-md"
+                          className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-gold text-brand-on text-xs font-black hover:bg-warning transition-all shadow-md"
                         >
                           {isSavingProfile ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                           <span>حفظ التعديلات</span>
