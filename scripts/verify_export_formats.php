@@ -36,13 +36,13 @@ $formats = SpreadsheetWriter::formats();
 chk('csv is always offered', isset($formats['csv']));
 chk('json is always offered', isset($formats['json']));
 
-// The whole point: never advertise a format that cannot be produced. phpoffice is
-// declared in composer.json but absent from vendor/, so excel must NOT appear.
-$xlsxInstalled = class_exists(\PhpOffice\PhpSpreadsheet\Spreadsheet::class);
+// The whole point: never advertise a format that cannot be produced. Native
+// ZipArchive OpenXML generator provides excel capability without heavy dependencies.
+$xlsxInstalled = SpreadsheetWriter::xlsxAvailable();
 chk(
     $xlsxInstalled
-        ? 'excel is offered and phpspreadsheet is genuinely installed'
-        : 'excel is withheld because phpspreadsheet is not installed',
+        ? 'excel is offered and xlsx generator is available'
+        : 'excel is withheld because xlsx generator is not available',
     $xlsxInstalled === isset($formats['excel']),
     'xlsxInstalled=' . var_export($xlsxInstalled, true)
         . ' offered=' . var_export(isset($formats['excel']), true)

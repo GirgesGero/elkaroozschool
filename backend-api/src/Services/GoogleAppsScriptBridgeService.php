@@ -113,4 +113,16 @@ class GoogleAppsScriptBridgeService
     {
         return $this->fetchFilePayload('file', ['path' => $relPath]);
     }
+
+    /**
+     * Upload a file payload through Google Apps Script Bridge
+     */
+    public function uploadFile(string $relPath, string $content, string $mimeType = 'application/octet-stream'): ?array
+    {
+        return $this->call('upload', [
+            'path' => $relPath,
+            'base64' => base64_encode($content),
+            'mime' => $mimeType,
+        ]);
+    }
 }

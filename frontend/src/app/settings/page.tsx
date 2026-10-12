@@ -36,6 +36,7 @@ import {
 } from 'lucide-react';
 import type { Profile } from '@/types/database';
 import Avatar from '../../components/Avatar';
+import CurriculumManagementPanel from '@/components/CurriculumManagementPanel';
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -317,6 +318,8 @@ export default function SettingsPage() {
           </section>
         )}
 
+        {profile && <CurriculumManagementPanel profile={profile} />}
+
         {/* 3. Role-Aware Administrative & Management Sections (أقسام الإدارة حسب الصلاحيات) */}
         
         {/* ========================================== */}
@@ -524,7 +527,7 @@ export default function SettingsPage() {
         {/* ========================================== */}
         {/* SECTION C: Secretariat & Attendance Hub    */}
         {/* ========================================== */}
-        {(isSecretariat || isAdminOrSuper) && (
+        {(isSecretariat || isAdminOrSuper || isServant) && (
           <section className="p-5 rounded-3xl bg-canvas border border-line shadow-xl space-y-4">
             <div className="flex items-center justify-between border-b border-line pb-3">
               <div className="flex items-center gap-2.5">

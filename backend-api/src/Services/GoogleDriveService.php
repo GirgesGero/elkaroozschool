@@ -386,6 +386,104 @@ class GoogleDriveService {
         return is_array($data) ? $data : [];
     }
 
+    /**
+     * Stream a file from Google Drive directly to client with HTTP 206 Byte-Range support (RFC 7233).
+     */
+    public function streamFile(
+        string $driveFileId,
+        ?string $rangeHeader = null,
+        string $mimeType = 'application/octet-stream',
+        string $fileName = 'file',
+        int $fileSize = 0
+    ): void {
+        if (!preg_match('/^[a-zA-Z0-9_-]+$/', $driveFileId)) {
+            throw new \InvalidArgumentException('Invalid Google Drive file ID');
+        }
+
+        $token = $this->getAccessToken();
+
+        if ($fileSize <= 0) {
+            $meta = $this->getFileMetadata($driveFileId);
+            $fileSize = (int)($meta['size'] ?? 0);
+            if (!empty($meta['mimeType'])) {
+                $mimeType = (string)$meta['mimeType'];
+            }
+        }
+
+        $start = 0;
+        $end = $fileSize > 0 ? $fileSize - 1 : 0;
+        $isRange = false;
+
+        if ($rangeHeader && preg_match('/bytes=(\d+)-(\d*)/', $rangeHeader, $matches)) {
+            $isRange = true;
+            $start = (int)$matches[1];
+            if (!empty($matches[2])) {
+                $end = (int)$matches[2];
+            }
+            if ($start > $end || ($fileSize > 0 && $start >= $fileSize)) {
+                http_response_code(416);
+                header("Content-Range: bytes */{$fileSize}");
+                exit;
+            }
+        }
+
+        $headers = [
+            'Authorization: Bearer ' . $token,
+        ];
+        if ($isRange) {
+            $headers[] = "Range: bytes={$start}-{$end}";
+        }
+
+        $url = 'https://www.googleapis.com/drive/v3/files/' . urlencode($driveFileId) . '?alt=media&supportsAllDrives=true';
+
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_HTTPHEADER => $headers,
+            CURLOPT_TIMEOUT => $this->timeoutSeconds * 5,
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_HEADER => false,
+            CURLOPT_WRITEFUNCTION => function($curl, $data) {
+                echo $data;
+                if (ob_get_level() > 0) {
+                    ob_flush();
+                }
+                flush();
+                return strlen($data);
+            }
+        ]);
+
+        if ($isRange) {
+            http_response_code(206);
+            $length = $end - $start + 1;
+            header('Content-Type: ' . $mimeType);
+            header("Content-Range: bytes {$start}-{$end}/{$fileSize}");
+            header('Content-Length: ' . $length);
+            header('Accept-Ranges: bytes');
+        } else {
+            http_response_code(200);
+            header('Content-Type: ' . $mimeType);
+            if ($fileSize > 0) {
+                header('Content-Length: ' . $fileSize);
+            }
+            header('Accept-Ranges: bytes');
+            header('Content-Disposition: inline; filename="' . rawurlencode($fileName) . '"');
+        }
+
+        while (ob_get_level() > 0) {
+            ob_end_clean();
+        }
+
+        $success = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if (!$success || $httpCode >= 400) {
+            throw new \RuntimeException("Google Drive stream failed with HTTP {$httpCode}");
+        }
+        exit;
+    }
+
     private function base64UrlEncode(string $data): string {
         return rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
     }

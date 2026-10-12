@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
+import { phpApi } from '@/lib/api/php';
 import {
   Image as ImageIcon,
   Sparkles,
@@ -10,6 +11,8 @@ import {
   X,
   Users,
   Globe,
+  Upload,
+  Loader2,
 } from 'lucide-react';
 import type { Profile } from '@/types/database';
 import Avatar from '../components/Avatar';
@@ -26,6 +29,8 @@ export default function PostComposer({ currentUser, onPostCreated }: PostCompose
   const [images, setImages] = useState<string[]>([]);
   const [showImageInput, setShowImageInput] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Check if current user can create posts (Staff or Admin)
   const canPost =
@@ -35,6 +40,33 @@ export default function PostComposer({ currentUser, onPostCreated }: PostCompose
     currentUser?.role_id === 'secretariat';
 
   if (!canPost || !currentUser) return null;
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploadingImage(true);
+    const supabase = createClient();
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('يرجى تسجيل الدخول لرفع الصور');
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('folder_type', 'feed');
+      formData.append('group_id', String(currentUser?.group_id || targetGroup || 1));
+      const res = await phpApi<{ file_url: string; asset_id: string }>('/storage/upload', {
+        formData,
+        session,
+      });
+      if (res?.file_url) {
+        setImages((prev) => [...prev, res.file_url]);
+      }
+    } catch (err) {
+      console.error('Feed image upload error:', err);
+    } finally {
+      setIsUploadingImage(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
 
   const handleAddImage = () => {
     if (!imageUrl.trim()) return;
@@ -147,14 +179,38 @@ export default function PostComposer({ currentUser, onPostCreated }: PostCompose
         {/* Bottom toolbar */}
         <div className="flex items-center justify-between border-t border-line/80 pt-3 mt-2 pr-12">
           <div className="flex items-center gap-2">
-            {/* Image attachment button */}
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileUpload}
+              accept="image/*"
+              className="hidden"
+            />
+            {/* Upload file button */}
+            <button
+              type="button"
+              disabled={isUploadingImage}
+              onClick={() => fileInputRef.current?.click()}
+              className="p-2 rounded-xl bg-nav border border-line hover:border-gold/50 text-content-secondary hover:text-gold transition-colors flex items-center gap-1.5 text-xs font-bold disabled:opacity-50"
+              title="رفع صورة من الجهاز إلى Google Drive"
+            >
+              {isUploadingImage ? (
+                <Loader2 className="w-4 h-4 text-warning animate-spin" />
+              ) : (
+                <Upload className="w-4 h-4 text-warning" />
+              )}
+              <span>{isUploadingImage ? 'جاري الرفع...' : 'رفع صورة'}</span>
+            </button>
+
+            {/* Image URL toggle button */}
             <button
               type="button"
               onClick={() => setShowImageInput(!showImageInput)}
               className="p-2 rounded-xl bg-nav border border-line hover:border-gold/50 text-content-secondary hover:text-gold transition-colors flex items-center gap-1.5 text-xs font-bold"
+              title="إضافة رابط صورة"
             >
               <ImageIcon className="w-4 h-4 text-success" />
-              <span>صورة</span>
+              <span>رابط صورة</span>
             </button>
 
             {/* Target Group Selector */}

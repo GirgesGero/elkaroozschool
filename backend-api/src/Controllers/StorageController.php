@@ -73,7 +73,13 @@ class StorageController {
 
         try {
             $storage = new StorageBridgeService();
-            $uploaded = $storage->saveUploadedFile($_FILES['file'], $targetSubDir);
+            $uploaded = $storage->saveUploadedFile($_FILES['file'], $targetSubDir, [
+                'user' => $user,
+                'folder_type' => $folderType,
+                'group_id' => $groupId,
+                'resource_type' => $_POST['resource_type'] ?? null,
+                'resource_id' => $_POST['resource_id'] ?? null,
+            ]);
 
             // Audit log the file upload
             AuditLogService::log(
@@ -173,8 +179,23 @@ class StorageController {
             } catch (\Exception $e) {
                 $this->refuse($e, 'STREAM_FAILED', 500);
             }
+        } elseif (($asset['storage_provider'] ?? '') === 'HOSTINGER_LOCAL') {
+            try {
+                $storage = new StorageBridgeService();
+                $range = $_SERVER['HTTP_RANGE'] ?? null;
+                $storage->streamLocalFile(
+                    (string)$asset['drive_file_id'],
+                    $range,
+                    (string)$asset['mime_type'],
+                    (string)$asset['file_name'],
+                    (int)$asset['file_size_bytes']
+                );
+                exit;
+            } catch (\Exception $e) {
+                $this->refuse($e, 'STREAM_FAILED', 500);
+            }
         } else {
-            // Local storage fallback
+            // Unsupported storage provider
             Response::error('نوع موفر التخزين غير مدعوم للبث المباشر', 'UNSUPPORTED_PROVIDER', 400);
         }
     }

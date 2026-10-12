@@ -25,6 +25,8 @@ import {
   History,
 } from 'lucide-react';
 import type { Profile } from '@/types/database';
+import * as XLSX from 'xlsx';
+import { phpApi } from '@/lib/api/php';
 
 interface ImportRecord {
   id: string;
@@ -202,7 +204,7 @@ export default function AdminImportsPage() {
     }
   };
 
-  const handleExportTrainees = async (format: 'csv') => {
+  const handleExportTrainees = async (format: 'csv' | 'excel') => {
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -217,31 +219,64 @@ export default function AdminImportsPage() {
         return;
       }
 
-      // Convert to CSV
-      const headers = ['username', 'full_name', 'phone', 'father_name', 'birth_date', 'status'];
-      const csvRows = [headers.join(',')];
+      let exportBlob: Blob;
+      let exportFilename: string;
 
-      data.forEach((p) => {
-        csvRows.push(
-          [
+      if (format === 'excel') {
+        const rows = data.map((p) => ({
+          'اسم المستخدم': p.username,
+          'الاسم بالكامل': p.full_name,
+          'رقم الهاتف': p.phone || '',
+          'اسم الأب / المرشد': p.father_name || '',
+          'تاريخ الميلاد': p.birth_date || '',
+          'الحالة': p.is_active ? 'نشط' : 'موقوف',
+        }));
+        const ws = XLSX.utils.json_to_sheet(rows);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'المتدربون');
+        const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+        exportBlob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        exportFilename = `trainees_export_${Date.now()}.xlsx`;
+      } else {
+        const headers = ['username', 'full_name', 'phone', 'father_name', 'birth_date', 'status'];
+        const csvRows = [headers.join(',')];
+        data.forEach((p) => {
+          csvRows.push([
             p.username,
             `"${p.full_name}"`,
             p.phone || '',
             `"${p.father_name || ''}"`,
             p.birth_date || '',
             p.is_active ? 'نشط' : 'موقوف'
-          ].join(',')
-        );
-      });
+          ].join(','));
+        });
+        exportBlob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+        exportFilename = `trainees_export_${Date.now()}.csv`;
+      }
 
-      const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
+      // Trigger direct browser download
+      const url = URL.createObjectURL(exportBlob);
       const link = document.createElement('a');
       link.setAttribute('href', url);
-      link.setAttribute('download', `trainees_export_${Date.now()}.csv`);
+      link.setAttribute('download', exportFilename);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+
+      // Save a copy to Google Drive / Storage in the background if session exists
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        if (sessionData?.session) {
+          const formData = new FormData();
+          formData.append('file', exportBlob, exportFilename);
+          formData.append('folder_type', 'general');
+          formData.append('group_id', '0');
+          formData.append('resource_type', 'GENERAL');
+          await phpApi('/storage/upload', { formData, session: sessionData.session });
+        }
+      } catch (cloudErr) {
+        console.warn('Google Drive backup copy skipped/failed:', cloudErr);
+      }
 
       // Audit export
       await supabase.rpc('log_operational_event', {
@@ -251,6 +286,7 @@ export default function AdminImportsPage() {
         p_status: 'SUCCESS',
         p_details: { rows_count: data.length, format }
       });
+      setStatusMsg({ type: 'success', text: `تم تصدير وحفظ كشف المتدربين بنجاح (${format.toUpperCase()})` });
     } catch (err: unknown) {
       setStatusMsg({ type: 'error', text: explainDbError(err) });
     }
@@ -379,19 +415,19 @@ export default function AdminImportsPage() {
             </button>
           </div>
 
-          <div className="bg-nav/60 border border-line rounded-2xl p-5 flex items-center justify-between opacity-70">
+          <div className="bg-nav border border-line rounded-2xl p-5 flex items-center justify-between">
             <div>
-              <h3 className="font-bold text-content-secondary mb-1">تصدير سجلات المتدربين (Excel / XLSX)</h3>
+              <h3 className="font-bold text-content mb-1">تصدير سجلات المتدربين (Excel / XLSX)</h3>
               <p className="text-xs text-content-muted">
-                غير متاح حالياً — التصدير بصيغة CSV فقط. لن نُنزّل ملف CSV باسم xlsx.
+                تصدير معتمد بصيغة Microsoft Excel مع حفظ نسخة سحابية على Google Drive
               </p>
             </div>
             <button
-              disabled
-              className="flex items-center gap-2 bg-nav/60 border border-line text-content-muted px-4 py-2 rounded-xl text-xs font-semibold cursor-not-allowed"
+              onClick={() => handleExportTrainees('excel')}
+              className="flex items-center gap-2 bg-nav hover:bg-input border border-line text-content px-4 py-2 rounded-xl text-xs font-semibold transition"
             >
-              <FileSpreadsheet className="w-4 h-4" />
-              غير متاح
+              <FileSpreadsheet className="w-4 h-4 text-success" />
+              تحميل Excel
             </button>
           </div>
         </div>

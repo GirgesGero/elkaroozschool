@@ -24,6 +24,8 @@ import {
   Users,
 } from 'lucide-react';
 import type { Profile } from '@/types/database';
+import { phpApi } from '@/lib/api/php';
+import { Paperclip, Loader2 } from 'lucide-react';
 
 interface MarathonDetail {
   id: string;
@@ -67,6 +69,35 @@ export default function MarathonManagePage() {
   const [newQText, setNewQText] = useState('');
   const [newQOptions, setNewQOptions] = useState<string[]>(['', '', '', '']); // 4 default
   const [newQCorrectIdx, setNewQCorrectIdx] = useState<number>(0);
+  const [selectedReopenQuestionId, setSelectedReopenQuestionId] = useState<string>('');
+  const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
+  const [isUploadingQAttachment, setIsUploadingQAttachment] = useState(false);
+
+  const handleUploadQuestionAttachment = async (file: File) => {
+    setIsUploadingQAttachment(true);
+    const supabase = createClient();
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('يرجى تسجيل الدخول');
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('folder_type', 'general');
+      formData.append('group_id', String(profile?.group_id || 1));
+      formData.append('resource_type', 'GENERAL');
+      const res = await phpApi<{ file_url: string; filename: string }>('/storage/upload', {
+        formData,
+        session
+      });
+      if (res?.file_url) {
+        setNewQText((prev) => (prev ? prev + '\n' : '') + `[مرفق: ${res.filename}](${res.file_url})`);
+        setNotice(`تم رفع مرفق السؤال (${res.filename}) إلى Google Drive.`);
+      }
+    } catch (err) {
+      setNotice(err instanceof Error ? err.message : 'تعذر رفع المرفق');
+    } finally {
+      setIsUploadingQAttachment(false);
+    }
+  };
 
   // Form state for creating Section
   const [showAddSecModal, setShowAddSecModal] = useState(false);
@@ -128,12 +159,13 @@ export default function MarathonManagePage() {
         .from('marathon_sections')
         .select('*')
         .eq('marathon_id', selectedMarathonId)
+        .eq('status', 'PUBLISHED')
         .order('order_index', { ascending: true });
 
       // 2. Fetch questions with options
       const { data: questions } = await supabase
         .from('marathon_questions')
-        .select('*, marathon_answers(id, answer_text, is_correct)')
+        .select('id, marathon_id, section_id, question_text, question_type, score_weight, order_index, status, marathon_answers(id, answer_text, is_correct, order_index)')
         .eq('marathon_id', selectedMarathonId)
         .order('order_index', { ascending: true });
 
@@ -181,15 +213,15 @@ export default function MarathonManagePage() {
     if (!newSecTitle.trim() || !selectedMarathonId) return;
     const supabase = createClient();
 
-    const { data, error } = await supabase
+    const { data: sectionId, error } = await supabase.rpc('create_marathon_section', {
+      p_marathon_id: selectedMarathonId,
+      p_title: newSecTitle.trim(),
+    });
+    const { data } = sectionId ? await supabase
       .from('marathon_sections')
-      .insert({
-        marathon_id: selectedMarathonId,
-        title: newSecTitle.trim(),
-        order_index: (selectedMarathon?.sections.length || 0) + 1,
-      })
-      .select()
-      .single();
+      .select('*')
+      .eq('id', sectionId)
+      .single() : { data: null };
 
     if (!error && data) {
       setSelectedMarathon((prev) =>
@@ -206,35 +238,32 @@ export default function MarathonManagePage() {
     if (!newQText.trim() || !selectedMarathonId) return;
     const supabase = createClient();
 
-    // 1. Insert question (order = total questions + 1)
-    const nextOrder = (selectedMarathon?.questions.length || 0) + 1;
-    const { data: qData, error: qErr } = await supabase
-      .from('marathon_questions')
-      .insert({
-        marathon_id: selectedMarathonId,
-        section_id: newQSectionId || null,
-        question_text: newQText.trim(),
-        order_index: nextOrder,
-      })
-      .select()
-      .single();
-
-    if (qErr || !qData) {
-      setNotice(`فشل إضافة السؤال: ${qErr?.message}`);
+    // 1. Validate before creating a question. The old handler inserted the
+    // question, then ignored option-insert failures, leaving an unusable item.
+    const cleanOptions = newQOptions.map((item) => item.trim()).filter(Boolean);
+    if (newQCorrectIdx < 0 || newQCorrectIdx >= newQOptions.length || !newQOptions[newQCorrectIdx]?.trim()) {
+      setNotice('حدد إجابة صحيحة غير فارغة.');
       return;
     }
-
-    // 2. Insert options
-    const optionsPayload = newQOptions
-      .filter((opt) => opt.trim() !== '')
-      .map((optText, idx) => ({
-        question_id: qData.id,
-        answer_text: optText.trim(),
-        is_correct: idx === newQCorrectIdx,
-        order_index: idx + 1,
-      }));
-
-    await supabase.from('marathon_answers').insert(optionsPayload);
+    if (cleanOptions.length < 2) {
+      setNotice('أدخل خيارين صحيحين على الأقل وحدد إجابة صحيحة واحدة.');
+      return;
+    }
+    const optionsPayload = cleanOptions.map((optText, idx) => ({
+      answer_text: optText,
+      is_correct: optText === newQOptions[newQCorrectIdx]?.trim(),
+      order_index: idx + 1,
+    }));
+    const { error: qErr } = await supabase.rpc('create_marathon_question', {
+      p_marathon_id: selectedMarathonId,
+      p_section_id: newQSectionId || null,
+      p_question_text: newQText.trim(),
+      p_options: optionsPayload,
+    });
+    if (qErr) {
+      setNotice(`فشل إضافة السؤال: ${qErr.message}`);
+      return;
+    }
 
     // Refresh questions
     setShowAddQModal(false);
@@ -244,7 +273,20 @@ export default function MarathonManagePage() {
     setNotice('تم إضافة السؤال وتوزيع الـ 100 درجة بالتساوي تلقائياً.');
   };
 
-  // Handler for Selective Reopening of Question for Trainee
+  const handleArchiveQuestion = async (questionId: string) => {
+    const supabase = createClient();
+    const { error } = await supabase.rpc('archive_marathon_question', { p_question_id: questionId });
+    if (error) {
+      setNotice(`فشل أرشفة السؤال: ${error.message}`);
+      return;
+    }
+    setSelectedMarathon((prev) => prev ? {
+      ...prev,
+      questions: prev.questions.filter((question) => question.id !== questionId),
+    } : prev);
+    setNotice('تمت أرشفة السؤال. المحاولات القديمة محفوظة.');
+  };
+
   const handleSelectiveReopen = async (submissionId: string, questionId: string) => {
     const supabase = createClient();
     const { error } = await supabase.rpc('reopen_marathon_question', {
@@ -380,9 +422,12 @@ export default function MarathonManagePage() {
                       </span>
                       <h4 className="font-bold text-sm text-content">{q.question_text}</h4>
                     </div>
-                    <span className="text-[11px] font-mono text-content-muted bg-nav px-2.5 py-0.5 rounded border border-line">
-                      {q.score_weight.toFixed(2)} درجة
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] font-mono text-content-muted bg-nav px-2.5 py-0.5 rounded border border-line">
+                        {q.score_weight.toFixed(2)} درجة
+                      </span>
+                      <button type="button" onClick={() => void handleArchiveQuestion(q.id)} className="rounded-lg border border-danger/40 px-2 py-1 text-[10px] font-bold text-danger hover:bg-danger/10">أرشفة</button>
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
@@ -453,17 +498,27 @@ export default function MarathonManagePage() {
                         )}
                       </td>
                       <td className="p-3 text-center">
+                        <select
+                          value={selectedReopenQuestionId}
+                          onChange={(e) => setSelectedReopenQuestionId(e.target.value)}
+                          className="mb-2 max-w-44 bg-nav border border-line rounded-lg px-2 py-1 text-xs text-content"
+                        >
+                          <option value="">اختر السؤال</option>
+                          {selectedMarathon?.questions.map((question, index) => (
+                            <option key={question.id} value={question.id}>السؤال {index + 1}</option>
+                          ))}
+                        </select>
                         <button
                           onClick={() => {
-                            if (selectedMarathon?.questions[0]) {
-                              handleSelectiveReopen(sub.id, selectedMarathon.questions[0].id);
+                            if (selectedReopenQuestionId) {
+                              handleSelectiveReopen(sub.id, selectedReopenQuestionId);
                             }
                           }}
                           className="p-1.5 bg-nav hover:bg-input text-content-secondary rounded-lg text-xs font-semibold inline-flex items-center gap-1 transition-colors"
-                          title="إعادة فتح سؤال محدد"
+                          title="إعادة فتح السؤال الأول"
                         >
                           <RotateCcw className="w-3.5 h-3.5 text-warning" />
-                          <span>إعادة فتح</span>
+                          <span>إعادة فتح السؤال المحدد</span>
                         </button>
                       </td>
                     </tr>
@@ -498,7 +553,27 @@ export default function MarathonManagePage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-content-secondary mb-1">نص السؤال</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-semibold text-content-secondary">نص السؤال</label>
+                    <label className="cursor-pointer text-xs text-gold hover:text-warning flex items-center gap-1 font-bold">
+                      {isUploadingQAttachment ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Paperclip className="w-3.5 h-3.5" />
+                      )}
+                      <span>{isUploadingQAttachment ? 'جاري الرفع...' : 'إرفاق ملف / صورة'}</span>
+                      <input
+                        type="file"
+                        className="hidden"
+                        disabled={isUploadingQAttachment}
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) handleUploadQuestionAttachment(f);
+                          e.target.value = '';
+                        }}
+                      />
+                    </label>
+                  </div>
                   <textarea
                     rows={2}
                     value={newQText}

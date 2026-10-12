@@ -82,24 +82,27 @@ export default function MarathonPlayerPage() {
 
         if (mData) setMarathonTitle(mData.title);
 
-        // Fetch sections & questions
-        const { data: qData } = await supabase
-          .from('marathon_questions')
-          .select('*, marathon_sections(title), marathon_answers(id, answer_text, is_correct)')
-          .eq('marathon_id', marathonId)
-          .order('order_index', { ascending: true });
+        // The player never reads the answer key or the raw question tables.
+        // The RPC returns only published questions and option text; correctness
+        // stays server-side and historical submissions keep their old question IDs.
+        const { data: playerQuestions, error: questionError } = await supabase.rpc('get_marathon_questions_for_player', {
+          p_marathon_id: marathonId,
+        });
+        if (questionError) {
+          setErrorMsg('تعذر تحميل أسئلة الماراثون.');
+        }
 
-        if (qData) {
-          const mappedQ: QuestionItem[] = qData.map((q: any) => ({
-            id: q.id,
-            section_id: q.section_id,
-            question_text: q.question_text,
-            order_index: q.order_index,
-            section_title: q.marathon_sections?.title,
-            options: q.marathon_answers || [],
-          }));
-          setQuestions(mappedQ);
+        const mappedQ: QuestionItem[] = Array.isArray(playerQuestions) ? playerQuestions.map((q: any) => ({
+          id: q.id,
+          section_id: q.section_id,
+          question_text: q.question_text,
+          order_index: q.order_index,
+          section_title: q.section_title,
+          options: q.options || [],
+        })) : [];
+        setQuestions(mappedQ);
 
+        if (!questionError) {
           // Fetch Trainee state & answers
           const { data: state } = await supabase.rpc('get_trainee_marathon_state', {
             p_marathon_id: marathonId,
@@ -279,7 +282,7 @@ export default function MarathonPlayerPage() {
               <div className="space-y-3 mb-6">
                 {currentQ.options.map((opt, optIdx) => {
                   const isSelected = selectedOptionId === opt.id || (isQuestionAnswered && currentAnswer?.selected_answer_id === opt.id);
-                  const isCorrectOption = isCompleted && opt.is_correct;
+                  const isCorrectOption = false;
 
                   return (
                     <label
@@ -287,11 +290,7 @@ export default function MarathonPlayerPage() {
                       className={`w-full p-4 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
                         isQuestionAnswered
                           ? isSelected
-                            ? isCompleted && opt.is_correct
-                              ? 'bg-canvas/50 border-success text-content'
-                              : isCompleted && !opt.is_correct
-                              ? 'bg-canvas/40 border-danger text-content'
-                              : 'bg-nav/80 border-line-subtle text-content'
+                            ? 'bg-nav/80 border-line-subtle text-content'
                             : isCorrectOption
                             ? 'bg-canvas/30 border-success/80 text-success'
                             : 'bg-nav/50 border-line text-content-muted opacity-80 cursor-not-allowed'
@@ -321,10 +320,10 @@ export default function MarathonPlayerPage() {
                               <span>الإجابة الصحيحة</span>
                             </span>
                           )}
-                          {isSelected && !opt.is_correct && (
+                          {isSelected && (
                             <span className="text-xs text-danger font-bold flex items-center gap-1">
                               <XCircle className="w-4 h-4" />
-                              <span>إجابتك</span>
+                              <span>إجابتك مسجلة</span>
                             </span>
                           )}
                         </div>

@@ -176,6 +176,43 @@ class ExportController {
 
         $filename = 'elkarooz_' . $entity . '_group_' . $groupId . '.' . $supported[$format];
 
+        // Generate content and save an immutable copy to Google Drive & media_assets
+        $content = '';
+        if ($format === 'csv') {
+            $content = SpreadsheetWriter::generateCsv($spec['label'], $rows);
+        } elseif ($format === 'excel') {
+            $content = SpreadsheetWriter::generateXlsx($spec['label'], $rows);
+        }
+
+        $savedAsset = null;
+        if ($content !== '') {
+            try {
+                $storage = new \App\Services\StorageBridgeService();
+                $savedAsset = $storage->saveFileContent(
+                    $content,
+                    $filename,
+                    "system/exports/group_{$groupId}",
+                    [
+                        'user' => $user,
+                        'resource_type' => 'GENERAL',
+                        'group_id' => $groupId > 0 ? $groupId : null,
+                    ]
+                );
+            } catch (\Throwable $e) {
+                error_log('[ExportController] Notice: Could not save export copy to Drive: ' . $e->getMessage());
+            }
+        }
+
+        if (isset($_GET['save_only']) && filter_var($_GET['save_only'], FILTER_VALIDATE_BOOLEAN)) {
+            Response::success($savedAsset ?: ['filename' => $filename], 'تم حفظ التقرير في Google Drive بنجاح');
+            return;
+        }
+
+        if ($savedAsset && !empty($savedAsset['asset_id'])) {
+            header('X-Media-Asset-Id: ' . $savedAsset['asset_id']);
+            header('X-Drive-File-Id: ' . ($savedAsset['drive_file_id'] ?? ''));
+        }
+
         try {
             // Throws SpreadsheetUnavailableException rather than silently emitting
             // something that is not the requested format.

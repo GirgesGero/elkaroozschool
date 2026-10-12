@@ -2255,6 +2255,27 @@ export type Database = {
     Functions: {
       get_current_user_group: { Args: never; Returns: number }
       get_current_user_role: { Args: never; Returns: string }
+      can_manage_curriculum: { Args: { p_group_id: number }; Returns: boolean }
+      can_manage_marathon: { Args: { p_group_id: number }; Returns: boolean }
+      create_marathon_section: { Args: { p_marathon_id: string; p_title: string }; Returns: string }
+      create_marathon_question: { Args: { p_marathon_id: string; p_section_id: string | null; p_question_text: string; p_options: Json }; Returns: string }
+      get_marathon_questions_for_player: { Args: { p_marathon_id: string }; Returns: Json }
+      archive_marathon_question: { Args: { p_question_id: string }; Returns: Json }
+      replace_marathon_question: { Args: { p_question_id: string; p_question_text: string; p_section_id: string | null; p_options: Json }; Returns: string }
+      reopen_marathon_question: { Args: { p_submission_id: string; p_question_id: string }; Returns: Json }
+      submit_marathon_answer: { Args: { p_marathon_id: string; p_question_id: string; p_selected_answer_id: string }; Returns: Json }
+      publish_curriculum_day: {
+        Args: { p_day_id: string }
+        Returns: any
+      }
+      update_curriculum_day: {
+        Args: { p_day_id: string; p_day_number?: number | null; p_title?: string | null; p_study_date?: string | null; p_sort_order?: number | null }
+        Returns: any
+      }
+      update_curriculum_entry: {
+        Args: { p_entry_id: string; p_day_id?: string | null; p_title?: string | null; p_description?: string | null; p_lecturer_id?: string | null; p_sort_order?: number | null; p_content_metadata?: Json | null }
+        Returns: any
+      }
       has_servant_permission: { Args: { perm_id: string }; Returns: boolean }
       is_admin_or_super_user: { Args: never; Returns: boolean }
       is_secretariat_of_group: {

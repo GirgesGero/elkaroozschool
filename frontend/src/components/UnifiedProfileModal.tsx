@@ -32,6 +32,7 @@ import {
 } from 'lucide-react';
 import type { Profile } from '@/types/database';
 import Avatar from '../components/Avatar';
+import { phpApi } from '@/lib/api/php';
 
 interface UnifiedProfileModalProps {
   profileId: string | null;
@@ -212,7 +213,33 @@ export default function UnifiedProfileModal({
 
     try {
       const prepared = await prepareAvatar(file);
-      await handleSaveAvatarUrl(prepared.dataUrl);
+      let targetUrl = prepared.dataUrl;
+
+      // Upload to Google Drive / backend storage when reachable
+      try {
+        const supabase = createClient();
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          const formData = new FormData();
+          formData.append('file', file);
+          formData.append('folder_type', 'users');
+          formData.append('group_id', String(profile?.group_id || 1));
+          formData.append('resource_type', 'AVATAR');
+          formData.append('resource_id', profile?.id || '');
+          const res = await phpApi<{ file_url: string }>('/storage/upload', {
+            formData,
+            session,
+            timeoutMs: 15_000,
+          });
+          if (res?.file_url) {
+            targetUrl = res.file_url;
+          }
+        }
+      } catch (cloudErr) {
+        console.warn('Storage API unreachable, falling back to local compressed dataUrl:', cloudErr);
+      }
+
+      await handleSaveAvatarUrl(targetUrl);
       setAvatarSuccessMsg(true);
     } catch (err) {
       const message =
