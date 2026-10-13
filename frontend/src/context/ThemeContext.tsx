@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
 export type AppTheme = 'light' | 'dark' | 'luxury' | 'system';
-export type AppAccent = 'gold' | 'burgundy' | 'navy' | 'emerald';
+export type AppAccent = 'gold' | 'burgundy' | 'navy' | 'emerald' | 'amethyst';
 
 interface ThemeContextType {
   theme: AppTheme;
@@ -31,7 +31,7 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     const savedAccent = localStorage.getItem('elkarooz-accent') as AppAccent | null;
 
     const initialTheme: AppTheme = savedTheme && ['light', 'dark', 'luxury', 'system'].includes(savedTheme) ? savedTheme : 'luxury';
-    const initialAccent: AppAccent = savedAccent && ['gold', 'burgundy', 'navy', 'emerald'].includes(savedAccent) ? savedAccent : 'gold';
+    const initialAccent: AppAccent = savedAccent && ['gold', 'burgundy', 'navy', 'emerald', 'amethyst'].includes(savedAccent) ? savedAccent : 'gold';
 
     setThemeState(initialTheme);
     setAccentState(initialAccent);
@@ -42,7 +42,7 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
   const applyThemeClasses = (t: AppTheme, a: AppAccent) => {
     const root = document.documentElement;
     root.classList.remove('theme-light', 'theme-dark', 'theme-luxury', 'dark');
-    root.classList.remove('accent-gold', 'accent-burgundy', 'accent-navy', 'accent-emerald');
+    root.classList.remove('accent-gold', 'accent-burgundy', 'accent-navy', 'accent-emerald', 'accent-amethyst');
 
     let effectiveTheme = t;
     if (t === 'system') {

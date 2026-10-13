@@ -150,7 +150,7 @@ export default function UnifiedProfileModal({
   const isSelf = currentUser?.id === profile?.id;
   const isAdminOrSuper = currentUser?.role_id === 'admin' || currentUser?.role_id === 'super_user';
   const canEdit = isSelf || isAdminOrSuper;
-  const isStaff = profile?.role_id === 'servant' || profile?.role_id === 'secretariat' || profile?.role_id === 'admin';
+  const isStaff = profile?.role_id === 'servant' || profile?.role_id === 'secretariat' || profile?.role_id === 'admin' || profile?.role_id === 'super_user';
 
   // Handle direct Avatar URL change
   const handleSaveAvatarUrl = async (newUrl: string) => {
@@ -314,6 +314,8 @@ export default function UnifiedProfileModal({
             <span className="px-3 py-1 rounded-full bg-black/60 backdrop-blur-md text-[11px] font-bold text-gold border border-gold/30 shadow-md">
               {profile?.role_id === 'admin'
                 ? 'مدير النظام'
+                : profile?.role_id === 'super_user'
+                ? 'المشرف العام'
                 : profile?.role_id === 'servant'
                 ? 'خادم الفرقة'
                 : profile?.role_id === 'secretariat'

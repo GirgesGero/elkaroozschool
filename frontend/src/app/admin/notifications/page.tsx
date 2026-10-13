@@ -97,7 +97,7 @@ export default function AdminNotificationsPage() {
 
       setProfile(userProfile as Profile);
       setIsAdmin(true);
-      setCanEditPastoral(userProfile.role_id === 'admin');
+      setCanEditPastoral(['admin', 'super_user'].includes(userProfile.role_id));
 
       // 1. Fetch Templates
       const { data: tmpls } = await supabase.from('notification_templates').select('*');

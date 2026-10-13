@@ -71,6 +71,7 @@ export async function phpApi<T = unknown>(path: string, options: RequestOptions 
   // derives the acting user from these claims and enforces RBAC on them.
   if (session?.access_token) {
     headers.Authorization = `Bearer ${session.access_token}`;
+    headers['X-Authorization'] = `Bearer ${session.access_token}`;
   }
   if (body !== undefined && !formData) {
     headers['Content-Type'] = 'application/json';

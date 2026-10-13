@@ -130,12 +130,12 @@ export default function MarathonManagePage() {
         const prof = userProfile as Profile;
         setProfile(prof);
 
-        // Fetch marathons for group
-        const { data: mList } = await supabase
-          .from('marathons')
-          .select('*')
-          .eq('group_id', prof.group_id)
-          .order('created_at', { ascending: false });
+        // Fetch marathons (scoped to group if user is assigned to one, otherwise all)
+        let mQuery = supabase.from('marathons').select('*');
+        if (prof.group_id) {
+          mQuery = mQuery.eq('group_id', prof.group_id);
+        }
+        const { data: mList } = await mQuery.order('created_at', { ascending: false });
 
         if (mList && mList.length > 0) {
           setMarathons(mList);

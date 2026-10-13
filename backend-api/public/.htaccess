@@ -5,6 +5,9 @@
     RewriteEngine On
     RewriteBase /
     
+    # Pass Authorization header to PHP across FastCGI / LiteSpeed / OpenResty
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
     # Block HTTP methods that are not allowed
     RewriteCond %{REQUEST_METHOD} ^(TRACE|TRACK|CONNECT|DEBUG) [NC]
     RewriteRule ^.*$ - [F]

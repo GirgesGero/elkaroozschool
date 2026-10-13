@@ -218,6 +218,155 @@
   --rgb-info: 127 169 232;
 }
 
+/* =============================================================================
+   ACCENT PALETTES — Multi-Color System for BOTH Light & Dark/Luxury Modes
+   ============================================================================= */
+
+/* --- 1. Coptic Gold (الذهب القبطي) --- */
+.accent-gold {
+  /* Inherits calibrated default theme gold values */
+}
+
+/* --- 2. Imperial Burgundy (العنابي الإمبراطوري) --- */
+.theme-light.accent-burgundy,
+:root.accent-burgundy:not(.theme-dark):not(.theme-luxury) {
+  --brand-primary: #9F1239;
+  --brand-primary-hover: #881337;
+  --brand-primary-text: #FFFFFF;
+  --brand-gold: #9F1239;
+  --brand-gold-bright: #E11D48;
+  --brand-gold-text: #881337;
+  --text-active-tab: #9F1239;
+  --bg-active-tab: #FFE4E6;
+  --shadow-gold: 0 4px 18px rgba(159, 18, 57, 0.22);
+  --selection-bg: #FECDD3;
+  --selection-text: #881337;
+  --rgb-brand: 159 18 57;
+  --rgb-gold: 159 18 57;
+}
+.theme-dark.accent-burgundy,
+.theme-luxury.accent-burgundy,
+.dark.accent-burgundy {
+  --brand-primary: #FB7185;
+  --brand-primary-hover: #FDA4AF;
+  --brand-primary-text: #19030A;
+  --brand-gold: #FB7185;
+  --brand-gold-bright: #FECDD3;
+  --brand-gold-text: #FB7185;
+  --text-active-tab: #FB7185;
+  --bg-active-tab: #3B0E17;
+  --shadow-gold: 0 4px 20px rgba(251, 113, 133, 0.25);
+  --selection-bg: #4C0519;
+  --selection-text: #FECDD3;
+  --rgb-brand: 251 113 133;
+  --rgb-gold: 251 113 133;
+}
+
+/* --- 3. Royal Sapphire & Navy (الأزرق النيلي الملكي) --- */
+.theme-light.accent-navy,
+:root.accent-navy:not(.theme-dark):not(.theme-luxury) {
+  --brand-primary: #1D4ED8;
+  --brand-primary-hover: #1E40AF;
+  --brand-primary-text: #FFFFFF;
+  --brand-gold: #1D4ED8;
+  --brand-gold-bright: #3B82F6;
+  --brand-gold-text: #1E3A8A;
+  --text-active-tab: #1D4ED8;
+  --bg-active-tab: #DBEAFE;
+  --shadow-gold: 0 4px 18px rgba(29, 78, 216, 0.22);
+  --selection-bg: #BFDBFE;
+  --selection-text: #1E3A8A;
+  --rgb-brand: 29 78 216;
+  --rgb-gold: 29 78 216;
+}
+.theme-dark.accent-navy,
+.theme-luxury.accent-navy,
+.dark.accent-navy {
+  --brand-primary: #60A5FA;
+  --brand-primary-hover: #93C5FD;
+  --brand-primary-text: #051329;
+  --brand-gold: #60A5FA;
+  --brand-gold-bright: #BFDBFE;
+  --brand-gold-text: #60A5FA;
+  --text-active-tab: #60A5FA;
+  --bg-active-tab: #0E2448;
+  --shadow-gold: 0 4px 20px rgba(96, 165, 250, 0.25);
+  --selection-bg: #172554;
+  --selection-text: #DBEAFE;
+  --rgb-brand: 96 165 250;
+  --rgb-gold: 96 165 250;
+}
+
+/* --- 4. Monastic Palm Emerald (الزمرد النخيل) --- */
+.theme-light.accent-emerald,
+:root.accent-emerald:not(.theme-dark):not(.theme-luxury) {
+  --brand-primary: #15803D;
+  --brand-primary-hover: #166534;
+  --brand-primary-text: #FFFFFF;
+  --brand-gold: #15803D;
+  --brand-gold-bright: #22C55E;
+  --brand-gold-text: #14532D;
+  --text-active-tab: #15803D;
+  --bg-active-tab: #DCFCE7;
+  --shadow-gold: 0 4px 18px rgba(21, 128, 61, 0.22);
+  --selection-bg: #BBF7D0;
+  --selection-text: #14532D;
+  --rgb-brand: 21 128 61;
+  --rgb-gold: 21 128 61;
+}
+.theme-dark.accent-emerald,
+.theme-luxury.accent-emerald,
+.dark.accent-emerald {
+  --brand-primary: #34D399;
+  --brand-primary-hover: #6EE7B7;
+  --brand-primary-text: #031A11;
+  --brand-gold: #34D399;
+  --brand-gold-bright: #A7F3D0;
+  --brand-gold-text: #34D399;
+  --text-active-tab: #34D399;
+  --bg-active-tab: #063523;
+  --shadow-gold: 0 4px 20px rgba(52, 211, 153, 0.25);
+  --selection-bg: #064E3B;
+  --selection-text: #D1FAE5;
+  --rgb-brand: 52 211 153;
+  --rgb-gold: 52 211 153;
+}
+
+/* --- 5. Liturgical Sacred Amethyst (البنفسجي الكنسي) --- */
+.theme-light.accent-amethyst,
+:root.accent-amethyst:not(.theme-dark):not(.theme-luxury) {
+  --brand-primary: #7E22CE;
+  --brand-primary-hover: #6B21A8;
+  --brand-primary-text: #FFFFFF;
+  --brand-gold: #7E22CE;
+  --brand-gold-bright: #A855F7;
+  --brand-gold-text: #581C87;
+  --text-active-tab: #7E22CE;
+  --bg-active-tab: #F3E8FF;
+  --shadow-gold: 0 4px 18px rgba(126, 34, 206, 0.22);
+  --selection-bg: #E9D5FF;
+  --selection-text: #581C87;
+  --rgb-brand: 126 34 206;
+  --rgb-gold: 126 34 206;
+}
+.theme-dark.accent-amethyst,
+.theme-luxury.accent-amethyst,
+.dark.accent-amethyst {
+  --brand-primary: #C084FC;
+  --brand-primary-hover: #D8B4FE;
+  --brand-primary-text: #170228;
+  --brand-gold: #C084FC;
+  --brand-gold-bright: #F3E8FF;
+  --brand-gold-text: #C084FC;
+  --text-active-tab: #C084FC;
+  --bg-active-tab: #2D0F4B;
+  --shadow-gold: 0 4px 20px rgba(192, 132, 252, 0.25);
+  --selection-bg: #3B0764;
+  --selection-text: #F3E8FF;
+  --rgb-brand: 192 132 252;
+  --rgb-gold: 192 132 252;
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -355,37 +504,106 @@
     font-family: inherit;
     font-size: 0.9375rem;
     cursor: pointer;
-    transition: background-color 180ms cubic-bezier(0.4, 0, 0.2, 1),
-      color 180ms cubic-bezier(0.4, 0, 0.2, 1), opacity 180ms cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    user-select: none;
+    transition: all 220ms cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: transform, box-shadow;
   }
 
-  .app-btn-primary {
+  .app-btn:hover:not(:disabled) {
+    transform: translateY(-1.5px);
+  }
+
+  .app-btn:active:not(:disabled) {
+    transform: translateY(1px) scale(0.982);
+  }
+
+  .app-btn svg,
+  button svg {
+    transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .app-btn:hover:not(:disabled) svg {
+    transform: scale(1.08);
+  }
+
+  .app-btn:active:not(:disabled) svg {
+    transform: scale(0.94);
+  }
+
+  /* Primary Button: Sacred Luxury & Dynamic Ambient Glow */
+  .app-btn-primary,
+  .btn-gold {
     background-color: var(--brand-primary);
     color: var(--brand-primary-text);
-    box-shadow: var(--shadow-gold);
+    box-shadow: var(--shadow-gold), 0 1px 2px rgba(0, 0, 0, 0.08);
+    position: relative;
+    overflow: hidden;
   }
 
-  .app-btn-primary:hover {
+  .app-btn-primary::before,
+  .btn-gold::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0) 100%);
+    pointer-events: none;
+    opacity: 0.8;
+    transition: opacity 200ms ease;
+  }
+
+  .app-btn-primary:hover:not(:disabled),
+  .btn-gold:hover:not(:disabled) {
     background-color: var(--brand-primary-hover);
+    box-shadow: 0 6px 22px -2px var(--shadow-gold), 0 0 0 1px color-mix(in srgb, var(--brand-primary) 38%, transparent);
+    transform: translateY(-1.5px);
   }
 
+  .app-btn-primary:hover:not(:disabled)::before,
+  .btn-gold:hover:not(:disabled)::before {
+    opacity: 1;
+  }
+
+  .app-btn-primary:active:not(:disabled),
+  .btn-gold:active:not(:disabled) {
+    transform: translateY(1px) scale(0.982);
+    box-shadow: 0 2px 8px -1px var(--shadow-gold);
+  }
+
+  /* Secondary Button: Subtle Tactile Border */
   .app-btn-secondary {
     background-color: var(--btn-secondary-bg);
     color: var(--btn-secondary-text);
+    border: 1px solid var(--border-card);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
   }
 
-  .app-btn-secondary:hover {
+  .app-btn-secondary:hover:not(:disabled) {
     background-color: var(--btn-secondary-hover);
+    border-color: color-mix(in srgb, var(--brand-primary) 40%, var(--border-card));
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+    transform: translateY(-1px);
   }
 
+  .app-btn-secondary:active:not(:disabled) {
+    transform: translateY(1px) scale(0.985);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  }
+
+  /* Ghost Button */
   .app-btn-ghost {
     background-color: transparent;
     color: var(--text-secondary);
   }
 
-  .app-btn-ghost:hover {
+  .app-btn-ghost:hover:not(:disabled) {
     background-color: var(--bg-card-hover);
-    color: var(--text-primary);
+    color: var(--brand-primary);
+    transform: translateY(-1px);
+  }
+
+  .app-btn-ghost:active:not(:disabled) {
+    transform: translateY(1px) scale(0.985);
   }
 
   /* Disabled must look disabled and stop responding. */

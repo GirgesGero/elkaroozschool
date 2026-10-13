@@ -15,6 +15,9 @@ class SpreadsheetUnavailableException extends \RuntimeException {}
 class SpreadsheetWriter {
     /**
      * Formats this deployment can serve.
+     * Note: PDF is deliberately omitted from formats() because rendering Arabic text
+     * without a dedicated bidirectional complex-text shaping library results in
+     * disconnected reversed glyphs.
      *
      * @return array<string,string> format => file extension
      */

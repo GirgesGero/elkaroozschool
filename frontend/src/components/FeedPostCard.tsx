@@ -196,6 +196,8 @@ export default function FeedPostCard({
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-nav/80 text-content-secondary border border-line">
                 {post.author?.role_id === 'admin'
                   ? 'مسؤول'
+                  : post.author?.role_id === 'super_user'
+                  ? 'مشرف عام'
                   : post.author?.role_id === 'servant'
                   ? 'خادم'
                   : post.author?.role_id === 'secretariat'

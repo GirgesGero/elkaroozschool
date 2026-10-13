@@ -152,6 +152,8 @@ export default function FeedPage() {
                 <span className="text-[11px] font-bold text-gold block mt-0.5">
                   {profile.role_id === 'admin'
                     ? 'مدير النظام'
+                    : profile.role_id === 'super_user'
+                    ? 'المشرف العام'
                     : profile.role_id === 'servant'
                     ? 'خادم الفرقة'
                     : profile.role_id === 'secretariat'

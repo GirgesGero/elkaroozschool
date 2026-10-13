@@ -153,8 +153,7 @@ class ImportController {
      * The raw Bearer token from the request, or null when absent.
      */
     private function bearerToken(): ?string {
-        $header = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
-        return preg_match('/Bearer\s(\S+)/', $header, $m) ? $m[1] : null;
+        return JwtAuthMiddleware::extractBearerToken();
     }
 
     /**

@@ -45,6 +45,7 @@ export default function SettingsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
+  const [buttonTestCount, setButtonTestCount] = useState(0);
 
   useEffect(() => {
     async function loadUser() {
@@ -210,12 +211,13 @@ export default function SettingsPage() {
           {/* Accent Color Palette Selector */}
           <div className="pt-2 border-t border-line/80">
             <label className="text-xs font-bold text-content-secondary block mb-2.5">لون التمييز الكنسي (Brand Accent)</label>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
               <button
+                type="button"
                 onClick={() => setAccent('gold')}
                 className={`p-3 rounded-2xl border flex items-center gap-2.5 transition-all ${
                   accent === 'gold'
-                    ? 'bg-gold/20 border-gold text-brand-on font-bold'
+                    ? 'bg-gold/20 border-gold text-brand-on font-bold shadow-md'
                     : 'bg-canvas border-line text-content-secondary hover:border-line'
                 }`}
               >
@@ -224,40 +226,103 @@ export default function SettingsPage() {
               </button>
 
               <button
+                type="button"
                 onClick={() => setAccent('burgundy')}
                 className={`p-3 rounded-2xl border flex items-center gap-2.5 transition-all ${
                   accent === 'burgundy'
-                    ? 'bg-brand/30 border-brand text-brand-on font-bold'
+                    ? 'bg-brand/30 border-brand text-brand-on font-bold shadow-md'
                     : 'bg-canvas border-line text-content-secondary hover:border-line'
                 }`}
               >
-                <div className="w-4 h-4 rounded-full bg-brand shadow-sm shrink-0" />
+                <div className="w-4 h-4 rounded-full bg-[#9F1239] shadow-sm shrink-0" />
                 <span className="text-xs">العنابي الكنسي</span>
               </button>
 
               <button
+                type="button"
                 onClick={() => setAccent('navy')}
                 className={`p-3 rounded-2xl border flex items-center gap-2.5 transition-all ${
                   accent === 'navy'
-                    ? 'bg-nav/50 border-info text-content font-bold'
+                    ? 'bg-info/20 border-info text-content font-bold shadow-md'
                     : 'bg-canvas border-line text-content-secondary hover:border-line'
                 }`}
               >
-                <div className="w-4 h-4 rounded-full bg-nav border border-info shadow-sm shrink-0" />
+                <div className="w-4 h-4 rounded-full bg-[#1D4ED8] shadow-sm shrink-0" />
                 <span className="text-xs">الأزرق النيلي</span>
               </button>
 
               <button
+                type="button"
                 onClick={() => setAccent('emerald')}
                 className={`p-3 rounded-2xl border flex items-center gap-2.5 transition-all ${
                   accent === 'emerald'
-                    ? 'bg-success/20 border-success text-content font-bold'
+                    ? 'bg-success/20 border-success text-content font-bold shadow-md'
                     : 'bg-canvas border-line text-content-secondary hover:border-line'
                 }`}
               >
-                <div className="w-4 h-4 rounded-full bg-success shadow-sm shrink-0" />
+                <div className="w-4 h-4 rounded-full bg-[#15803D] shadow-sm shrink-0" />
                 <span className="text-xs">الأخضر النخل</span>
               </button>
+
+              <button
+                type="button"
+                onClick={() => setAccent('amethyst')}
+                className={`p-3 rounded-2xl border flex items-center gap-2.5 transition-all ${
+                  accent === 'amethyst'
+                    ? 'bg-brand/20 border-purple-500 text-content font-bold shadow-md'
+                    : 'bg-canvas border-line text-content-secondary hover:border-line'
+                }`}
+              >
+                <div className="w-4 h-4 rounded-full bg-[#9333EA] shadow-sm shrink-0" />
+                <span className="text-xs">البنفسجي الكنسي</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Interactive Live Theme & Button Preview Sandbox */}
+          <div className="pt-3 border-t border-line/80">
+            <div className="flex items-center justify-between mb-2.5">
+              <label className="text-xs font-bold text-content-secondary flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-gold" />
+                <span>معاينة حية لتناسق الألوان وفيزياء الأزرار (Interactive Theme & Button Sandbox)</span>
+              </label>
+              <span className="text-[10px] font-bold text-content-muted bg-canvas px-2 py-0.5 rounded-md border border-line">
+                الوضع: {theme === 'luxury' ? 'الملكي القبطي' : theme === 'dark' ? 'الداكن' : theme === 'light' ? 'النهاري' : 'التلقائي'}
+              </span>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-nav/60 border border-line flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setButtonTestCount((c) => c + 1)}
+                className="app-btn app-btn-primary text-xs"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>زر أساسي متوهج ({buttonTestCount > 0 ? `نقرة ${buttonTestCount} ⚡` : 'اضغط للتجربة'})</span>
+              </button>
+
+              <button
+                type="button"
+                className="app-btn app-btn-secondary text-xs"
+              >
+                <span>زر ثانوي محدد</span>
+              </button>
+
+              <button
+                type="button"
+                className="app-btn app-btn-ghost text-xs"
+              >
+                <span>زر شفاف</span>
+              </button>
+
+              <div className="mr-auto flex items-center gap-2">
+                <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-active-bg text-active-fg border border-line">
+                  عنصر نشط
+                </span>
+                <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-brand text-brand-on shadow-sm">
+                  لون الهوية
+                </span>
+              </div>
             </div>
           </div>
         </section>

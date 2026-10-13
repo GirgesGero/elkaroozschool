@@ -327,7 +327,8 @@ class StorageBridgeService {
         ?string $rangeHeader = null,
         string $mimeType = 'application/octet-stream',
         string $fileName = 'file',
-        int $fileSize = 0
+        int $fileSize = 0,
+        ?string $checksum = null
     ): void {
         $root = realpath($this->rootDir);
         if ($root === false) {
@@ -339,8 +340,10 @@ class StorageBridgeService {
         $iterator = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($root));
         foreach ($iterator as $item) {
             if ($item->isFile() && $item->getFilename() === $fileName) {
-                $foundPath = $item->getPathname();
-                break;
+                if ($checksum === null || $checksum === '' || hash_file('sha256', $item->getPathname()) === $checksum) {
+                    $foundPath = $item->getPathname();
+                    break;
+                }
             }
         }
 

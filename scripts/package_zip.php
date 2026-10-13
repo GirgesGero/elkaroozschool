@@ -107,7 +107,7 @@ foreach ($iterator as $file) {
     $path = $file->getPathname();
     $rel  = str_replace('\\', '/', substr($path, strlen($beRoot) + 1));
 
-    if (preg_match('#(^|/)\.env(\.|$)#', $rel)) {
+    if (preg_match('#(^|/)\.env(\.|$)#', $rel) && !str_ends_with($rel, '.example') && !str_ends_with($rel, '.template')) {
         $forbidden[] = $rel . ' (env file)';
         continue;
     }
@@ -339,6 +339,14 @@ check('the deny comes BEFORE the grant (ordering is load-bearing)',
 
 printf("\n  archive: %s\n", $outFile);
 printf("  size:    %d bytes, %d entries\n", (int) filesize($outFile), count($names));
+
+$repoDeployDir = $root . '/deploy-packages';
+if (is_dir($repoDeployDir) && $fail === 0) {
+    $repoZip = $repoDeployDir . '/HOSTINGER_PUBLIC_HTML_READY_v3.zip';
+    if (@copy($finalFile, $repoZip)) {
+        printf("  deployed copy: %s\n", $repoZip);
+    }
+}
 
 printf("\n=== SUMMARY ===\n%d passed, %d failed\n", $pass, $fail);
 exit($fail === 0 ? 0 : 1);

@@ -52,6 +52,7 @@ import {
 } from 'lucide-react';
 import type { Profile, AttendanceStatus } from '@/types/database';
 import Avatar from '../../../components/Avatar';
+import TraineeCard from '@/components/TraineeCard';
 
 interface PageProps {
   params?: { id?: string };
@@ -1119,61 +1120,15 @@ export default function GroupDetailsPage({ params }: PageProps) {
                   </div>
                 </div>
 
-                {/* Trainees Grid / Table */}
+                {/* Trainees Grid Cards */}
                 {filteredTrainees.length > 0 ? (
-                  <div className="bg-nav/80 border border-line rounded-2xl overflow-hidden divide-y divide-line-subtle shadow-xl">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {filteredTrainees.map((t) => (
-                      <div
+                      <TraineeCard
                         key={t.id}
-                        onClick={() => openTraineeDrawer(t.id)}
-                        className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-nav/60 cursor-pointer transition-colors"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-nav text-gold flex items-center justify-center font-bold shrink-0">
-                            {t.avatar_url ? (
-                              <Avatar src={t.avatar_url} name={t.full_name} size={40} />
-                            ) : (
-                              <User className="w-5 h-5" />
-                            )}
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <h4 className="font-bold text-sm text-content">{t.full_name}</h4>
-                              <span
-                                className={`text-[10px] font-bold px-2 py-0.2 rounded-full border ${
-                                  t.is_active
-                                    ? 'bg-success/10 text-success border-success/30'
-                                    : 'bg-danger/10 text-danger border-danger/30'
-                                }`}
-                              >
-                                {t.is_active ? 'نشط' : 'موقوف'}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-2 text-xs text-content-muted mt-0.5">
-                              <span>@{t.username}</span>
-                              {t.phone && (
-                                <>
-                                  <span>•</span>
-                                  <span>{t.phone}</span>
-                                </>
-                              )}
-                              {t.confession_father && (
-                                <>
-                                  <span>•</span>
-                                  <span>أب الاعتراف: {t.confession_father}</span>
-                                </>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-3 justify-end">
-                          <button className="px-3 py-1.5 rounded-lg bg-nav hover:bg-input text-content text-xs font-semibold flex items-center gap-1 transition-colors border border-line">
-                            <span>فتح الملف الكامل</span>
-                            <ChevronLeft className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </div>
+                        trainee={t}
+                        onClick={openTraineeDrawer}
+                      />
                     ))}
                   </div>
                 ) : (

@@ -12,6 +12,7 @@ import UnifiedProfileModal from '@/components/UnifiedProfileModal';
 import GroupSelector from '@/components/GroupSelector';
 import TraineeProfileDrawer from '@/components/TraineeProfileDrawer';
 import CreateTraineeModal from '@/components/CreateTraineeModal';
+import TraineeCard from '@/components/TraineeCard';
 import {
   AlertCircle,
   ArrowRight,
@@ -266,92 +267,15 @@ export default function TraineesDirectoryPage() {
             <p className="text-sm">جاري تحميل سجل المتدربين...</p>
           </div>
         ) : filtered.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {filtered.map((t) => (
-              <div
+              <TraineeCard
                 key={t.id}
-                onClick={() => openDrawer(t.id)}
-                className={`border rounded-2xl p-5 shadow-lg transition-all duration-200 cursor-pointer hover:scale-[1.01] flex flex-col justify-between ${
-                  t.is_active
-                    ? 'bg-nav/90 border-line hover:border-gold/40'
-                    : 'bg-canvas/20 border-danger/40 opacity-85'
-                }`}
-              >
-                <div>
-                  <div className="flex items-start justify-between mb-3.5">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-xl bg-nav border border-line flex items-center justify-center text-gold font-bold text-base shrink-0">
-                        {t.avatar_url ? (
-                          <Avatar src={t.avatar_url} name={t.full_name} size={48} />
-                        ) : (
-                          <User className="w-6 h-6" />
-                        )}
-                      </div>
-                      <div>
-                        <h3 className="font-bold text-sm text-content hover:text-gold transition-colors">
-                          {t.full_name}
-                        </h3>
-                        <span className="text-xs text-content-muted font-mono">@{t.username}</span>
-                      </div>
-                    </div>
-
-                    <span
-                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
-                        t.is_active
-                          ? 'bg-canvas/60 text-success border-success/50'
-                          : 'bg-canvas/60 text-danger border-danger/50'
-                      }`}
-                    >
-                      {t.is_active ? 'نشط' : 'موقوف'}
-                    </span>
-                  </div>
-
-                  {/* Trainee Details */}
-                  <div className="space-y-1.5 text-xs text-content-secondary mb-4 bg-nav/60 p-3 rounded-xl border border-line/60">
-                    <div className="flex items-center justify-between text-content-muted">
-                      <span>الفرقة الدراسية:</span>
-                      <strong className="text-gold">
-                        {t.group_id === 1 ? 'الفرقة الأولى' : t.group_id === 2 ? 'الفرقة الثانية' : 'الفرقة الثالثة'}
-                      </strong>
-                    </div>
-
-                    {t.phone && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-content-muted">الهاتف:</span>
-                        <span dir="ltr" className="text-content font-semibold">{t.phone}</span>
-                      </div>
-                    )}
-
-                    {t.confession_father && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-content-muted">أب الاعتراف:</span>
-                        <span className="text-content">{t.confession_father}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Bottom Actions */}
-                <div className="flex items-center justify-between pt-3 border-t border-line/80">
-                  <span className="text-xs text-gold font-bold flex items-center gap-1">
-                    <span>فتح الملف الأكاديمي</span>
-                    <ChevronLeft className="w-3.5 h-3.5" />
-                  </span>
-
-                  <button
-                    disabled={updating}
-                    onClick={(e) => handleToggleSuspension(t, e)}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
-                      t.is_active
-                        ? 'bg-canvas/70 hover:bg-canvas text-danger border border-danger/50'
-                        : 'bg-canvas/70 hover:bg-canvas text-success border border-success/50'
-                    }`}
-                  >
-                    <Power className="w-3 h-3" />
-                    <span>{t.is_active ? 'إيقاف' : 'تفعيل'}</span>
-                  </button>
-                </div>
-              </div>
+                trainee={t}
+                onClick={openDrawer}
+                onToggleStatus={handleToggleSuspension}
+                isUpdatingStatus={updating}
+              />
             ))}
           </div>
         ) : (

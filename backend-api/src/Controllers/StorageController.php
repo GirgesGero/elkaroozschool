@@ -188,7 +188,8 @@ class StorageController {
                     $range,
                     (string)$asset['mime_type'],
                     (string)$asset['file_name'],
-                    (int)$asset['file_size_bytes']
+                    (int)$asset['file_size_bytes'],
+                    (string)($asset['checksum_sha256'] ?? '')
                 );
                 exit;
             } catch (\Exception $e) {

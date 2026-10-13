@@ -8,6 +8,24 @@ use Firebase\JWT\Key;
 use App\Utils\Response;
 
 class JwtAuthMiddleware {
+    public static function extractBearerToken(): ?string {
+        $allHeaders = function_exists('getallheaders') ? getallheaders() : [];
+        $authHeader = $_SERVER['HTTP_AUTHORIZATION']
+            ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION']
+            ?? $_SERVER['REDIRECT_REDIRECT_HTTP_AUTHORIZATION']
+            ?? $_SERVER['HTTP_X_AUTHORIZATION']
+            ?? $allHeaders['Authorization']
+            ?? $allHeaders['authorization']
+            ?? $allHeaders['X-Authorization']
+            ?? $allHeaders['x-authorization']
+            ?? '';
+
+        if (preg_match('/Bearer\s+(\S+)/i', $authHeader, $matches)) {
+            return $matches[1];
+        }
+        return null;
+    }
+
     public static function authenticate(): array {
         // Shared hosts (Hostinger runs LiteSpeed) strip the Authorization header from
         // $_SERVER unless the vhost sets `CGIPassAuth On`. Every authenticated route then
@@ -16,19 +34,11 @@ class JwtAuthMiddleware {
         //
         // Apache passes it through REDIRECT_HTTP_AUTHORIZATION when a rewrite has already
         // run, and some FastCGI setups expose it as HTTP_AUTHORIZATION only after a
-        // rewrite. All three are checked, in order, before giving up. A token is still
-        // verified cryptographically below, so reading it from a second location does not
-        // weaken anything: an attacker cannot forge a valid signature either way.
-        $authHeader = $_SERVER['HTTP_AUTHORIZATION']
-            ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION']
-            ?? $_SERVER['REDIRECT_REDIRECT_HTTP_AUTHORIZATION']
-            ?? '';
-
-        if (!preg_match('/Bearer\s+(\S+)/i', $authHeader, $matches)) {
+        // rewrite. All fallbacks are checked in extractBearerToken().
+        $jwt = self::extractBearerToken();
+        if (!$jwt) {
             Response::error('المصادقة مطلوبة: التوكن غير موجود', 'UNAUTHORIZED', 401);
         }
-
-        $jwt = $matches[1];
         $config = require AppRoot::path('config/supabase.php');
 
         try {

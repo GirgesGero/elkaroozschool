@@ -154,23 +154,34 @@ export default function MarathonPlayerPage() {
       setErrorMsg(error.message);
     } else {
       // Update answers map
-      setAnswersMap((prev) => {
-        const next = new Map(prev);
-        next.set(currentQ.id, {
-          question_id: currentQ.id,
-          selected_answer_id: selectedOptionId,
-          is_reopened: false,
-        });
-        return next;
+      const nextAnswers = new Map(answersMap);
+      nextAnswers.set(currentQ.id, {
+        question_id: currentQ.id,
+        selected_answer_id: selectedOptionId,
+        is_reopened: false,
       });
+      setAnswersMap(nextAnswers);
 
       setSelectedOptionId(null);
 
       // Check if marathon completed
-      if (res?.is_completed || currentQIndex + 1 >= questions.length) {
+      const allAnswered = questions.length > 0 && questions.every((q) => nextAnswers.has(q.id) && !nextAnswers.get(q.id)?.is_reopened);
+      if (res?.is_completed || allAnswered) {
         setIsCompleted(true);
       } else {
-        setCurrentQIndex((prev) => prev + 1);
+        // Look for the next unanswered question starting after current index
+        const nextUnanswered = questions.findIndex((q, i) => i > currentQIndex && (!nextAnswers.has(q.id) || nextAnswers.get(q.id)?.is_reopened));
+        if (nextUnanswered !== -1) {
+          setCurrentQIndex(nextUnanswered);
+        } else {
+          // If no later question is unanswered, wrap around to find any earlier unanswered question
+          const earlierUnanswered = questions.findIndex((q) => !nextAnswers.has(q.id) || nextAnswers.get(q.id)?.is_reopened);
+          if (earlierUnanswered !== -1) {
+            setCurrentQIndex(earlierUnanswered);
+          } else {
+            setIsCompleted(true);
+          }
+        }
       }
     }
     setSubmitting(false);
@@ -282,7 +293,7 @@ export default function MarathonPlayerPage() {
               <div className="space-y-3 mb-6">
                 {currentQ.options.map((opt, optIdx) => {
                   const isSelected = selectedOptionId === opt.id || (isQuestionAnswered && currentAnswer?.selected_answer_id === opt.id);
-                  const isCorrectOption = false;
+                  const isCorrectOption = Boolean(opt.is_correct);
 
                   return (
                     <label
