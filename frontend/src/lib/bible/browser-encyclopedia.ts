@@ -370,13 +370,28 @@ export async function getCategoriesAndSections(): Promise<BibleCategory[]> {
 }
 
 /** Section -> article summaries. Small index files (~20 KB gz each). */
+async function getSectionItems(secCode: string): Promise<any[]> {
+  let items = sectionIndexCache.get(secCode);
+  if (!items) {
+    const path = `indexes/sections/${secCode}.json.gz`;
+    try {
+      const data = await gz(path);
+      items = Array.isArray(data) ? data : [];
+    } catch {
+      items = [];
+    }
+    sectionIndexCache.set(secCode, items);
+  }
+  return items;
+}
+
 export async function getSectionArticles(
   sectionId: number,
-  page = 1,
-  limit = 20
+  page: number = 1,
+  limit: number = 20
 ): Promise<{
   section_id: number;
-  section_code: string;
+  section_code?: string;
   total: number;
   page: number;
   limit: number;
@@ -389,17 +404,7 @@ export async function getSectionArticles(
     section?.code ??
     (sectionId < 10 ? `sec-0${sectionId}` : `sec-${sectionId}`);
 
-  let items = sectionIndexCache.get(secCode);
-  if (!items) {
-    const path = `indexes/sections/${secCode}.json.gz`;
-    try {
-      const data = await gz(path);
-      items = Array.isArray(data) ? data : [];
-    } catch {
-      items = [];
-    }
-    sectionIndexCache.set(secCode, items);
-  }
+  const items = await getSectionItems(secCode);
 
   const total = items.length;
   const offset = Math.max(0, (page - 1) * limit);
@@ -554,6 +559,25 @@ async function resolveArticleId(lookup: {
   if (lookup.book && lookup.ch !== undefined) {
     const key = `${lookup.book}-${lookup.ch}`.toLowerCase();
     if (slugMap[key]) return slugMap[key];
+
+    // Fallback: look up in sec-holy-bible-complete (or sec-01) by matching book and chapter
+    const cleanLookup = lookup.book.replace(/^(سفر|إنجيل|رسالة)\s+/i, '').trim().toLowerCase();
+    const holyItems = await getSectionItems('sec-holy-bible-complete');
+    const match = holyItems.find((it: any) => {
+      if (it.ch !== lookup.ch) return false;
+      const b = (it.book || '').replace(/^(سفر|إنجيل|رسالة)\s+/i, '').trim().toLowerCase();
+      return b === cleanLookup || b.includes(cleanLookup) || cleanLookup.includes(b);
+    });
+    if (match?.id) return Number(match.id);
+
+    // Fallback 2: sec-01
+    const sec01Items = await getSectionItems('sec-01');
+    const match01 = sec01Items.find((it: any) => {
+      if (it.ch !== lookup.ch) return false;
+      const b = (it.book || '').replace(/^(سفر|إنجيل|رسالة)\s+/i, '').trim().toLowerCase();
+      return b === cleanLookup || b.includes(cleanLookup) || cleanLookup.includes(b);
+    });
+    if (match01?.id) return Number(match01.id);
   }
   return null;
 }

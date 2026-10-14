@@ -11,7 +11,14 @@ import GlobalSearchModal from '@/components/GlobalSearchModal';
 import UnifiedProfileModal from '@/components/UnifiedProfileModal';
 import WingSelector from '@/components/Bible/WingSelector';
 import BibleSearchModal from '@/components/Bible/BibleSearchModal';
-import { getBibleCategories, getBibleStats, getBibleSections, type BibleCategory } from '@/lib/api/bible';
+import {
+  getBibleCategories,
+  getBibleStats,
+  getBibleSections,
+  getBibleArticle,
+  type BibleCategory,
+  type BibleArticle,
+} from '@/lib/api/bible';
 import {
   AlertCircle,
   ArrowRight,
@@ -129,6 +136,7 @@ export default function BiblePage() {
   const [selectedBookId, setSelectedBookId] = useState<number>(1);
   const [selectedChapter, setSelectedChapter] = useState<number>(1);
   const [verses, setVerses] = useState<BibleVerse[]>([]);
+  const [chapterArticle, setChapterArticle] = useState<BibleArticle | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingVerses, setLoadingVerses] = useState(false);
 
@@ -220,12 +228,17 @@ export default function BiblePage() {
     loadTestamentsAndBooks();
   }, []);
 
-  // 2. Load Chapter Verses with Word Breakdown (Only in Reader view mode)
+  // 2. Load Chapter Verses with Word Breakdown (Supports both live DB & offline static dataset)
   useEffect(() => {
-    if (viewMode !== 'reader' || !selectedBookId || !selectedChapter) return;
+    if (!selectedBookId || !selectedChapter) return;
 
     async function loadChapter() {
       setLoadingVerses(true);
+      setChapterArticle(null);
+      const book = books.find((b) => b.id === selectedBookId);
+      const bookName = book?.name_ar || '';
+
+      // 1. Try Supabase RPC first if available
       try {
         const supabase = createClient();
         const { data: vList, error } = await supabase.rpc('get_chapter_verses_with_words', {
@@ -233,12 +246,50 @@ export default function BiblePage() {
           p_chapter_number: selectedChapter,
         });
 
-        if (!error && vList) {
+        if (!error && vList && Array.isArray(vList) && vList.length > 0) {
           setVerses((vList as BibleVerse[]) || []);
+          setLoadingVerses(false);
+          return;
+        }
+      } catch {
+        // Fallback below
+      }
+
+      // 2. Fallback to complete offline static encyclopedia dataset
+      try {
+        const article = await getBibleArticle({ book: bookName, chapter: selectedChapter });
+        if (article) {
+          setChapterArticle(article);
+          if (article.content) {
+            const pattern = /<p class="verse-p"><span class="verse-num">(\d+)<\/span>\s*(.*?)<\/p>/g;
+            const parsedVerses: BibleVerse[] = [];
+            let match;
+            while ((match = pattern.exec(article.content)) !== null) {
+              const vNum = parseInt(match[1], 10);
+              const textClean = match[2].replace(/<[^>]*>/g, '').trim();
+              parsedVerses.push({
+                id: vNum,
+                verse_number: vNum,
+                text_ar: textClean,
+                source_url: article.slug || '',
+                commentaries_count: 0,
+                words: textClean.split(/\s+/).filter(Boolean).map((w, i) => ({
+                  id: i + 1,
+                  word_position: i + 1,
+                  word_text: w,
+                  has_commentary: false,
+                })),
+              });
+            }
+            setVerses(parsedVerses);
+          } else {
+            setVerses([]);
+          }
         } else {
           setVerses([]);
         }
       } catch (err) {
+        console.error('Failed to load chapter from offline dataset:', err);
         setVerses([]);
       } finally {
         setLoadingVerses(false);
@@ -246,7 +297,7 @@ export default function BiblePage() {
     }
 
     loadChapter();
-  }, [viewMode, selectedBookId, selectedChapter]);
+  }, [selectedBookId, selectedChapter, books]);
 
   // 3. Handle Word Click -> Fetch Contextual Commentary + Dictionary
   const handleWordClick = async (word: VerseWord) => {
@@ -337,9 +388,82 @@ export default function BiblePage() {
       />
 
       {/* Main Container */}
-      <main className="max-w-5xl w-full mx-auto px-4 py-6 flex-1 flex flex-col gap-6 pb-28 md:pb-12">
-        {/* Banner & Search */}
-        <div className="bg-nav border border-line rounded-2xl p-5 shadow-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <main className="max-w-6xl w-full mx-auto px-4 py-6 flex-1 flex flex-col gap-6 pb-28 md:pb-12">
+        {/* Top Header & Navigation Mode Switcher */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-3xl bg-nav/95 border-2 border-gold/40 shadow-xl backdrop-blur-xl">
+          <div className="space-y-1">
+            <h1 className="text-xl sm:text-2xl font-black text-content flex items-center gap-2.5">
+              <BookOpen className="w-6 h-6 text-gold" />
+              <span>موسوعة الكتاب المقدس والعلوم الكنسية</span>
+            </h1>
+            <p className="text-xs text-content-muted leading-relaxed">
+              مكتبة شاملة تضم الأسفار الإلهية، شروحات الآباء، أطلس الكتاب، والمعاجم الكنسية
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap">
+            <div className="flex p-1 bg-canvas rounded-2xl border border-line">
+              <button
+                type="button"
+                onClick={() => setViewMode('hub')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                  viewMode === 'hub'
+                    ? 'bg-gold text-brand-on shadow-md font-black'
+                    : 'text-content-secondary hover:text-content'
+                }`}
+              >
+                <span>شجرة الموسوعة والأجنحة</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('reader')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                  viewMode === 'reader'
+                    ? 'bg-gold text-brand-on shadow-md font-black'
+                    : 'text-content-secondary hover:text-content'
+                }`}
+              >
+                <span>قارئ الإصحاحات والآيات</span>
+              </button>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setEncyclopedia((prev) => ({ ...prev, searchOpen: true }))}
+              className="px-3.5 py-2.5 rounded-2xl bg-gold hover:bg-warning text-brand-on font-black text-xs transition-all shadow-md flex items-center gap-1.5 shrink-0"
+              title="بحث سريع في نصوص الموسوعة"
+            >
+              <Search className="w-4 h-4" />
+              <span className="hidden sm:inline">بحث سريع</span>
+            </button>
+          </div>
+        </div>
+
+        {/* --- VIEW 1: ENCYCLOPEDIA TREE & HUB --- */}
+        {viewMode === 'hub' && (
+          <div className="space-y-6 animate-fade-in">
+            {encyclopedia.loading ? (
+              <div className="text-center py-24">
+                <Loader2 className="w-12 h-12 text-gold animate-spin mx-auto mb-4" />
+                <p className="text-content-muted text-sm">جاري تحميل شجرة الموسوعة الكنسية...</p>
+              </div>
+            ) : (
+              <WingSelector
+                categories={encyclopedia.categories}
+                onSelectCategory={handleSelectCategory}
+                stats={encyclopedia.stats}
+                onOpenReader={() => setViewMode('reader')}
+                onOpenSearch={() => setEncyclopedia((prev) => ({ ...prev, searchOpen: true }))}
+              />
+            )}
+          </div>
+        )}
+
+        {/* --- VIEW 2: SCRIPTURE VERSE READER --- */}
+        {viewMode === 'reader' && (
+          <div className="space-y-6 animate-fade-in">
+            {/* Banner & Search */}
+            <div className="bg-nav border border-line rounded-2xl p-5 shadow-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 text-warning mb-1 text-xs font-semibold">
               <BookOpen className="w-4 h-4" />
@@ -477,9 +601,25 @@ export default function BiblePage() {
             <div className="py-16 text-center text-warning">
               <Loader2 className="w-8 h-8 animate-spin mx-auto" />
             </div>
+          ) : verses.length === 0 && chapterArticle?.content ? (
+            <div className="space-y-4">
+              <div
+                className="bible-article-body space-y-4 text-content leading-loose text-base sm:text-lg select-text"
+                dangerouslySetInnerHTML={{ __html: chapterArticle.content }}
+              />
+              <div className="pt-4 border-t border-line flex justify-end">
+                <Link
+                  href={`/bible/reader/${chapterArticle.id}`}
+                  className="px-4 py-2 rounded-xl bg-gold text-brand-on font-bold text-xs hover:bg-warning transition-all flex items-center gap-1.5"
+                >
+                  <BookOpen className="w-4 h-4" />
+                  <span>فتح في قارئ الموسوعة الكامل</span>
+                </Link>
+              </div>
+            </div>
           ) : verses.length === 0 ? (
             <div className="py-12 text-center text-content-muted text-xs">
-              جاري تجهيز باقي إصحاحات السفر من خادم المحتوى.
+              لا توجد نصوص مسجلة لهذا الإصحاح حالياً.
             </div>
           ) : (
             <div className="space-y-4">
@@ -724,58 +864,6 @@ export default function BiblePage() {
             </div>
           </div>
         )}
-        {/* Encyclopedia Hub View */}
-        {viewMode === 'hub' && (
-          <div className="max-w-6xl mx-auto px-4 py-8 pb-24">
-            <div className="flex items-center justify-between mb-8">
-              <div>
-                <h1 className="text-3xl md:text-4xl font-black text-content mb-2" dir="rtl">
-                  موسوعة الكتاب المقدس
-                </h1>
-                <p className="text-content-muted text-sm" dir="rtl">
-                  مكتبة شاملة تضم الأسفار، التفاسير، الأطلس، واللاهوتيات
-                </p>
-              </div>
-              <button
-                onClick={() => setEncyclopedia(prev => ({ ...prev, searchOpen: true }))}
-                className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-gold hover:bg-warning text-brand-on font-bold text-sm transition-all"
-              >
-                <Search className="w-4 h-4" />
-                <span>بحث سريع</span>
-              </button>
-            </div>
-
-            {encyclopedia.loading ? (
-              <div className="text-center py-24">
-                <Loader2 className="w-12 h-12 text-gold animate-spin mx-auto mb-4" />
-                <p className="text-content-muted">جاري تحميل الموسوعة...</p>
-              </div>
-            ) : (
-              <WingSelector
-                categories={encyclopedia.categories}
-                onSelectCategory={handleSelectCategory}
-                stats={encyclopedia.stats}
-              />
-            )}
-          </div>
-        )}
-
-        {/* Bible Verse Reader View (existing) */}
-        {viewMode === 'reader' && (
-          <div className="max-w-6xl mx-auto px-4 py-8 pb-24">
-            <div className="flex items-center justify-between mb-6">
-              <button
-                onClick={() => setViewMode('hub')}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-nav/60 hover:bg-nav/80 border border-line text-content-secondary hover:text-content transition-all"
-                dir="rtl"
-              >
-                <ArrowRight className="w-4 h-4" />
-                <span className="text-sm">العودة للموسوعة</span>
-              </button>
-            </div>
-            
-            {/* Paste existing Bible verse reader UI here (the original content) */}
-            {/* This preserves the existing Supabase-based Bible reader */}
           </div>
         )}
       </main>
