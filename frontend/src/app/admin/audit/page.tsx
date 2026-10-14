@@ -44,7 +44,6 @@ interface AuditLogEntry {
 
 export default function AdminAuditPage() {
   const router = useRouter();
-  const supabase = createClient();
 
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -60,9 +59,50 @@ export default function AdminAuditPage() {
   const [actionFilter, setActionFilter] = useState('ALL');
   const [selectedLog, setSelectedLog] = useState<AuditLogEntry | null>(null);
 
+  const fetchLogs = async (pageNum: number, filter: string, query: string) => {
+    try {
+      const supabase = createClient();
+      const from = (pageNum - 1) * pageSize;
+      const to = from + pageSize - 1;
+
+      let q = supabase
+        .from('audit_logs')
+        .select('*', { count: 'exact' })
+        .order('created_at', { ascending: false })
+        .range(from, to);
+
+      if (filter !== 'ALL') {
+        q = q.eq('action', filter);
+      }
+
+      if (query.trim()) {
+        // Escape all PostgREST special characters to prevent filter injection
+        const cleanQuery = query.replace(/[%.,()&|!*\[\]"'`\\]/g, ' ').trim();
+        if (cleanQuery) {
+          q = q.or(
+            `actor_name.ilike.%${cleanQuery}%,action.ilike.%${cleanQuery}%,entity_type.ilike.%${cleanQuery}%,entity_id.ilike.%${cleanQuery}%`
+          );
+        }
+      }
+
+      const { data, count, error } = await q;
+
+      if (!error && data) {
+        setLogs(data as AuditLogEntry[]);
+        setTotalCount(count || 0);
+      }
+    } catch (err) {
+      // Suppress internal details in production
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('Audit fetch error:', err);
+      }
+    }
+  };
+
   useEffect(() => {
     async function initUser() {
       setLoading(true);
+      const supabase = createClient();
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -91,39 +131,8 @@ export default function AdminAuditPage() {
     }
 
     initUser();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
-
-  const fetchLogs = async (pageNum: number, filter: string, query: string) => {
-    try {
-      const from = (pageNum - 1) * pageSize;
-      const to = from + pageSize - 1;
-
-      let q = supabase
-        .from('audit_logs')
-        .select('*', { count: 'exact' })
-        .order('created_at', { ascending: false })
-        .range(from, to);
-
-      if (filter !== 'ALL') {
-        q = q.eq('action', filter);
-      }
-
-      if (query.trim()) {
-        q = q.or(
-          `actor_name.ilike.%${query.trim()}%,action.ilike.%${query.trim()}%,entity_type.ilike.%${query.trim()}%,entity_id.ilike.%${query.trim()}%`
-        );
-      }
-
-      const { data, count, error } = await q;
-
-      if (!error && data) {
-        setLogs(data as AuditLogEntry[]);
-        setTotalCount(count || 0);
-      }
-    } catch (err) {
-      console.error('Audit fetch error:', err);
-    }
-  };
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();

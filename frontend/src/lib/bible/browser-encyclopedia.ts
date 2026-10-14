@@ -149,10 +149,10 @@ async function gunzip(buf: ArrayBuffer): Promise<string> {
         'يرجى استخدام متصفح أحدث مثل Chrome 80+ أو Edge 80+.'
     );
   }
-  const stream = new (window as any).Blob([buf])
-    .stream()
-    .pipeThrough(new (window as any).DecompressionStream('gzip'));
-  return await new Response(stream).text();
+  const decompressedStream = new Response(buf).body!.pipeThrough(
+    new (window as any).DecompressionStream('gzip')
+  );
+  return await new Response(decompressedStream).text();
 }
 
 /* ------------------------------------------------------------------ *
@@ -539,6 +539,55 @@ async function loadShard(shardId: number, count: number) {
   return data;
 }
 
+function extractBookTokens(name: string): Set<string> {
+  const STOPWORDS = new Set(['سفر', 'انجيل', 'رساله', 'بولس', 'الرسول', 'اللاهوتي', 'الي', 'اهل', 'ابن', 'تتمه']);
+  let norm = name.trim().toLowerCase()
+    .replace(/[إأآا]/g, 'ا')
+    .replace(/[ىي]/g, 'ي')
+    .replace(/ة/g, 'ه')
+    .replace(/\b1\b/g, 'الاول')
+    .replace(/\b2\b/g, 'الثاني')
+    .replace(/\b3\b/g, 'الثالث');
+
+  const rawTokens = norm.split(/\s+/).filter(Boolean);
+  const cleaned: string[] = [];
+  for (const w of rawTokens) {
+    if (STOPWORDS.has(w)) continue;
+    const stripped = w.length > 3 && w.startsWith('ال') ? w.slice(2) : w;
+    if (!STOPWORDS.has(stripped) && stripped) {
+      cleaned.push(stripped);
+    }
+  }
+  return new Set(cleaned);
+}
+
+function matchesBookExactOrTokens(candidate: string, query: string): boolean {
+  const qTokens = extractBookTokens(query);
+  const cTokens = extractBookTokens(candidate);
+  if (qTokens.size === 0 || cTokens.size === 0) return false;
+
+  // Ordinal parity constraint: e.g. الاول / ثاني / ثالث must strictly match
+  const ordinals = ['اول', 'ثان', 'ثالث'];
+  for (const ord of ordinals) {
+    const qHas = Array.from(qTokens).some((t) => t.includes(ord));
+    const cHas = Array.from(cTokens).some((t) => t.includes(ord));
+    if (qHas !== cHas) return false;
+  }
+
+  // All significant query tokens must be in candidate tokens
+  for (const t of qTokens) {
+    if (!cTokens.has(t)) return false;
+  }
+
+  // For short books (single token like يوحنا, بطرس), candidate should not have unexpected other primary names
+  if (qTokens.size === 1 && !Array.from(qTokens)[0].includes('اول') && !Array.from(qTokens)[0].includes('ثان')) {
+    const cHasOrd = Array.from(cTokens).some((t) => t.includes('اول') || t.includes('ثان') || t.includes('ثالث'));
+    if (cHasOrd) return false;
+  }
+
+  return true;
+}
+
 /**
  * Find an article's numeric id from any public identifier.
  * Accepts id | slug | file path | book+chapter, matching the old PHP contract.
@@ -560,13 +609,11 @@ async function resolveArticleId(lookup: {
     const key = `${lookup.book}-${lookup.ch}`.toLowerCase();
     if (slugMap[key]) return slugMap[key];
 
-    // Fallback: look up in sec-holy-bible-complete (or sec-01) by matching book and chapter
-    const cleanLookup = lookup.book.replace(/^(سفر|إنجيل|رسالة)\s+/i, '').trim().toLowerCase();
+    // Accurate token-based matching across sec-holy-bible-complete
     const holyItems = await getSectionItems('sec-holy-bible-complete');
     const match = holyItems.find((it: any) => {
       if (it.ch !== lookup.ch) return false;
-      const b = (it.book || '').replace(/^(سفر|إنجيل|رسالة)\s+/i, '').trim().toLowerCase();
-      return b === cleanLookup || b.includes(cleanLookup) || cleanLookup.includes(b);
+      return matchesBookExactOrTokens(it.book || '', lookup.book!);
     });
     if (match?.id) return Number(match.id);
 
@@ -574,8 +621,7 @@ async function resolveArticleId(lookup: {
     const sec01Items = await getSectionItems('sec-01');
     const match01 = sec01Items.find((it: any) => {
       if (it.ch !== lookup.ch) return false;
-      const b = (it.book || '').replace(/^(سفر|إنجيل|رسالة)\s+/i, '').trim().toLowerCase();
-      return b === cleanLookup || b.includes(cleanLookup) || cleanLookup.includes(b);
+      return matchesBookExactOrTokens(it.book || '', lookup.book!);
     });
     if (match01?.id) return Number(match01.id);
   }

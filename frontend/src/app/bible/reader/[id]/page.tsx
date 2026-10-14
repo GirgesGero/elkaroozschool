@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { getBibleArticle, type BibleArticle } from '@/lib/api/bible';
 import { ArrowRight, ArrowLeft, Loader2, BookOpen, ChevronLeft, Eye, Share2, Copy, Check } from 'lucide-react';
+import DOMPurify from 'dompurify';
 import SmartHeader from '@/components/SmartHeader';
 import SmartBottomNav from '@/components/SmartBottomNav';
 import BibleSearchModal from '@/components/Bible/BibleSearchModal';
@@ -146,7 +147,7 @@ export default function ArticleReaderPage() {
         <article className="p-6 md:p-10 rounded-3xl bg-canvas border border-line/80 shadow-xl leading-loose text-content text-base md:text-lg font-normal mb-8 select-text">
           <div 
             className="bible-article-body space-y-4 prose prose-invert max-w-none prose-headings:text-content prose-p:text-content prose-a:text-gold"
-            dangerouslySetInnerHTML={{ __html: article.content }}
+            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(article.content) }}
           />
         </article>
 

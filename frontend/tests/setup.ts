@@ -41,6 +41,33 @@ if (typeof window !== 'undefined' && !window.matchMedia) {
   });
 }
 
+if (typeof window !== 'undefined' && !window.DecompressionStream && typeof globalThis.DecompressionStream !== 'undefined') {
+  (window as any).DecompressionStream = globalThis.DecompressionStream;
+}
+
+if (typeof window !== 'undefined' && typeof globalThis.Blob !== 'undefined') {
+  (window as any).Blob = globalThis.Blob;
+}
+
+const originalFetch = globalThis.fetch;
+globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+  const urlStr = typeof input === 'string' ? input : input instanceof URL ? input.toString() : (input as any)?.url;
+  if (urlStr && urlStr.includes('/storage/bible-dataset/v1/')) {
+    const rel = urlStr.split('/storage/bible-dataset/v1/')[1];
+    const fs = await import('node:fs');
+    const path = await import('node:path');
+    const localPath = path.resolve(process.cwd(), 'public', 'storage', 'bible-dataset', 'v1', rel);
+    if (fs.existsSync(localPath)) {
+      const buffer = fs.readFileSync(localPath);
+      return new Response(buffer, {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+  }
+  return originalFetch(input, init);
+}) as typeof fetch;
+
 /**
  * next/image and next/link are Next's own components; under plain vitest the Next runtime
  * is not installed, so they fail to resolve. Stubbed here rather than in each suite

@@ -39,6 +39,7 @@ import {
   Church,
   Layers,
 } from 'lucide-react';
+import DOMPurify from 'dompurify';
 import type { Profile } from '@/types/database';
 
 interface EncyclopediaState {
@@ -302,6 +303,17 @@ export default function BiblePage() {
   // 3. Handle Word Click -> Fetch Contextual Commentary + Dictionary
   const handleWordClick = async (word: VerseWord) => {
     setSelectedWordId(word.id);
+    if (!word.has_commentary) {
+      // When word has no pre-indexed commentary or in offline dataset mode,
+      // present word without making failing RPC calls.
+      setWordDetails({
+        word_text: word.word_text,
+        clean_word: word.word_text.replace(/[ً-ْ]/g, ''),
+        word_commentaries: [],
+        dictionary_entries: [],
+      });
+      return;
+    }
     setLoadingWordDetails(true);
     try {
       const supabase = createClient();
@@ -605,7 +617,7 @@ export default function BiblePage() {
             <div className="space-y-4">
               <div
                 className="bible-article-body space-y-4 text-content leading-loose text-base sm:text-lg select-text"
-                dangerouslySetInnerHTML={{ __html: chapterArticle.content }}
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(chapterArticle.content) }}
               />
               <div className="pt-4 border-t border-line flex justify-end">
                 <Link

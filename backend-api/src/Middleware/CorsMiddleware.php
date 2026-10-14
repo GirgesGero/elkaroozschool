@@ -21,6 +21,12 @@ class CorsMiddleware {
         header("Access-Control-Allow-Headers: " . implode(', ', $config['cors']['allowed_headers'] ?? ['Content-Type', 'Authorization', 'X-Requested-With']));
         header("Access-Control-Max-Age: 86400"); // 24 hours preflight cache
 
+        // Security hardening headers
+        header("Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://*.supabase.co https://*.googleapis.com; frame-ancestors 'none'");
+        header("X-Content-Type-Options: nosniff");
+        header("X-Frame-Options: DENY");
+        header("Referrer-Policy: strict-origin-when-cross-origin");
+
         if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
             http_response_code(204);
             exit;

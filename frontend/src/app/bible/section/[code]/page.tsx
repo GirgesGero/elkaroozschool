@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { 
+  getBibleCategories,
   getBibleSections, 
   getBibleSectionArticles, 
   type BibleSection,
@@ -50,11 +51,30 @@ export default function SectionBrowserPage() {
   const loadSections = useCallback(async () => {
     setLoadingSections(true);
     try {
-      const data = await getBibleSections(categoryCode);
-      setSections(data);
-      if (data.length > 0) {
-        setSelectedSection(data[0]);
-        loadSectionArticles(data[0].id, 1);
+      const allSections = await getBibleSections();
+      const directMatch = allSections.find(
+        (s) => s.code === categoryCode || String(s.id) === categoryCode
+      );
+
+      let categorySections: BibleSection[] = [];
+      let initialSection: BibleSection | null = null;
+
+      if (directMatch) {
+        const cats = await getBibleCategories();
+        const parentCat = cats.find((c) => c.id === directMatch.category_id);
+        categorySections = await getBibleSections(parentCat?.code);
+        initialSection = directMatch;
+      } else {
+        categorySections = await getBibleSections(categoryCode);
+        if (categorySections.length > 0) {
+          initialSection = categorySections[0];
+        }
+      }
+
+      setSections(categorySections);
+      if (initialSection) {
+        setSelectedSection(initialSection);
+        loadSectionArticles(initialSection.id, 1);
       }
     } catch (error) {
       console.error('Failed to load sections:', error);
@@ -86,7 +106,7 @@ export default function SectionBrowserPage() {
     );
   }
 
-  const categoryTitle = sections[0]?.category_title || 'الموسوعة';
+  const categoryTitle = selectedSection?.category_title || sections[0]?.category_title || 'الموسوعة الكنسية';
 
   return (
     <div className="min-h-screen bg-canvas" dir="rtl">

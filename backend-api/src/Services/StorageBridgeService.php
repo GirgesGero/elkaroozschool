@@ -16,7 +16,7 @@ class StorageBridgeService {
         $config = require AppRoot::path('config/storage.php');
         $this->rootDir = rtrim($config['root_path'], '/');
         $this->publicUrl = rtrim($config['public_url'], '/');
-        $this->rootFolderId = (string)(getenv('GOOGLE_DRIVE_ROOT_ID') ?: '1liUd9WOQ_6B9pQ1acj2h5fpLNDF8sPUB');
+        $this->rootFolderId = (string)(getenv('GOOGLE_DRIVE_ROOT_ID') ?: '');
     }
 
     private function getSupabase(): SupabaseClient {
@@ -271,7 +271,10 @@ class StorageBridgeService {
         // 3. FALLBACK UPLOADER: Resolve an active admin if uploaded_by is missing
         if (!$uploadedBy) {
             $adminRes = $supabase->query('profiles?role_id=in.(admin,super_user)&deleted_at=is.null&limit=1');
-            $uploadedBy = $adminRes['data'][0]['id'] ?? 'a864e1f1-5f6c-4c6c-90e0-13a79e3cb558';
+            $uploadedBy = $adminRes['data'][0]['id'] ?? null;
+            if (!$uploadedBy) {
+                throw new \RuntimeException('لا يمكن تسجيل الملف بدون مُحدّد المستخدم (uploaded_by). لم يتم العثور على حساب إداري نشط.');
+            }
         }
 
         // 4. REGISTER ASSET IN Supabase media_assets TABLE
@@ -337,12 +340,26 @@ class StorageBridgeService {
         }
 
         $foundPath = null;
-        $iterator = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($root));
-        foreach ($iterator as $item) {
-            if ($item->isFile() && $item->getFilename() === $fileName) {
-                if ($checksum === null || $checksum === '' || hash_file('sha256', $item->getPathname()) === $checksum) {
-                    $foundPath = $item->getPathname();
-                    break;
+
+        // Direct path resolution from driveFileId (relative path stored in DB)
+        // instead of recursive directory scan for performance and cross-group isolation
+        $directPath = $root . '/' . ltrim(str_replace(['..', "\0"], '', $driveFileId), '/\\');
+        $directReal = realpath($directPath);
+        if ($directReal !== false && is_file($directReal) && str_starts_with($directReal, $root)) {
+            if ($checksum === null || $checksum === '' || hash_file('sha256', $directReal) === $checksum) {
+                $foundPath = $directReal;
+            }
+        }
+
+        // Fallback: search by filename with checksum verification (for legacy records)
+        if (!$foundPath) {
+            $iterator = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($root));
+            foreach ($iterator as $item) {
+                if ($item->isFile() && $item->getFilename() === $fileName) {
+                    if ($checksum === null || $checksum === '' || hash_file('sha256', $item->getPathname()) === $checksum) {
+                        $foundPath = $item->getPathname();
+                        break;
+                    }
                 }
             }
         }

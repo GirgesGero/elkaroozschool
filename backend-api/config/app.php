@@ -6,6 +6,7 @@
 // a trusted CORS origin in a live system.
 $corsOrigins = [
     'https://elkaroozschool-seven.vercel.app',
+    'https://elkaroozschool1.vercel.app',
     'https://elkarooz-school.com',
     'https://www.elkarooz-school.com',
 ];
@@ -22,6 +23,6 @@ return [
     'cors' => [
         'allowed_origins' => $corsOrigins,
         'allowed_methods' => ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-        'allowed_headers' => ['Content-Type', 'Authorization', 'X-Requested-With', 'X-Group-Scope']
+        'allowed_headers' => ['Content-Type', 'Authorization', 'X-Authorization', 'X-Requested-With', 'X-Group-Scope']
     ]
 ];

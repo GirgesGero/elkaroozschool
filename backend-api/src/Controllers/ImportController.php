@@ -25,8 +25,10 @@ class ImportController {
             Response::error('الصيغة غير مدعومة. يرجى رفع ملف CSV أو Excel', 'INVALID_FORMAT', 400);
         }
 
-        // 1. Parse rows
-        $rows = ExcelParserService::parseCsv($file['tmp_name']);
+        // 1. Parse rows — detect format by extension
+        $rows = $ext === 'xlsx'
+            ? ExcelParserService::parseXlsx($file['tmp_name'])
+            : ExcelParserService::parseCsv($file['tmp_name']);
         if (empty($rows)) {
             Response::error('الملف فارغ أو تعذر قراءة الأعمدة', 'EMPTY_FILE', 400);
         }
