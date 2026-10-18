@@ -2,9 +2,9 @@
 
 ## ✅ تم التجهيز بنجاح
 
-**التاريخ:** 2026-10-06  
-**الوقت:** 15:48 UTC  
-**الحالة:** ✅ جاهز للرفع
+**آخر تحديث:** 2026-10-15  
+**الإصدار:** v3.1 (Security Hardening, Dynamic Substring Match, DOMPurify & Audit Trail)  
+**الحالة:** ✅ الحزمة المحدثة جاهزة للرفع (`HOSTINGER_PUBLIC_HTML_READY_v3.zip`)
 
 ---
 

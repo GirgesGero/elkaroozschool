@@ -233,14 +233,16 @@ export default function WingSelector({
                 type="text"
                 value={treeSearch}
                 onChange={(e) => setTreeSearch(e.target.value)}
+                aria-label="تصفية فروع الشجرة"
                 placeholder="تصفية فروع وأقسام الشجرة..."
-                className="w-full bg-canvas border border-line rounded-xl pr-9 pl-3 py-1.5 text-xs text-content placeholder:text-content-muted focus:outline-none focus:border-gold"
+                className="w-full bg-canvas border border-line rounded-xl pr-9 pl-3 py-1.5 text-[16px] md:text-xs text-content placeholder:text-content-muted focus:outline-none focus:border-gold"
               />
               {treeSearch && (
                 <button
                   type="button"
+                  aria-label="مسح البحث"
                   onClick={() => setTreeSearch('')}
-                  className="absolute left-2.5 top-1/2 -translate-y-1/2 text-content-muted hover:text-content text-xs"
+                  className="absolute left-2.5 top-1/2 -translate-y-1/2 min-h-[44px] min-w-[44px] flex items-center justify-center text-content-muted hover:text-content text-xs"
                 >
                   ✕
                 </button>
@@ -254,6 +256,7 @@ export default function WingSelector({
                 type="button"
                 onClick={expandAll}
                 className="px-2.5 py-1.5 rounded-xl bg-canvas border border-line text-[11px] font-bold text-content-secondary hover:text-gold hover:border-gold/40 transition-colors"
+                aria-label="توسيع كافة الفروع"
                 title="توسيع كافة الفروع"
               >
                 توسيع الكل
@@ -262,6 +265,7 @@ export default function WingSelector({
                 type="button"
                 onClick={collapseAll}
                 className="px-2.5 py-1.5 rounded-xl bg-canvas border border-line text-[11px] font-bold text-content-secondary hover:text-gold hover:border-gold/40 transition-colors"
+                aria-label="طي كافة الفروع"
                 title="طي كافة الفروع"
               >
                 طي الكل

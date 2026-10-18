@@ -16,6 +16,7 @@ import {
   getBibleStats,
   getBibleSections,
   getBibleArticle,
+  searchBibleEncyclopedia,
   type BibleCategory,
   type BibleArticle,
 } from '@/lib/api/bible';
@@ -275,7 +276,7 @@ export default function BiblePage() {
                 source_url: article.slug || '',
                 commentaries_count: 0,
                 words: textClean.split(/\s+/).filter(Boolean).map((w, i) => ({
-                  id: i + 1,
+                  id: vNum * 10000 + i + 1,
                   word_position: i + 1,
                   word_text: w,
                   has_commentary: false,
@@ -356,22 +357,43 @@ export default function BiblePage() {
     }
   };
 
-  // 5. Handle Global Bible Search
+  // 5. Handle Global Bible Search — uses static offline encyclopedia (no RPC)
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!searchQuery.trim()) return;
+    const q = searchQuery.trim();
+    if (!q) return;
     setIsSearching(true);
-
-    const supabase = createClient();
-    const { data: res } = await supabase.rpc('search_bible_content', {
-      p_query: searchQuery.trim(),
-      p_limit: 25,
-    });
-
-    setSearchResults((res as any[]) || []);
-    setIsSearching(false);
-    setShowSearchModal(true);
+    try {
+      const res = await searchBibleEncyclopedia(q, { limit: 25 });
+      const mapped = (res.results || []).map((r: any) => ({
+        book_id: 0,
+        book_name: r.book_name || r.section_title || '',
+        chapter_number: r.chapter_num ?? 0,
+        verse_number: 0,
+        text_ar: r.snippet || r.title,
+        title: r.title,
+        id: r.id,
+      }));
+      setSearchResults(mapped);
+    } catch (err) {
+      console.error('Bible search failed:', err);
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+      setShowSearchModal(true);
+    }
   };
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      if (selectedWordId !== null) { setSelectedWordId(null); setWordDetails(null); return; }
+      if (selectedVerseForCommentary) { setSelectedVerseForCommentary(null); return; }
+      if (showSearchModal) setShowSearchModal(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [selectedWordId, selectedVerseForCommentary, showSearchModal]);
 
   const currentBook = books.find((b) => b.id === selectedBookId);
   const filteredBooks = books.filter((b) => b.testament_id === selectedTestamentId);
@@ -496,7 +518,7 @@ export default function BiblePage() {
                           onChange={(e) => setSearchQuery(e.target.value)}
                           placeholder="ابحث في الآيات والتفاسير..."
                           aria-label="ابحث في الآيات والتفاسير"
-                          className="w-full bg-[var(--bg-input)] border border-[var(--border-card)] rounded-xl pr-10 pl-3 py-2 text-xs text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--brand-primary)]"
+                          className="w-full bg-[var(--bg-input)] border border-[var(--border-card)] rounded-xl pr-10 pl-3 py-2 text-[16px] md:text-sm text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--brand-primary)]"
                         />
                       </div>
                       <button
@@ -512,7 +534,7 @@ export default function BiblePage() {
         <div className="bg-nav border border-line rounded-2xl p-4 shadow-md flex flex-wrap items-center justify-between gap-4">
           <div className="flex flex-wrap items-center gap-3">
             {/* Testament Toggle */}
-            <div className="flex bg-nav p-1 rounded-xl border border-line">
+            <fieldset aria-label="اختر العهد" className="flex bg-nav p-1 rounded-xl border border-line">
               {testaments.map((t) => (
                 <button
                   key={t.id}
@@ -538,10 +560,13 @@ export default function BiblePage() {
                   {t.name_ar}
                 </button>
               ))}
-            </div>
+            </fieldset>
 
             {/* Book Selector */}
+            <label htmlFor="bible-book-select" className="sr-only">اختر السفر</label>
             <select
+              id="bible-book-select"
+              aria-label="اختر السفر"
               value={selectedBookId}
               onChange={(e) => {
                 setSelectedBookId(parseInt(e.target.value));
@@ -557,7 +582,10 @@ export default function BiblePage() {
             </select>
 
             {/* Chapter Selector */}
+            <label htmlFor="bible-chapter-select" className="sr-only">اختر الاصحاح</label>
             <select
+              id="bible-chapter-select"
+              aria-label="اختر الاصحاح"
               value={selectedChapter}
               onChange={(e) => setSelectedChapter(parseInt(e.target.value))}
               className="bg-nav border border-line text-content text-xs rounded-xl px-3.5 py-2 font-bold focus:outline-none focus:ring-1 focus:ring-warning"
@@ -665,10 +693,12 @@ export default function BiblePage() {
                   <div className="text-base leading-loose font-medium text-content flex flex-wrap gap-1.5">
                     {verse.words && verse.words.length > 0 ? (
                       verse.words.map((w) => (
-                        <span
+                        <button
                           key={w.id}
+                          type="button"
                           onClick={() => handleWordClick(w)}
-                          className={`cursor-pointer px-1 py-0.5 rounded transition-all ${
+                          aria-label={`شرح كلمة ${w.word_text}`}
+                          className={`px-1 py-0.5 rounded transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-1 ${
                             w.has_commentary
                               ? 'bg-canvas/40 text-warning border-b-2 border-warning/80 hover:bg-canvas/60 font-semibold'
                               : 'hover:bg-nav hover:text-content'
@@ -680,7 +710,7 @@ export default function BiblePage() {
                           }
                         >
                           {w.word_text}
-                        </span>
+                        </button>
                       ))
                     ) : (
                       <span>{verse.text_ar}</span>
@@ -694,23 +724,25 @@ export default function BiblePage() {
 
         {/* --- INTERACTIVE WORD DETAILS MODAL --- */}
         {selectedWordId !== null && (
-          <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-nav border border-line rounded-2xl max-w-lg w-full p-6 shadow-2xl max-h-[85vh] flex flex-col">
+          <div role="dialog" aria-modal="true" aria-label="شرح الكلمة" onClick={() => { setSelectedWordId(null); setWordDetails(null); }} className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+            <div onClick={(e) => e.stopPropagation()} className="bg-nav border border-line rounded-2xl max-w-lg w-full p-6 shadow-2xl max-h-[85vh] flex flex-col">
               <div className="flex items-center justify-between pb-3 border-b border-line mb-4">
                 <div className="flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-warning" />
+                  <Sparkles className="w-5 h-5 text-warning" aria-hidden="true" />
                   <h3 className="font-bold text-base text-content">
                     معنى وشرح الكلمة: «{wordDetails?.word_text}»
                   </h3>
                 </div>
                 <button
+                  type="button"
+                  aria-label="اغلاق"
                   onClick={() => {
                     setSelectedWordId(null);
                     setWordDetails(null);
                   }}
-                  className="text-content-muted hover:text-content"
+                  className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl text-content-muted hover:text-content focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-5 h-5" aria-hidden="true" />
                 </button>
               </div>
 
@@ -784,8 +816,8 @@ export default function BiblePage() {
 
         {/* --- VERSE FULL COMMENTARY PANEL --- */}
         {selectedVerseForCommentary && (
-          <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-nav border border-line rounded-2xl max-w-2xl w-full p-6 shadow-2xl max-h-[85vh] flex flex-col">
+          <div role="dialog" aria-modal="true" aria-label="تفسير الاية" onClick={() => setSelectedVerseForCommentary(null)} className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+            <div onClick={(e) => e.stopPropagation()} className="bg-nav border border-line rounded-2xl max-w-2xl w-full p-6 shadow-2xl max-h-[85vh] flex flex-col">
               <div className="flex items-center justify-between pb-3 border-b border-line mb-4">
                 <div>
                   <h3 className="font-bold text-base text-content">
@@ -796,10 +828,12 @@ export default function BiblePage() {
                   </p>
                 </div>
                 <button
+                  type="button"
+                  aria-label="اغلاق"
                   onClick={() => setSelectedVerseForCommentary(null)}
-                  className="text-content-muted hover:text-content"
+                  className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl text-content-muted hover:text-content focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-5 h-5" aria-hidden="true" />
                 </button>
               </div>
 
@@ -837,17 +871,19 @@ export default function BiblePage() {
 
         {/* --- GLOBAL SEARCH RESULTS MODAL --- */}
         {showSearchModal && (
-          <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-nav border border-line rounded-2xl max-w-2xl w-full p-6 shadow-2xl max-h-[85vh] flex flex-col">
+          <div role="dialog" aria-modal="true" aria-label="نتائج البحث" onClick={() => setShowSearchModal(false)} className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+            <div onClick={(e) => e.stopPropagation()} className="bg-nav border border-line rounded-2xl max-w-2xl w-full p-6 shadow-2xl max-h-[85vh] flex flex-col">
               <div className="flex items-center justify-between pb-3 border-b border-line mb-4">
                 <h3 className="font-bold text-base text-content">
                   نتائج البحث عن: «{searchQuery}» ({searchResults.length})
                 </h3>
                 <button
+                  type="button"
+                  aria-label="اغلاق"
                   onClick={() => setShowSearchModal(false)}
-                  className="text-content-muted hover:text-content"
+                  className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl text-content-muted hover:text-content focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-5 h-5" aria-hidden="true" />
                 </button>
               </div>
 

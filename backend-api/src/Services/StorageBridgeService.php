@@ -31,19 +31,16 @@ class StorageBridgeService {
             return $this->driveService;
         }
 
-        $saPath = getenv('GOOGLE_SERVICE_ACCOUNT_JSON_PATH');
-        if ($saPath && is_file($saPath)) {
-            $this->driveService = new GoogleDriveService($saPath);
+        $saJson = getenv('GOOGLE_SERVICE_ACCOUNT_JSON');
+        if ($saJson && str_starts_with(trim($saJson), '{')) {
+            // Pass raw JSON string directly to memory without writing key to /tmp
+            $this->driveService = new GoogleDriveService($saJson);
             return $this->driveService;
         }
 
-        $saJson = getenv('GOOGLE_SERVICE_ACCOUNT_JSON');
-        if ($saJson && str_starts_with(trim($saJson), '{')) {
-            $tempPath = sys_get_temp_dir() . '/elkarooz_sa_' . md5($saJson) . '.json';
-            if (!file_exists($tempPath)) {
-                file_put_contents($tempPath, $saJson);
-            }
-            $this->driveService = new GoogleDriveService($tempPath);
+        $saPath = getenv('GOOGLE_SERVICE_ACCOUNT_JSON_PATH');
+        if ($saPath && is_file($saPath)) {
+            $this->driveService = new GoogleDriveService($saPath);
             return $this->driveService;
         }
 

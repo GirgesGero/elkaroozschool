@@ -1,11 +1,18 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { useAppTheme } from '@/context/ThemeContext';
+import {
+  getLockoutState,
+  recordFailedAttempt,
+  clearLockout,
+  MAX_FAILED_ATTEMPTS,
+  type LockoutState,
+} from '@/lib/auth/login-lockout';
 import {
   Lock,
   User,
@@ -16,7 +23,9 @@ import {
   EyeOff,
   Sun,
   Moon,
-  Crown
+  Crown,
+  Clock,
+  ShieldAlert,
 } from 'lucide-react';
 
 export default function LoginPage() {
@@ -27,9 +36,36 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lockout, setLockout] = useState<LockoutState>({
+    failedAttempts: 0,
+    isLocked: false,
+    remainingSeconds: 0,
+    remainingAttempts: MAX_FAILED_ATTEMPTS,
+    lockedUntil: null,
+  });
+
+  // Track and tick cooldown countdown timer
+  useEffect(() => {
+    const syncState = () => {
+      const current = getLockoutState();
+      setLockout(current);
+    };
+
+    syncState();
+    const interval = setInterval(syncState, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleLogin = async (e?: React.FormEvent, customUser?: string, customPass?: string) => {
     if (e) e.preventDefault();
+
+    // Prevent attempt if temporarily locked out
+    const currentLock = getLockoutState();
+    if (currentLock.isLocked) {
+      setError(`تم قفل تسجيل الدخول مؤقتاً لتكرار المحاولات الخاطئة. يرجى الانتظار ${currentLock.remainingSeconds} ثانية.`);
+      return;
+    }
+
     const userToLogin = customUser || username;
     const passToLogin = customPass || password;
 
@@ -46,12 +82,6 @@ export default function LoginPage() {
       const identifier = userToLogin.trim();
 
       // Accept either a username or a real email address.
-      //
-      // The form used to fabricate `${username}@elkarooz-school.com` and hand
-      // that to signInWithPassword. That only ever matched accounts whose auth
-      // email really used that domain, so anyone provisioned with their own
-      // mailbox could not sign in at all. An input containing '@' is already an
-      // address and is sent as-is; otherwise it is resolved as a username.
       let email = identifier.toLowerCase();
       if (!identifier.includes('@')) {
         const { data: resolved, error: lookupError } = await supabase.rpc(
@@ -60,7 +90,15 @@ export default function LoginPage() {
         );
 
         if (lookupError || !resolved) {
-          setError('اسم المستخدم أو كلمة المرور غير صحيحة');
+          const { state: newState } = recordFailedAttempt(identifier);
+          setLockout(newState);
+          if (newState.isLocked) {
+            setError(`تم استنفاد عدد محاولات الدخول (${MAX_FAILED_ATTEMPTS} محاولات). تم قفل تسجيل الدخول مؤقتاً لمدة ${newState.remainingSeconds} ثانية.`);
+          } else if (newState.remainingAttempts <= 2) {
+            setError(`اسم المستخدم أو كلمة المرور غير صحيحة. متبقي ${newState.remainingAttempts} محاولات قبل قفل الدخول مؤقتاً.`);
+          } else {
+            setError('اسم المستخدم أو كلمة المرور غير صحيحة');
+          }
           setLoading(false);
           return;
         }
@@ -73,10 +111,22 @@ export default function LoginPage() {
       });
 
       if (authError) {
-        setError('اسم المستخدم أو كلمة المرور غير صحيحة');
+        const { state: newState } = recordFailedAttempt(identifier);
+        setLockout(newState);
+        if (newState.isLocked) {
+          setError(`تم استنفاد عدد محاولات الدخول (${MAX_FAILED_ATTEMPTS} محاولات). تم قفل تسجيل الدخول مؤقتاً لمدة ${newState.remainingSeconds} ثانية.`);
+        } else if (newState.remainingAttempts <= 2) {
+          setError(`اسم المستخدم أو كلمة المرور غير صحيحة. متبقي ${newState.remainingAttempts} محاولات قبل قفل الدخول مؤقتاً.`);
+        } else {
+          setError('اسم المستخدم أو كلمة المرور غير صحيحة');
+        }
         setLoading(false);
         return;
       }
+
+      // Successful login -> clear lockout records
+      clearLockout();
+      setLockout(getLockoutState());
 
       if (data.user) {
         router.push('/');
@@ -214,12 +264,26 @@ export default function LoginPage() {
                 <p className="text-xs opacity-75">أدخل بيانات حسابك للمتابعة إلى المنظومة</p>
               </div>
 
-              {error && (
+              {lockout.isLocked ? (
+                <div className="p-4 bg-danger/10 border border-danger/30 text-rose-600 dark:text-rose-400 rounded-2xl flex items-start gap-3 text-sm animate-pulse">
+                  <ShieldAlert className="w-5 h-5 flex-shrink-0 mt-0.5 text-danger" />
+                  <div className="space-y-1">
+                    <p className="font-bold">الحساب مقفل مؤقتاً لحماية أمانك</p>
+                    <p className="text-xs leading-relaxed opacity-90">
+                      تم استنفاد الحد الأقصى للمحاولات ({MAX_FAILED_ATTEMPTS} محاولات). يرجى الانتظار{' '}
+                      <span className="font-mono font-bold text-sm bg-danger/20 text-danger px-2 py-0.5 rounded-md inline-block">
+                        {lockout.remainingSeconds}s
+                      </span>{' '}
+                      ثانية قبل المحاولة مجدداً.
+                    </p>
+                  </div>
+                </div>
+              ) : error ? (
                 <div className="p-3.5 bg-danger/10 border border-danger/20 text-rose-600 dark:text-danger rounded-xl flex items-center gap-2.5 text-sm">
                   <AlertCircle className="w-5 h-5 flex-shrink-0" />
                   <span>{error}</span>
                 </div>
-              )}
+              ) : null}
 
               <form onSubmit={handleLogin} className="space-y-4">
                 <div className="space-y-1.5">
@@ -233,9 +297,9 @@ export default function LoginPage() {
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
                       placeholder="username"
-                      className="app-input w-full rounded-xl px-4 py-3 pl-11 font-mono text-sm transition-all text-left"
+                      className="app-input w-full rounded-xl px-4 py-3 pl-11 font-mono text-sm transition-all text-left disabled:opacity-50 disabled:cursor-not-allowed"
                       required
-                      disabled={loading}
+                      disabled={loading || lockout.isLocked}
                     />
                     <User className="w-4 h-4 opacity-50 absolute left-3.5 top-1/2 -translate-y-1/2" />
                   </div>
@@ -252,9 +316,9 @@ export default function LoginPage() {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••••••"
-                      className="app-input w-full rounded-xl px-4 py-3 pl-20 font-mono text-sm transition-all text-left"
+                      className="app-input w-full rounded-xl px-4 py-3 pl-20 font-mono text-sm transition-all text-left disabled:opacity-50 disabled:cursor-not-allowed"
                       required
-                      disabled={loading}
+                      disabled={loading || lockout.isLocked}
                     />
                     <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
                       <button
@@ -265,7 +329,8 @@ export default function LoginPage() {
                            must be labelled, not decorative. */
                         aria-label={showPassword ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور'}
                         aria-pressed={showPassword}
-                        className="tap-target opacity-70 hover:opacity-100 transition-opacity rounded-lg"
+                        className="tap-target opacity-70 hover:opacity-100 transition-opacity rounded-lg disabled:opacity-40"
+                        disabled={loading || lockout.isLocked}
                       >
                         {showPassword ? (
                           <EyeOff className="w-4 h-4" aria-hidden="true" />
@@ -280,13 +345,18 @@ export default function LoginPage() {
 
                 <button
                   type="submit"
-                  disabled={loading}
-                  className="app-btn-primary w-full py-3.5 px-4 shadow-md flex items-center justify-center gap-2 text-base active:scale-[0.99] disabled:opacity-50 mt-2"
+                  disabled={loading || lockout.isLocked}
+                  className="app-btn-primary w-full py-3.5 px-4 shadow-md flex items-center justify-center gap-2 text-base active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed mt-2"
                 >
                   {loading ? (
                     <>
                       <Loader2 className="w-5 h-5 animate-spin" />
                       <span>جاري تسجيل الدخول...</span>
+                    </>
+                  ) : lockout.isLocked ? (
+                    <>
+                      <Clock className="w-5 h-5 animate-spin text-gold" />
+                      <span>مقفل مؤقتاً ({lockout.remainingSeconds} ثانية)</span>
                     </>
                   ) : (
                     <span>تسجيل الدخول إلى الحساب</span>

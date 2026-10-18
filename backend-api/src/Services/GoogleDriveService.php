@@ -10,29 +10,38 @@ use App\Utils\Security;
  * eliminating heavy dependencies for high performance and compatibility with Hostinger.
  */
 class GoogleDriveService {
-    private ?string $serviceAccountJsonPath;
+    private ?string $serviceAccountCredential;
     private ?string $cachedAccessToken = null;
     private int $tokenExpiresAt = 0;
     private int $timeoutSeconds;
 
-    public function __construct(?string $jsonPath = null, int $timeoutSeconds = 30) {
-        $this->serviceAccountJsonPath = $jsonPath ?: getenv('GOOGLE_SERVICE_ACCOUNT_JSON_PATH');
+    public function __construct(?string $jsonOrPath = null, int $timeoutSeconds = 30) {
+        $this->serviceAccountCredential = $jsonOrPath ?: (getenv('GOOGLE_SERVICE_ACCOUNT_JSON') ?: getenv('GOOGLE_SERVICE_ACCOUNT_JSON_PATH'));
         $this->timeoutSeconds = $timeoutSeconds;
     }
 
     /**
      * Generate or return a cached OAuth 2.0 Access Token for the Service Account.
+     * Fully in-memory: parses raw JSON or reads key file directly without writing to /tmp.
      */
     public function getAccessToken(): string {
         if ($this->cachedAccessToken && time() < ($this->tokenExpiresAt - 60)) {
             return $this->cachedAccessToken;
         }
 
-        if (!$this->serviceAccountJsonPath || !is_file($this->serviceAccountJsonPath)) {
-            throw new \RuntimeException('Google Service Account key file not found: ' . ($this->serviceAccountJsonPath ?: 'NOT_SET'));
+        if (!$this->serviceAccountCredential) {
+            throw new \RuntimeException('Google Service Account credentials not configured (neither JSON nor file path)');
         }
 
-        $keyContent = file_get_contents($this->serviceAccountJsonPath);
+        $trimmed = trim($this->serviceAccountCredential);
+        if (str_starts_with($trimmed, '{')) {
+            $keyContent = $trimmed;
+        } elseif (is_file($this->serviceAccountCredential)) {
+            $keyContent = file_get_contents($this->serviceAccountCredential);
+        } else {
+            throw new \RuntimeException('Google Service Account key file not found: ' . $this->serviceAccountCredential);
+        }
+
         $keyData = json_decode((string)$keyContent, true);
         if (!is_array($keyData) || empty($keyData['client_email']) || empty($keyData['private_key'])) {
             throw new \RuntimeException('Invalid Google Service Account JSON key structure');
@@ -183,9 +192,13 @@ class GoogleDriveService {
     }
 
     /**
-     * Download a file from Google Drive to local filesystem.
+     * Download a file from Google Drive to local filesystem with bounded size protection.
+     *
+     * @param string $driveFileId Valid Google Drive file ID
+     * @param string $localPath Destination local file path
+     * @param int $maxSizeBytes Max file size allowed (default 100 MB) to protect against DoS
      */
-    public function downloadFile(string $driveFileId, string $localPath): bool {
+    public function downloadFile(string $driveFileId, string $localPath, int $maxSizeBytes = 104857600): bool {
         if (!preg_match('/^[a-zA-Z0-9_-]+$/', $driveFileId)) {
             throw new \InvalidArgumentException('Invalid Google Drive file ID');
         }
@@ -203,15 +216,26 @@ class GoogleDriveService {
             throw new \RuntimeException('Failed to open local file for writing: ' . $localPath);
         }
 
+        $downloadedBytes = 0;
+        $exceededLimit = false;
+
         $ch = curl_init($url);
         curl_setopt_array($ch, [
             CURLOPT_HTTPHEADER => [
                 'Authorization: Bearer ' . $token,
             ],
-            CURLOPT_FILE => $fp,
             CURLOPT_TIMEOUT => $this->timeoutSeconds * 5,
             CURLOPT_SSL_VERIFYPEER => true,
             CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_WRITEFUNCTION => function($curl, $chunk) use ($fp, &$downloadedBytes, $maxSizeBytes, &$exceededLimit) {
+                $len = strlen($chunk);
+                $downloadedBytes += $len;
+                if ($downloadedBytes > $maxSizeBytes) {
+                    $exceededLimit = true;
+                    return 0; // Abort transfer immediately
+                }
+                return fwrite($fp, $chunk);
+            }
         ]);
 
         $result = curl_exec($ch);
@@ -219,6 +243,12 @@ class GoogleDriveService {
         $curlError = curl_error($ch);
         curl_close($ch);
         fclose($fp);
+
+        if ($exceededLimit) {
+            @unlink($localPath);
+            error_log("[GoogleDriveService] downloadFile aborted: file exceeded size limit ({$maxSizeBytes} bytes)");
+            throw new \RuntimeException("حجم الملف يتجاوز الحد الأقصى المسموح به ({$maxSizeBytes} بايت)");
+        }
 
         if (!$result || $httpCode < 200 || $httpCode >= 300) {
             @unlink($localPath);

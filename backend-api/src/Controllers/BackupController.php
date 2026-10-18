@@ -37,8 +37,8 @@ class BackupController {
         $password = $body['encryption_password'] ?? '';
         $storageOption = $body['storage_option'] ?? 'HOSTINGER'; // 'HOSTINGER' or 'DOWNLOAD_ONLY'
 
-        if (empty($password) || strlen($password) < 6) {
-            Response::error('يرجى إدخال كلمة مرور قوية لتشفير ملف النسخة الاحتياطية (6 خانات على الأقل)', 'PASSWORD_REQUIRED', 400);
+        if (empty($password) || strlen($password) < 8) {
+            Response::error('يرجى إدخال كلمة مرور قوية لتشفير ملف النسخة الاحتياطية (8 خانات على الأقل)', 'PASSWORD_REQUIRED', 400);
         }
 
         $backupId = Security::generateUuidV4();

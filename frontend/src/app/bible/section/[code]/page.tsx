@@ -168,7 +168,7 @@ export default function SectionBrowserPage() {
         </div>
 
         {/* Section Tabs / Pills */}
-        <div className="flex gap-2 overflow-x-auto pb-4 mb-8 scrollbar-none">
+        <div className="flex gap-2 overflow-x-auto pb-4 mb-8 scrollbar-none snap-x snap-mandatory" style={{ WebkitMaskImage: "linear-gradient(to left, transparent, black 16px, black calc(100% - 16px), transparent)" } as any}>
           {sections.map((sec) => {
             const isSelected = selectedSection?.id === sec.id;
             return (
@@ -215,14 +215,20 @@ export default function SectionBrowserPage() {
 
         {/* Articles List / Grid */}
         {loadingArticles ? (
-          <div className="py-20 text-center">
-            <Loader2 className="w-10 h-10 text-gold animate-spin mx-auto mb-4" />
-            <p className="text-sm text-content-muted">جاري تحميل وثائق القسم...</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" aria-busy="true" aria-label="جاري التحميل">
+            {[1,2,3,4,5,6,7,8].map((i) => (
+              <div key={i} className="p-5 rounded-2xl bg-nav/40 border border-line/60 h-40 animate-pulse">
+                <div className="h-3 w-16 bg-line/60 rounded mb-3" />
+                <div className="h-4 w-full bg-line/40 rounded mb-2" />
+                <div className="h-4 w-3/4 bg-line/40 rounded" />
+              </div>
+            ))}
           </div>
         ) : articles.length === 0 ? (
           <div className="py-20 text-center bg-nav/30 rounded-3xl border border-line/60 p-8">
             <BookOpen className="w-12 h-12 text-content-muted mx-auto mb-4" />
             <p className="text-content-muted">لا توجد وثائق في هذا القسم حالياً</p>
+            <button onClick={() => setIsSearchOpen(true)} className="mt-4 px-4 py-2 rounded-xl bg-gold text-brand-on text-xs font-bold">ابحث في كل الموسوعة</button>
           </div>
         ) : viewMode === 'grid' ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -285,11 +291,13 @@ export default function SectionBrowserPage() {
         {totalPages > 1 && (
           <div className="flex items-center justify-center gap-3 mt-10">
             <button
+              aria-label="الصفحة السابقة"
               disabled={currentPage <= 1 || loadingArticles}
               onClick={() => {
                 const nextP = currentPage - 1;
                 setCurrentPage(nextP);
                 if (selectedSection) loadSectionArticles(selectedSection.id, nextP);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
               className="px-4 py-2 rounded-xl bg-nav border border-line text-xs text-content-secondary hover:text-content disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
             >
@@ -297,16 +305,18 @@ export default function SectionBrowserPage() {
               <span>السابق</span>
             </button>
 
-            <span className="text-xs text-content-muted px-3">
+            <span aria-live="polite" className="text-xs text-content-muted px-3">
               صفحة <span className="text-content font-bold">{currentPage}</span> من <span className="text-content font-bold">{totalPages}</span>
             </span>
 
             <button
+              aria-label="الصفحة التالية"
               disabled={currentPage >= totalPages || loadingArticles}
               onClick={() => {
                 const nextP = currentPage + 1;
                 setCurrentPage(nextP);
                 if (selectedSection) loadSectionArticles(selectedSection.id, nextP);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
               className="px-4 py-2 rounded-xl bg-nav border border-line text-xs text-content-secondary hover:text-content disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
             >

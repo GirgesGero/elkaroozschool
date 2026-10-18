@@ -107,6 +107,11 @@ foreach ($iterator as $file) {
     $path = $file->getPathname();
     $rel  = str_replace('\\', '/', substr($path, strlen($beRoot) + 1));
 
+    // Skip scanning inside vendor/ and storage/ for performance (vendor is third-party, storage is local uploads)
+    if (str_starts_with($rel, 'vendor/') || str_starts_with($rel, 'storage/')) {
+        continue;
+    }
+
     if (preg_match('#(^|/)\.env(\.|$)#', $rel) && !str_ends_with($rel, '.example') && !str_ends_with($rel, '.template')) {
         $forbidden[] = $rel . ' (env file)';
         continue;

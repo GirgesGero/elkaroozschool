@@ -120,13 +120,20 @@ export default function BibleSearchModal({ isOpen, onClose, onSelectArticle, sec
     }
   };
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const { query, results, total, loading, searched, expandedTokens } = searchState;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center p-4 bg-nav/80 backdrop-blur-md overflow-y-auto" dir="rtl">
-      <div className="w-full max-w-3xl mt-20 rounded-3xl overflow-hidden shadow-2xl border border-line bg-canvas">
+    <div role="dialog" aria-modal="true" aria-label="البحث في الموسوعة" onClick={onClose} className="fixed inset-0 z-50 flex items-start justify-center p-4 bg-nav/80 backdrop-blur-md overflow-y-auto" dir="rtl">
+      <div onClick={(e) => e.stopPropagation()} className="w-full max-w-3xl mt-20 rounded-3xl overflow-hidden shadow-2xl border border-line bg-canvas">
         {/* Header */}
         <div className="p-6 border-b border-line/80 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -146,10 +153,11 @@ export default function BibleSearchModal({ isOpen, onClose, onSelectArticle, sec
             </div>
           </div>
           <button
+            aria-label="اغلاق"
             onClick={onClose}
-            className="p-2 rounded-xl bg-nav/80 hover:bg-nav text-content-muted hover:text-content border border-line transition-all"
+            className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl bg-nav/80 hover:bg-nav text-content-muted hover:text-content border border-line transition-all"
           >
-            <X className="w-4 h-4" />
+            <X className="w-4 h-4" aria-hidden="true" />
           </button>
         </div>
 
@@ -163,7 +171,8 @@ export default function BibleSearchModal({ isOpen, onClose, onSelectArticle, sec
               onKeyDown={handleKeyDown}
               placeholder="ابحث في الكتاب المقدس، التفاسير، الأطلس، اللاهوتيات..."
               autoFocus
-              className="w-full bg-nav/60 border border-line rounded-2xl px-5 py-4 pr-12 text-sm text-content placeholder-content-muted focus:outline-none focus:border-gold transition-all"
+              aria-label="ابحث في الموسوعة"
+              className="w-full bg-nav/60 border border-line rounded-2xl px-5 py-4 pr-12 text-[16px] md:text-sm text-content placeholder-content-muted focus:outline-none focus:border-gold transition-all"
             />
             <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-content-muted" />
             {loading && (

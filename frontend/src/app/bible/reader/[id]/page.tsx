@@ -51,7 +51,7 @@ export default function ArticleReaderPage() {
     return (
       <div className="min-h-screen bg-canvas flex items-center justify-center" dir="rtl">
         <div className="text-center">
-          <Loader2 className="w-12 h-12 text-gold animate-spin mx-auto mb-4" />
+          <Loader2 className="w-12 h-12 text-gold animate-spin mx-auto mb-4" aria-hidden="true" />
           <p className="text-content-muted">جاري جلب الوثيقة من الموسوعة...</p>
         </div>
       </div>
@@ -103,7 +103,7 @@ export default function ArticleReaderPage() {
               <span>{article.section_title || 'القسم'}</span>
             )}
             <ChevronLeft className="w-3.5 h-3.5" />
-            <span className="text-content font-medium truncate max-w-[200px]">{article.title}</span>
+            <span title={article.title} className="text-content font-medium truncate max-w-[200px]">{article.title}</span>
           </div>
 
           <button

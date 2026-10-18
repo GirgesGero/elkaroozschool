@@ -1,8 +1,8 @@
 # دليل نشر EL KAROOZ School على Hostinger
 
-**التاريخ:** 2026-10-06  
-**الإصدار:** v2.0 (Bible Encyclopedia v5.0 Integration)  
-**البيئة المستهدفة:** Hostinger Shared Hosting
+**آخر تحديث:** 2026-10-15  
+**الإصدار:** v3.1 (Security Hardening, CSP, Accurate Substring Matching & Audit Dashboard)  
+**البيئة المستهدفة:** Hostinger Shared Hosting (`http://elkaroozschool.is-best.net`)
 
 ---
 
