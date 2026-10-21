@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useState, useEffect, useCallback, Suspense } from 'react';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { 
   getBibleCategories,
   getBibleSections, 
@@ -14,16 +14,19 @@ import SmartHeader from '@/components/SmartHeader';
 import SmartBottomNav from '@/components/SmartBottomNav';
 import BibleSearchModal from '@/components/Bible/BibleSearchModal';
 
-export default function SectionBrowserPage() {
+function SectionBrowserContent() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const categoryCode = params.code as string;
 
   const [sections, setSections] = useState<BibleSection[]>([]);
   const [selectedSection, setSelectedSection] = useState<BibleSection | null>(null);
   const [articles, setArticles] = useState<BibleSectionArticleSummary[]>([]);
   const [totalArticles, setTotalArticles] = useState(0);
-  const [currentPage, setCurrentPage] = useState(1);
+
+  const initialPage = parseInt(searchParams.get('page') || '1', 10) || 1;
+  const [currentPage, setCurrentPage] = useState(initialPage);
   const [totalPages, setTotalPages] = useState(1);
   
   const [loadingSections, setLoadingSections] = useState(true);
@@ -72,22 +75,97 @@ export default function SectionBrowserPage() {
       }
 
       setSections(categorySections);
+
+      // Check URL searchParams for section deep-link
+      const sectionParam = searchParams.get('section');
+      const pageParam = parseInt(searchParams.get('page') || '1', 10) || 1;
+
+      if (sectionParam) {
+        const matchedFromParam =
+          categorySections.find(
+            (s) => s.code === sectionParam || String(s.id) === sectionParam
+          ) ||
+          allSections.find(
+            (s) => s.code === sectionParam || String(s.id) === sectionParam
+          );
+        if (matchedFromParam) {
+          initialSection = matchedFromParam;
+        }
+      }
+
       if (initialSection) {
         setSelectedSection(initialSection);
-        loadSectionArticles(initialSection.id, 1);
+        setCurrentPage(pageParam);
+        loadSectionArticles(initialSection.id, pageParam);
       }
     } catch (error) {
       console.error('Failed to load sections:', error);
     } finally {
       setLoadingSections(false);
     }
-  }, [categoryCode, loadSectionArticles]);
+  }, [categoryCode, loadSectionArticles, searchParams]);
 
   useEffect(() => {
     if (categoryCode) {
       loadSections();
     }
   }, [categoryCode, loadSections]);
+
+  // Synchronize selectedSection and currentPage to URL searchParams
+  useEffect(() => {
+    if (!selectedSection) return;
+    const urlParams = new URLSearchParams(searchParams.toString());
+    let changed = false;
+
+    const currentSectionCode = selectedSection.code || String(selectedSection.id);
+    if (urlParams.get('section') !== currentSectionCode) {
+      urlParams.set('section', currentSectionCode);
+      changed = true;
+    }
+
+    if (currentPage > 1) {
+      if (urlParams.get('page') !== String(currentPage)) {
+        urlParams.set('page', String(currentPage));
+        changed = true;
+      }
+    } else {
+      if (urlParams.has('page')) {
+        urlParams.delete('page');
+        changed = true;
+      }
+    }
+
+    if (changed) {
+      const q = urlParams.toString();
+      const newUrl = q
+        ? `/bible/section/${categoryCode}?${q}`
+        : `/bible/section/${categoryCode}`;
+      router.replace(newUrl, { scroll: false });
+    }
+  }, [selectedSection, currentPage, categoryCode, router, searchParams]);
+
+  // Listen to searchParams changes for browser back/forward navigation
+  useEffect(() => {
+    const secParam = searchParams.get('section');
+    if (secParam && sections.length > 0) {
+      const targetSec = sections.find(
+        (s) => s.code === secParam || String(s.id) === secParam
+      );
+      if (targetSec && targetSec.id !== selectedSection?.id) {
+        setSelectedSection(targetSec);
+        const p = parseInt(searchParams.get('page') || '1', 10) || 1;
+        setCurrentPage(p);
+        loadSectionArticles(targetSec.id, p);
+        return;
+      }
+    }
+
+    const pParam = parseInt(searchParams.get('page') || '1', 10) || 1;
+    if (pParam !== currentPage && selectedSection) {
+      setCurrentPage(pParam);
+      loadSectionArticles(selectedSection.id, pParam);
+    }
+  }, [searchParams, sections, selectedSection, currentPage, loadSectionArticles]);
 
   const handleSelectSection = (sec: BibleSection) => {
     setSelectedSection(sec);
@@ -336,5 +414,19 @@ export default function SectionBrowserPage() {
 
       <SmartBottomNav profile={null} onOpenProfile={(id) => setSelectedProfileId(id)} />
     </div>
+  );
+}
+
+export default function SectionBrowserPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-canvas flex items-center justify-center" dir="rtl">
+          <Loader2 className="w-12 h-12 text-gold animate-spin mx-auto mb-4" />
+        </div>
+      }
+    >
+      <SectionBrowserContent />
+    </Suspense>
   );
 }

@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { X, ChevronLeft } from 'lucide-react';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 import {
   PRIMARY_NAV,
   SECONDARY_NAV,
@@ -33,22 +34,41 @@ export default function NavDrawer({
   const panelRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
 
-  // Close on Escape, and move focus into the panel so keyboard users are not
-  // stranded behind the overlay.
+  useFocusTrap(open, onClose, panelRef);
+
+  // Manage body scroll: when NavDrawer is hidden on desktop (md:hidden),
+  // NEVER lock body scroll (overflow = 'hidden') on desktop viewports.
   useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    document.addEventListener('keydown', onKey);
-    closeRef.current?.focus();
+    if (!open || typeof window === 'undefined') return;
+
+    const mql = window.matchMedia('(min-width: 768px)');
     const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+
+    const updateOverflow = () => {
+      if (mql.matches) {
+        document.body.style.overflow = previousOverflow;
+      } else {
+        document.body.style.overflow = 'hidden';
+      }
+    };
+
+    updateOverflow();
+
+    if (mql.addEventListener) {
+      mql.addEventListener('change', updateOverflow);
+    } else if (mql.addListener) {
+      mql.addListener(updateOverflow);
+    }
+
     return () => {
-      document.removeEventListener('keydown', onKey);
+      if (mql.removeEventListener) {
+        mql.removeEventListener('change', updateOverflow);
+      } else if (mql.removeListener) {
+        mql.removeListener(updateOverflow);
+      }
       document.body.style.overflow = previousOverflow;
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open) return null;
 

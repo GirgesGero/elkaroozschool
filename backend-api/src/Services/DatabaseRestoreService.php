@@ -95,50 +95,96 @@ final class DatabaseRestoreService
      */
     public function restore(string $extractDir, bool $truncate = false): array
     {
-        $dbFile = $extractDir
-            . DIRECTORY_SEPARATOR . 'database'
-            . DIRECTORY_SEPARATOR . 'database.json';
+        $dbDir = $extractDir . DIRECTORY_SEPARATOR . 'database';
+        $dbFile = $dbDir . DIRECTORY_SEPARATOR . 'database.json';
 
-        if (!is_file($dbFile)) {
-            throw new \RuntimeException(
-                'الاستعادة طلبت قاعدة البيانات لكن ملف database.json غير موجود في النسخة'
-            );
-        }
+        $decoded = null;
+        if (is_file($dbFile)) {
+            $size = filesize($dbFile);
+            if ($size === false || $size === 0) {
+                throw new \RuntimeException('ملف قاعدة البيانات في النسخة فارغ');
+            }
 
-        $size = filesize($dbFile);
-        if ($size === false || $size === 0) {
-            throw new \RuntimeException('ملف قاعدة البيانات في النسخة فارغ');
-        }
+            // The archive is already bounded by BackupArchiveInspector (2 GB compressed,
+            // 8 GB expanded, 500k entries, ratio 200), so this ceiling is about the
+            // single jsonb payload rather than the archive: it stops one oversized
+            // document from turning into an out-of-memory failure with no useful
+            // message, which is exactly the failure an operator would not be able to
+            // act on.
+            if ($size > self::MAX_PAYLOAD_BYTES) {
+                throw new \RuntimeException(sprintf(
+                    'ملف قاعدة البيانات (%s بايت) يتجاوز الحد المسموح (%s بايت). '
+                    . 'قسّم النسخ الاحتياطية على أجزاء.',
+                    number_format($size),
+                    number_format(self::MAX_PAYLOAD_BYTES)
+                ));
+            }
 
-        // The archive is already bounded by BackupArchiveInspector (2 GB compressed,
-        // 8 GB expanded, 500k entries, ratio 200), so this ceiling is about the
-        // single jsonb payload rather than the archive: it stops one oversized
-        // document from turning into an out-of-memory failure with no useful
-        // message, which is exactly the failure an operator would not be able to
-        // act on.
-        if ($size > self::MAX_PAYLOAD_BYTES) {
-            throw new \RuntimeException(sprintf(
-                'ملف قاعدة البيانات (%s بايت) يتجاوز الحد المسموح (%s بايت). '
-                . 'قسّم النسخ الاحتياطية على أجزاء.',
-                number_format($size),
-                number_format(self::MAX_PAYLOAD_BYTES)
-            ));
-        }
+            $raw = file_get_contents($dbFile);
+            if ($raw === false) {
+                throw new \RuntimeException('تعذّرت قراءة ملف قاعدة البيانات من النسخة');
+            }
 
-        $raw = file_get_contents($dbFile);
-        if ($raw === false) {
-            throw new \RuntimeException('تعذّرت قراءة ملف قاعدة البيانات من النسخة');
-        }
+            $decoded = json_decode($raw, true);
+            if (!is_array($decoded) || $decoded === []) {
+                // A decode failure here would otherwise reach Postgres as null and
+                // come back as a generic 22023. Saying which file is broken is the
+                // difference between an operator fixing the archive and an operator
+                // filing a bug.
+                throw new \RuntimeException(
+                    'ملف database.json في النسخة غير صالح: يجب أن يكون كائن JSON يحتوي على الجداول'
+                );
+            }
+        } else {
+            // Fall back to aggregating all table JSON files in the database directory
+            $tableFiles = is_dir($dbDir) ? glob($dbDir . DIRECTORY_SEPARATOR . '*.json') : [];
+            if (empty($tableFiles)) {
+                throw new \RuntimeException(
+                    'الاستعادة طلبت قاعدة البيانات لكن ملف database.json غير موجود في النسخة'
+                );
+            }
 
-        $decoded = json_decode($raw, true);
-        if (!is_array($decoded) || $decoded === []) {
-            // A decode failure here would otherwise reach Postgres as null and
-            // come back as a generic 22023. Saying which file is broken is the
-            // difference between an operator fixing the archive and an operator
-            // filing a bug.
-            throw new \RuntimeException(
-                'ملف database.json في النسخة غير صالح: يجب أن يكون كائن JSON يحتوي على الجداول'
-            );
+            $decoded = [];
+            $totalSize = 0;
+            foreach ($tableFiles as $file) {
+                $tableName = pathinfo($file, PATHINFO_FILENAME);
+                if ($tableName === 'database') {
+                    continue;
+                }
+                $size = filesize($file);
+                if ($size === false) {
+                    continue;
+                }
+                $totalSize += $size;
+                if ($totalSize > self::MAX_PAYLOAD_BYTES) {
+                    throw new \RuntimeException(sprintf(
+                        'ملفات قاعدة البيانات تتجاوز الحد المسموح (%s بايت). قسّم النسخ الاحتياطية على أجزاء.',
+                        number_format(self::MAX_PAYLOAD_BYTES)
+                    ));
+                }
+                $raw = file_get_contents($file);
+                if ($raw === false) {
+                    throw new \RuntimeException('تعذّرت قراءة ملف الجدول من النسخة: ' . basename($file));
+                }
+                $tableData = json_decode($raw, true);
+                if (!is_array($tableData)) {
+                    throw new \RuntimeException('ملف الجدول غير صالح: ' . basename($file));
+                }
+                if (isset($tableData['rows']) && is_array($tableData['rows'])) {
+                    $tName = isset($tableData['table']) && is_string($tableData['table']) ? $tableData['table'] : $tableName;
+                    $decoded[$tName] = $tableData['rows'];
+                } elseif (array_is_list($tableData) || empty($tableData)) {
+                    $decoded[$tableName] = $tableData;
+                } else {
+                    $decoded[$tableName] = $tableData;
+                }
+            }
+
+            if (empty($decoded)) {
+                throw new \RuntimeException(
+                    'الاستعادة طلبت قاعدة البيانات لكن ملف database.json غير موجود في النسخة'
+                );
+            }
         }
 
         // Reject the bookkeeping tables here as well as in SQL. The RPC refuses

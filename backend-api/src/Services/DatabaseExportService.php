@@ -128,6 +128,7 @@ final class DatabaseExportService
         $totalRows = 0;
         $totalBytes = 0;
         $written = 0;
+        $consolidated = [];
 
         foreach ($tables as $entry) {
             $table = (string) ($entry['table'] ?? '');
@@ -237,10 +238,26 @@ final class DatabaseExportService
             $totalRows += count($rows);
             $totalBytes += strlen($json);
             $written++;
+            $consolidated[$table] = $rows;
         }
 
         if ($written === 0) {
             throw new \RuntimeException('no tables were exported; refusing to claim a database backup');
+        }
+
+        $dbJsonPath = $dbDir . '/database.json';
+        $dbJson = json_encode(
+            $consolidated,
+            JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT
+        );
+        if ($dbJson === false) {
+            throw new \RuntimeException(sprintf(
+                'cannot encode consolidated database.json: %s',
+                json_last_error_msg()
+            ));
+        }
+        if (file_put_contents($dbJsonPath, $dbJson) === false) {
+            throw new \RuntimeException('cannot write consolidated database.json');
         }
 
         return [

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 import {
   Search,
   X,
@@ -47,15 +48,10 @@ export default function GlobalSearchModal({
     if (!isOpen) {
       setQuery('');
       setResults({ people: [], groups: [], books: [], posts: [] });
-      return;
     }
+  }, [isOpen]);
 
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+  const containerRef = useFocusTrap(isOpen, onClose);
 
   useEffect(() => {
     if (!query.trim() || query.length < 2) {
@@ -114,7 +110,7 @@ export default function GlobalSearchModal({
     results.people.length + results.groups.length + results.books.length + results.posts.length;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-8 sm:pt-16 px-3 bg-black/80 backdrop-blur-md animate-fade-in" dir="rtl">
+    <div ref={containerRef} role="dialog" aria-modal="true" aria-label="البحث الشامل" className="fixed inset-0 z-50 flex items-start justify-center pt-8 sm:pt-16 px-3 bg-black/80 backdrop-blur-md animate-fade-in" dir="rtl">
       <div className="w-full max-w-2xl bg-canvas border border-gold/40 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh] animate-scale-in">
         {/* Search Bar Header */}
         <div className="p-4 border-b border-line flex items-center gap-3 bg-canvas">

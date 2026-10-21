@@ -30,7 +30,9 @@ export async function updateSession(request: NextRequest) {
   if (!supabaseUrl || !supabaseKey) {
     if (!publicPath) {
       const redirectUrl = request.nextUrl.clone();
+      const redirectTo = `${request.nextUrl.pathname}${request.nextUrl.search}`;
       redirectUrl.pathname = '/login';
+      redirectUrl.search = `?redirectTo=${encodeURIComponent(redirectTo)}`;
       return NextResponse.redirect(redirectUrl);
     }
     return NextResponse.next({ request });
@@ -61,7 +63,9 @@ export async function updateSession(request: NextRequest) {
 
   if (!user && !publicPath) {
     const url = request.nextUrl.clone();
+    const redirectTo = `${request.nextUrl.pathname}${request.nextUrl.search}`;
     url.pathname = '/login';
+    url.search = `?redirectTo=${encodeURIComponent(redirectTo)}`;
     return NextResponse.redirect(url);
   }
 
@@ -84,10 +88,14 @@ export async function updateSession(request: NextRequest) {
     }
   }
 
-  // Redirect from login to feed if already logged in
+  // Redirect from login to destination or feed if already logged in
   if (user && request.nextUrl.pathname === '/login') {
-    const url = request.nextUrl.clone();
-    url.pathname = '/';
+    const redirectTo = request.nextUrl.searchParams.get('redirectTo');
+    const target =
+      redirectTo && redirectTo.startsWith('/') && !redirectTo.startsWith('//')
+        ? redirectTo
+        : '/';
+    const url = new URL(target, request.nextUrl.origin);
     return NextResponse.redirect(url);
   }
 

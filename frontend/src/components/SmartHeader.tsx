@@ -10,7 +10,12 @@ import { useAppTheme, type AppTheme } from '@/context/ThemeContext';
 import NotificationCenter from '@/components/NotificationCenter';
 import { useScrollChrome } from '@/hooks/useScrollChrome';
 import NavDrawer from '@/components/NavDrawer';
-import { PRIMARY_NAV, isNavActive as navIsActive } from '@/lib/navigation';
+import {
+  PRIMARY_NAV,
+  SECONDARY_NAV,
+  ADMIN_NAV,
+  isNavActive as navIsActive,
+} from '@/lib/navigation';
 import {
   Search,
   Sun,
@@ -52,18 +57,26 @@ export default function SmartHeader({ profile, onOpenSearch, onOpenProfile }: Sm
   const [showThemeMenu, setShowThemeMenu] = useState(false);
   const themeMenuRef = useRef<HTMLDivElement>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [showSectionsMenu, setShowSectionsMenu] = useState(false);
+  const sectionsMenuRef = useRef<HTMLDivElement>(null);
 
-  // Click outside AND Escape both close the menu — a keyboard user must not be
-  // stranded in a popover they cannot dismiss.
+  // Click outside AND Escape both close popover menus
   useEffect(() => {
-    if (!showThemeMenu) return;
+    if (!showThemeMenu && !showSectionsMenu) return;
     const handleClickOutside = (e: MouseEvent) => {
-      if (themeMenuRef.current && !themeMenuRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      if (showThemeMenu && themeMenuRef.current && !themeMenuRef.current.contains(target)) {
         setShowThemeMenu(false);
+      }
+      if (showSectionsMenu && sectionsMenuRef.current && !sectionsMenuRef.current.contains(target)) {
+        setShowSectionsMenu(false);
       }
     };
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setShowThemeMenu(false);
+      if (e.key === 'Escape') {
+        setShowThemeMenu(false);
+        setShowSectionsMenu(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     document.addEventListener('keydown', handleKey);
@@ -71,7 +84,16 @@ export default function SmartHeader({ profile, onOpenSearch, onOpenProfile }: Sm
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('keydown', handleKey);
     };
-  }, [showThemeMenu]);
+  }, [showThemeMenu, showSectionsMenu]);
+
+  const handleToggleSections = () => {
+    const isDesktop = typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches;
+    if (isDesktop) {
+      setShowSectionsMenu((v) => !v);
+    } else {
+      setDrawerOpen(true);
+    }
+  };
 
   const handleLogout = async () => {
     const supabase = createClient();
@@ -232,16 +254,84 @@ export default function SmartHeader({ profile, onOpenSearch, onOpenProfile }: Sm
             )}
           </div>
 
-          {/* Overflow: opens the side drawer where settings and the rest live */}
-          <button
-            onClick={() => setDrawerOpen(true)}
-            className="tap-target"
-            aria-label="كل الأقسام"
-            title="كل الأقسام"
-            aria-expanded={drawerOpen}
-          >
-            <LayoutGrid className="h-5 w-5" aria-hidden="true" />
-          </button>
+          {/* Overflow: opens the side drawer on mobile or dropdown on desktop */}
+          <div className="relative" ref={sectionsMenuRef}>
+            <button
+              onClick={handleToggleSections}
+              className="tap-target"
+              aria-label="كل الأقسام"
+              title="كل الأقسام"
+              aria-expanded={drawerOpen || showSectionsMenu}
+            >
+              <LayoutGrid className="h-5 w-5" aria-hidden="true" />
+            </button>
+
+            {showSectionsMenu && (
+              <div
+                role="menu"
+                className="absolute left-0 z-50 mt-2 w-64 overflow-hidden rounded-[14px] border p-2 shadow-2xl max-h-[80vh] overflow-y-auto"
+                style={{
+                  backgroundColor: 'var(--bg-card-raised)',
+                  borderColor: 'var(--border-card)',
+                  boxShadow: 'var(--shadow-overlay)',
+                }}
+              >
+                <div className="app-meta px-3 py-1.5 text-xs font-bold" style={{ borderBottom: '1px solid var(--border-subtle)', color: 'var(--text-muted)' }}>
+                  أقسام المدرسة
+                </div>
+                <div className="space-y-1 py-1">
+                  {SECONDARY_NAV.map((item) => {
+                    const active = navIsActive(item, pathname);
+                    const Icon = item.icon;
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={() => setShowSectionsMenu(false)}
+                        className="flex min-h-[40px] items-center gap-2.5 rounded-[10px] px-3 text-xs font-semibold transition-colors"
+                        style={{
+                          backgroundColor: active ? 'var(--bg-active-tab)' : 'transparent',
+                          color: active ? 'var(--text-active-tab)' : 'var(--text-primary)',
+                        }}
+                      >
+                        <Icon className="h-4 w-4" style={{ color: active ? 'var(--brand-primary)' : 'var(--text-muted)' }} />
+                        <span>{item.label}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
+
+                {isAdminOrSuper && (
+                  <>
+                    <div className="app-meta px-3 pt-3 pb-1 text-xs font-bold" style={{ borderTop: '1px solid var(--border-subtle)', color: 'var(--text-muted)' }}>
+                      إدارة النظام
+                    </div>
+                    <div className="space-y-1 py-1">
+                      {ADMIN_NAV.map((item) => {
+                        const active = navIsActive(item, pathname);
+                        const Icon = item.icon;
+                        return (
+                          <Link
+                            key={item.href}
+                            href={item.href}
+                            onClick={() => setShowSectionsMenu(false)}
+                            className="flex min-h-[40px] items-center gap-2.5 rounded-[10px] px-3 text-xs font-semibold transition-colors"
+                            style={{
+                              backgroundColor: active ? 'var(--bg-active-tab)' : 'transparent',
+                              color: active ? 'var(--text-active-tab)' : 'var(--text-primary)',
+                            }}
+                          >
+                            <Icon className="h-4 w-4" style={{ color: active ? 'var(--brand-primary)' : 'var(--text-muted)' }} />
+                            <span>{item.label}</span>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
 
           <NotificationCenter />
 

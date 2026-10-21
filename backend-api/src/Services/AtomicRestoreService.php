@@ -54,6 +54,24 @@ final class AtomicRestoreService {
     /** @var array restore options, kept for the apply step */
     private array $options = [];
 
+    /** @var string|null path to staged pre-restore database snapshot directory */
+    private ?string $dbSnapshotDir = null;
+    /** @var bool whether database changes were applied */
+    private bool $databaseRestored = false;
+    /** @var SupabaseClient|null */
+    private ?SupabaseClient $supabaseClient = null;
+
+    public function setSupabaseClientForTesting(SupabaseClient $client): void {
+        $this->supabaseClient = $client;
+    }
+
+    /**
+     * Alias for execute() to provide standard restore interface.
+     */
+    public function restore(string $extractDir, array $options = [], array $actor = []): array {
+        return $this->execute($extractDir, $options, $actor);
+    }
+
     /**
      * @param string $extractDir  already-extracted, already-validated archive
      * @param array  $options     restore_mode: DATABASE_ONLY|FILES_ONLY|FULL_SYSTEM
@@ -83,10 +101,14 @@ final class AtomicRestoreService {
             if ($mode === 'FILES_ONLY' || $mode === 'FULL_SYSTEM') {
                 $this->snapshotStorage($this->incomingFiles($extractDir));
             }
+            if ($mode === 'DATABASE_ONLY' || $mode === 'FULL_SYSTEM') {
+                $this->snapshotDatabase($extractDir);
+            }
 
             // ---- 4. Apply. ---------------------------------------------------
             if ($mode === 'DATABASE_ONLY' || $mode === 'FULL_SYSTEM') {
                 $databaseReport = $this->restoreDatabase($extractDir);
+                $this->databaseRestored = true;
             }
             if ($mode === 'FILES_ONLY' || $mode === 'FULL_SYSTEM') {
                 $this->restoreFiles($extractDir);
@@ -247,10 +269,48 @@ final class AtomicRestoreService {
      * @return array database restore report, merged into the controller response
      */
     private function restoreDatabase(string $extractDir): array {
-        return (new DatabaseRestoreService())->restore(
+        $client = $this->supabaseClient ?? null;
+        return (new DatabaseRestoreService($client))->restore(
             $extractDir,
             (bool) ($this->options['truncate_mode'] ?? false)
         );
+    }
+
+    /**
+     * Snapshot the database before applying changes so that if file restore fails,
+     * the database can be rolled back.
+     */
+    private function snapshotDatabase(string $extractDir): void {
+        $dbDir = $extractDir . DIRECTORY_SEPARATOR . 'database';
+        $hasDb = is_dir($dbDir) && (is_file($dbDir . DIRECTORY_SEPARATOR . 'database.json') || !empty(glob($dbDir . DIRECTORY_SEPARATOR . '*.json')));
+        if (!$hasDb) {
+            return;
+        }
+
+        $dest = $this->safetyDir . DIRECTORY_SEPARATOR . 'database_snapshot';
+        self::ensureDir($dest);
+
+        try {
+            if (!class_exists(DatabaseExportService::class)) {
+                $expFile = __DIR__ . '/DatabaseExportService.php';
+                if (is_file($expFile)) {
+                    require_once $expFile;
+                }
+            }
+            if (!class_exists(SupabaseClient::class)) {
+                $supaFile = __DIR__ . '/SupabaseClient.php';
+                if (is_file($supaFile)) {
+                    require_once $supaFile;
+                }
+            }
+            if (class_exists(DatabaseExportService::class) && (class_exists(SupabaseClient::class) || $this->supabaseClient !== null)) {
+                $client = $this->supabaseClient ?? new SupabaseClient();
+                (new DatabaseExportService($client))->exportToDirectory($dest);
+                $this->dbSnapshotDir = $dest;
+            }
+        } catch (\Throwable $e) {
+            error_log('[AtomicRestoreService] Pre-restore database snapshot notice: ' . $e->getMessage());
+        }
     }
 
     /** Relative paths inside the archive's files/ section. */
@@ -289,8 +349,27 @@ final class AtomicRestoreService {
         }
         $this->snapshot = [];
 
-        // 2. Remove any file the archive created that had no prior version.
-        //    (Handled by the caller passing the incoming list; see below.)
+        // 2. Roll back database if changes were applied and a snapshot exists
+        if ($this->databaseRestored && $this->dbSnapshotDir !== null && is_dir($this->dbSnapshotDir)) {
+            $this->rollbackDatabase();
+        }
+    }
+
+    private function rollbackDatabase(): void {
+        if ($this->dbSnapshotDir === null || !is_dir($this->dbSnapshotDir)) {
+            return;
+        }
+        if (!class_exists(DatabaseRestoreService::class)) {
+            $resFile = __DIR__ . '/DatabaseRestoreService.php';
+            if (is_file($resFile)) {
+                require_once $resFile;
+            }
+        }
+        if (class_exists(DatabaseRestoreService::class)) {
+            $client = $this->supabaseClient ?? null;
+            $restoreSvc = new DatabaseRestoreService($client);
+            $restoreSvc->restore($this->dbSnapshotDir, true);
+        }
     }
 
     public static function copyTree(string $src, string $dst): void {
@@ -305,17 +384,23 @@ final class AtomicRestoreService {
             return;
         }
         self::ensureDir($dst);
+        $srcPrefix = rtrim($src, '/\\');
         $items = new \RecursiveIteratorIterator(
             new \RecursiveDirectoryIterator($src, \FilesystemIterator::SKIP_DOTS),
             \RecursiveIteratorIterator::SELF_FIRST
         );
         foreach ($items as $item) {
             /** @var \SplFileInfo $item */
-            $target = $dst . DIRECTORY_SEPARATOR . $item->getFilename();
+            $itemPath = $item->getPathname();
+            $rel = ltrim(substr($itemPath, strlen($srcPrefix)), '/\\');
+            $target = $dst . DIRECTORY_SEPARATOR . $rel;
             if ($item->isDir()) {
                 self::ensureDir($target);
-            } elseif (!@copy($item->getPathname(), $target)) {
-                throw new \RuntimeException('فشل نسخ الملف: ' . $item->getPathname());
+            } else {
+                self::ensureDir(dirname($target));
+                if (!@copy($itemPath, $target)) {
+                    throw new \RuntimeException('فشل نسخ الملف: ' . $itemPath);
+                }
             }
         }
     }

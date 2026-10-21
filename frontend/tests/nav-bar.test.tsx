@@ -169,4 +169,45 @@ describe('NavDrawer', () => {
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(onClose).toHaveBeenCalled();
   });
+
+  it('never locks body overflow to hidden on desktop viewports', () => {
+    const originalMatchMedia = window.matchMedia;
+    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+      matches: query.includes('768px'),
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }));
+
+    document.body.style.overflow = 'auto';
+    const { unmount } = render(<NavDrawer open onClose={noop} canAdmin={false} />);
+    expect(document.body.style.overflow).not.toBe('hidden');
+    unmount();
+    window.matchMedia = originalMatchMedia;
+  });
+
+  it('locks body overflow to hidden on mobile viewports', () => {
+    const originalMatchMedia = window.matchMedia;
+    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }));
+
+    document.body.style.overflow = 'auto';
+    const { unmount } = render(<NavDrawer open onClose={noop} canAdmin={false} />);
+    expect(document.body.style.overflow).toBe('hidden');
+    unmount();
+    expect(document.body.style.overflow).toBe('auto');
+    window.matchMedia = originalMatchMedia;
+  });
 });

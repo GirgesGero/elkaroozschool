@@ -24,6 +24,8 @@ class ExcelParserService {
     /**
      * Parse an .xlsx file using PHP's ZipArchive + SimpleXML (no external dependencies).
      * Reads the first worksheet and returns rows as associative arrays keyed by header.
+     * Parses cell coordinates (attribute 'r') to map columns to their correct indices
+     * and pads omitted blank cells.
      */
     public static function parseXlsx(string $filePath): array {
         $zip = new \ZipArchive();
@@ -37,7 +39,17 @@ class ExcelParserService {
         if ($ssXml !== false) {
             $ss = new \SimpleXMLElement($ssXml);
             foreach ($ss->si as $si) {
-                $sharedStrings[] = (string) $si->t;
+                if (isset($si->t)) {
+                    $sharedStrings[] = (string) $si->t;
+                } elseif (isset($si->r)) {
+                    $text = '';
+                    foreach ($si->r as $r) {
+                        $text .= (string) $r->t;
+                    }
+                    $sharedStrings[] = $text;
+                } else {
+                    $sharedStrings[] = '';
+                }
             }
         }
 
@@ -52,15 +64,41 @@ class ExcelParserService {
 
         $allRows = [];
         foreach ($sheet->sheetData->row as $row) {
-            $cells = [];
+            $rowCells = [];
+            $maxCol = -1;
+            $fallbackIndex = 0;
+
             foreach ($row->c as $cell) {
-                $val = (string) $cell->v;
-                if ((string) $cell['t'] === 's' && isset($sharedStrings[(int) $val])) {
-                    $val = $sharedStrings[(int) $val];
+                $ref = (string) $cell['r'];
+                $colIndex = $fallbackIndex;
+                if ($ref !== '' && preg_match('/^([A-Z]+)(\d+)$/i', $ref, $matches)) {
+                    $colIndex = self::columnLetterToIndex($matches[1]);
+                    $fallbackIndex = $colIndex + 1;
+                } else {
+                    $fallbackIndex++;
                 }
-                $cells[] = $val;
+
+                $val = (string) $cell->v;
+                $cellType = (string) $cell['t'];
+                if ($cellType === 's' && isset($sharedStrings[(int) $val])) {
+                    $val = $sharedStrings[(int) $val];
+                } elseif ($cellType === 'inlineStr' && isset($cell->is->t)) {
+                    $val = (string) $cell->is->t;
+                }
+
+                $rowCells[$colIndex] = $val;
+                if ($colIndex > $maxCol) {
+                    $maxCol = $colIndex;
+                }
             }
-            $allRows[] = $cells;
+
+            if ($maxCol >= 0) {
+                $cells = [];
+                for ($i = 0; $i <= $maxCol; $i++) {
+                    $cells[$i] = $rowCells[$i] ?? '';
+                }
+                $allRows[] = $cells;
+            }
         }
 
         if (empty($allRows)) {
@@ -68,13 +106,30 @@ class ExcelParserService {
         }
 
         $header = array_shift($allRows);
+        $headerCount = count($header);
         $rows = [];
         foreach ($allRows as $data) {
-            if (count($data) === count($header)) {
-                $rows[] = array_combine($header, $data);
+            if (count($data) < $headerCount) {
+                $data = array_pad($data, $headerCount, '');
+            } elseif (count($data) > $headerCount) {
+                $data = array_slice($data, 0, $headerCount);
             }
+            $rows[] = array_combine($header, $data);
         }
 
         return $rows;
+    }
+
+    /**
+     * Convert Excel column letters (e.g. 'A', 'B', 'Z', 'AA', 'BC') to 0-based column index.
+     */
+    private static function columnLetterToIndex(string $col): int {
+        $col = strtoupper($col);
+        $len = strlen($col);
+        $index = 0;
+        for ($i = 0; $i < $len; $i++) {
+            $index = $index * 26 + (ord($col[$i]) - ord('A') + 1);
+        }
+        return $index - 1;
     }
 }

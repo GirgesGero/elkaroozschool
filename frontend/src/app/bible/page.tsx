@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
@@ -113,14 +113,16 @@ interface VerseCommentary {
   };
 }
 
-export default function BiblePage() {
+function BiblePageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
   
   // View Mode: 'hub' (Encyclopedia Wings) or 'reader' (Bible Verses)
-  const [viewMode, setViewMode] = useState<'hub' | 'reader'>('hub');
+  const initialMode = searchParams.get('mode') === 'reader' ? 'reader' : 'hub';
+  const [viewMode, setViewMode] = useState<'hub' | 'reader'>(initialMode);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   
   // Encyclopedia State
@@ -135,8 +137,13 @@ export default function BiblePage() {
   const [testaments, setTestaments] = useState<Testament[]>([]);
   const [selectedTestamentId, setSelectedTestamentId] = useState<number>(1);
   const [books, setBooks] = useState<BibleBook[]>([]);
-  const [selectedBookId, setSelectedBookId] = useState<number>(1);
-  const [selectedChapter, setSelectedChapter] = useState<number>(1);
+
+  const initialBookId = parseInt(searchParams.get('book') || '1', 10) || 1;
+  const [selectedBookId, setSelectedBookId] = useState<number>(initialBookId);
+
+  const initialChapter = parseInt(searchParams.get('chapter') || '1', 10) || 1;
+  const [selectedChapter, setSelectedChapter] = useState<number>(initialChapter);
+
   const [verses, setVerses] = useState<BibleVerse[]>([]);
   const [chapterArticle, setChapterArticle] = useState<BibleArticle | null>(null);
   const [loading, setLoading] = useState(true);
@@ -221,7 +228,23 @@ export default function BiblePage() {
       if (testList && testList.length > 0) setTestaments(testList);
       if (bookList && bookList.length > 0) {
         setBooks(bookList);
-        setSelectedBookId(bookList[0].id);
+        const bookParam = searchParams.get('book');
+        let matchedBook: BibleBook | undefined;
+        if (bookParam) {
+          matchedBook = bookList.find(
+            (b) =>
+              String(b.id) === bookParam ||
+              b.code === bookParam ||
+              b.name_ar === bookParam
+          );
+        }
+        if (matchedBook) {
+          setSelectedBookId(matchedBook.id);
+          setSelectedTestamentId(matchedBook.testament_id);
+        } else {
+          setSelectedBookId(bookList[0].id);
+          setSelectedTestamentId(bookList[0].testament_id);
+        }
       }
 
       setLoading(false);
@@ -357,6 +380,75 @@ export default function BiblePage() {
     }
   };
 
+  // Synchronize state (mode, book, chapter) to URL searchParams
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    let changed = false;
+
+    if (viewMode === 'reader') {
+      if (params.get('mode') !== 'reader') {
+        params.set('mode', 'reader');
+        changed = true;
+      }
+      if (selectedBookId && params.get('book') !== String(selectedBookId)) {
+        params.set('book', String(selectedBookId));
+        changed = true;
+      }
+      if (selectedChapter && params.get('chapter') !== String(selectedChapter)) {
+        params.set('chapter', String(selectedChapter));
+        changed = true;
+      }
+    } else {
+      if (params.has('mode')) {
+        params.delete('mode');
+        changed = true;
+      }
+      if (params.has('book')) {
+        params.delete('book');
+        changed = true;
+      }
+      if (params.has('chapter')) {
+        params.delete('chapter');
+        changed = true;
+      }
+    }
+
+    if (changed) {
+      const q = params.toString();
+      const newUrl = q ? `/bible?${q}` : '/bible';
+      router.replace(newUrl, { scroll: false });
+    }
+  }, [viewMode, selectedBookId, selectedChapter, router, searchParams]);
+
+  // Read URL searchParams when browser navigates
+  useEffect(() => {
+    const modeParam = searchParams.get('mode');
+    if (modeParam === 'reader' && viewMode !== 'reader') {
+      setViewMode('reader');
+    } else if (modeParam !== 'reader' && viewMode !== 'hub' && !modeParam) {
+      setViewMode('hub');
+    }
+
+    const bookParam = searchParams.get('book');
+    if (bookParam && books.length > 0) {
+      const matched = books.find(
+        (b) =>
+          String(b.id) === bookParam ||
+          b.code === bookParam ||
+          b.name_ar === bookParam
+      );
+      if (matched && matched.id !== selectedBookId) {
+        setSelectedBookId(matched.id);
+        setSelectedTestamentId(matched.testament_id);
+      }
+    }
+
+    const chapterParam = parseInt(searchParams.get('chapter') || '', 10);
+    if (chapterParam && chapterParam > 0 && chapterParam !== selectedChapter) {
+      setSelectedChapter(chapterParam);
+    }
+  }, [searchParams, books]);
+
   // 5. Handle Global Bible Search — uses static offline encyclopedia (no RPC)
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -365,15 +457,24 @@ export default function BiblePage() {
     setIsSearching(true);
     try {
       const res = await searchBibleEncyclopedia(q, { limit: 25 });
-      const mapped = (res.results || []).map((r: any) => ({
-        book_id: 0,
-        book_name: r.book_name || r.section_title || '',
-        chapter_number: r.chapter_num ?? 0,
-        verse_number: 0,
-        text_ar: r.snippet || r.title,
-        title: r.title,
-        id: r.id,
-      }));
+      const mapped = (res.results || []).map((r: any) => {
+        const foundBook = books.find(
+          (b) =>
+            b.name_ar === r.book_name ||
+            (r.book_name && (b.name_ar.includes(r.book_name) || r.book_name.includes(b.name_ar))) ||
+            (r.title && b.name_ar && r.title.includes(b.name_ar))
+        );
+        return {
+          book_id: foundBook?.id || null,
+          testament_id: foundBook?.testament_id || null,
+          book_name: foundBook?.name_ar || r.book_name || r.section_title || '',
+          chapter_number: r.chapter_num && r.chapter_num > 0 ? r.chapter_num : 1,
+          verse_number: 0,
+          text_ar: r.snippet || r.title,
+          title: r.title,
+          id: r.id,
+        };
+      });
       setSearchResults(mapped);
     } catch (err) {
       console.error('Bible search failed:', err);
@@ -381,6 +482,23 @@ export default function BiblePage() {
     } finally {
       setIsSearching(false);
       setShowSearchModal(true);
+    }
+  };
+
+  const handleSelectSearchResult = (sr: any) => {
+    setShowSearchModal(false);
+    if (sr.book_id) {
+      const matchedBook = books.find((b) => b.id === sr.book_id);
+      if (matchedBook) {
+        setSelectedTestamentId(matchedBook.testament_id);
+        setSelectedBookId(matchedBook.id);
+        setSelectedChapter(sr.chapter_number || 1);
+        setViewMode('reader');
+      } else if (sr.id) {
+        router.push(`/bible/reader/${sr.id}`);
+      }
+    } else if (sr.id) {
+      router.push(`/bible/reader/${sr.id}`);
     }
   };
 
@@ -692,26 +810,27 @@ export default function BiblePage() {
                   {/* Interactive Word Breakdown */}
                   <div className="text-base leading-loose font-medium text-content flex flex-wrap gap-1.5">
                     {verse.words && verse.words.length > 0 ? (
-                      verse.words.map((w) => (
-                        <button
-                          key={w.id}
-                          type="button"
-                          onClick={() => handleWordClick(w)}
-                          aria-label={`شرح كلمة ${w.word_text}`}
-                          className={`px-1 py-0.5 rounded transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-1 ${
-                            w.has_commentary
-                              ? 'bg-canvas/40 text-warning border-b-2 border-warning/80 hover:bg-canvas/60 font-semibold'
-                              : 'hover:bg-nav hover:text-content'
-                          }`}
-                          title={
-                            w.has_commentary
-                              ? 'انقر لعرض معنى الكلمة وقاموسها وتفسيرها'
-                              : 'انقر لعرض الكلمة'
-                          }
-                        >
-                          {w.word_text}
-                        </button>
-                      ))
+                      verse.words.map((w) =>
+                        w.has_commentary ? (
+                          <button
+                            key={w.id}
+                            type="button"
+                            onClick={() => handleWordClick(w)}
+                            aria-label={`شرح كلمة ${w.word_text}`}
+                            className="px-1 py-0.5 rounded transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-1 bg-canvas/40 text-warning border-b-2 border-warning/80 hover:bg-canvas/60 font-semibold cursor-pointer"
+                            title="انقر لعرض معنى الكلمة وقاموسها وتفسيرها"
+                          >
+                            {w.word_text}
+                          </button>
+                        ) : (
+                          <span
+                            key={w.id}
+                            className="px-0.5 py-0.5 text-content select-text"
+                          >
+                            {w.word_text}
+                          </span>
+                        )
+                      )
                     ) : (
                       <span>{verse.text_ar}</span>
                     )}
@@ -894,11 +1013,7 @@ export default function BiblePage() {
                   searchResults.map((sr, idx) => (
                     <div
                       key={idx}
-                      onClick={() => {
-                        setSelectedBookId(sr.book_id);
-                        setSelectedChapter(sr.chapter_number);
-                        setShowSearchModal(false);
-                      }}
+                      onClick={() => handleSelectSearchResult(sr)}
                       className="bg-nav p-3.5 rounded-xl border border-line hover:border-warning/60 cursor-pointer transition-all space-y-1.5"
                     >
                       <span className="font-bold text-warning text-xs">
@@ -929,5 +1044,19 @@ export default function BiblePage() {
         onOpenProfile={(id) => setSelectedProfileId(id)}
       />
     </div>
+  );
+}
+
+export default function BiblePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-canvas flex items-center justify-center" dir="rtl">
+          <Loader2 className="w-10 h-10 text-gold animate-spin" />
+        </div>
+      }
+    >
+      <BiblePageContent />
+    </Suspense>
   );
 }

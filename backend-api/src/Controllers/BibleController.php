@@ -8,11 +8,13 @@ namespace App\Controllers;
 
 use App\Services\BibleDataService;
 use App\Utils\Response;
-use App\Utils\SafeFailure;
+use Exception;
 use Throwable;
 
 class BibleController
 {
+    use SafeFailure;
+
     private BibleDataService $service;
 
     public function __construct()
@@ -30,7 +32,7 @@ class BibleController
             header('Cache-Control: public, max-age=86400, immutable');
             Response::success($manifest, 'تم جلب وثيقة الموسوعة بنجاح');
         } catch (Throwable $e) {
-            SafeFailure::respond($e, 'فشل في جلب وثيقة الموسوعة');
+            $this->refuse($e instanceof Exception ? $e : new Exception($e->getMessage(), 0, $e), 'BIBLE_ERROR', 500);
         }
     }
 
@@ -52,7 +54,7 @@ class BibleController
             header('Cache-Control: public, max-age=86400, immutable');
             Response::success($data, 'تم جلب أقسام الموسوعة بنجاح');
         } catch (Throwable $e) {
-            SafeFailure::respond($e, 'فشل في جلب أقسام الموسوعة');
+            $this->refuse($e instanceof Exception ? $e : new Exception($e->getMessage(), 0, $e), 'BIBLE_ERROR', 500);
         }
     }
 
@@ -75,7 +77,7 @@ class BibleController
             header('Cache-Control: public, max-age=3600');
             Response::success($data, 'تم جلب مقالات القسم بنجاح');
         } catch (Throwable $e) {
-            SafeFailure::respond($e, 'فشل في جلب مقالات القسم');
+            $this->refuse($e instanceof Exception ? $e : new Exception($e->getMessage(), 0, $e), 'BIBLE_ERROR', 500);
         }
     }
 
@@ -106,7 +108,7 @@ class BibleController
             header('Cache-Control: public, max-age=86400, immutable');
             Response::success($article, 'تم جلب محتوى المقال بنجاح');
         } catch (Throwable $e) {
-            SafeFailure::respond($e, 'فشل في جلب المقال');
+            $this->refuse($e instanceof Exception ? $e : new Exception($e->getMessage(), 0, $e), 'BIBLE_ERROR', 500);
         }
     }
 
@@ -137,7 +139,7 @@ class BibleController
             header('Cache-Control: public, max-age=1800');
             Response::success($results, "تم العثور على {$results['total']} نتيجة");
         } catch (Throwable $e) {
-            SafeFailure::respond($e, 'فشل في تنفيذ البحث');
+            $this->refuse($e instanceof Exception ? $e : new Exception($e->getMessage(), 0, $e), 'BIBLE_ERROR', 500);
         }
     }
 
@@ -160,7 +162,7 @@ class BibleController
             ];
             Response::success($data, 'إحصاءات الموسوعة وآية اليوم');
         } catch (Throwable $e) {
-            SafeFailure::respond($e, 'فشل في جلب الإحصاءات');
+            $this->refuse($e instanceof Exception ? $e : new Exception($e->getMessage(), 0, $e), 'BIBLE_ERROR', 500);
         }
     }
 }

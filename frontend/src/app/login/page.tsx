@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
@@ -28,8 +28,14 @@ import {
   ShieldAlert,
 } from 'lucide-react';
 
-export default function LoginPage() {
+function LoginFormContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const rawRedirect = searchParams.get('redirectTo');
+  const redirectTo =
+    rawRedirect && rawRedirect.startsWith('/') && !rawRedirect.startsWith('//')
+      ? rawRedirect
+      : '/';
   const { theme, setTheme } = useAppTheme();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -129,7 +135,7 @@ export default function LoginPage() {
       setLockout(getLockoutState());
 
       if (data.user) {
-        router.push('/');
+        router.push(redirectTo);
         router.refresh();
       }
     } catch (err: any) {
@@ -265,7 +271,7 @@ export default function LoginPage() {
               </div>
 
               {lockout.isLocked ? (
-                <div className="p-4 bg-danger/10 border border-danger/30 text-rose-600 dark:text-rose-400 rounded-2xl flex items-start gap-3 text-sm animate-pulse">
+                <div role="alert" aria-live="assertive" className="p-4 bg-danger/10 border border-danger/30 text-rose-600 dark:text-rose-400 rounded-2xl flex items-start gap-3 text-sm animate-pulse">
                   <ShieldAlert className="w-5 h-5 flex-shrink-0 mt-0.5 text-danger" />
                   <div className="space-y-1">
                     <p className="font-bold">الحساب مقفل مؤقتاً لحماية أمانك</p>
@@ -279,7 +285,7 @@ export default function LoginPage() {
                   </div>
                 </div>
               ) : error ? (
-                <div className="p-3.5 bg-danger/10 border border-danger/20 text-rose-600 dark:text-danger rounded-xl flex items-center gap-2.5 text-sm">
+                <div role="alert" aria-live="assertive" className="p-3.5 bg-danger/10 border border-danger/20 text-rose-600 dark:text-danger rounded-xl flex items-center gap-2.5 text-sm">
                   <AlertCircle className="w-5 h-5 flex-shrink-0" />
                   <span>{error}</span>
                 </div>
@@ -287,11 +293,12 @@ export default function LoginPage() {
 
               <form onSubmit={handleLogin} className="space-y-4">
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-bold opacity-80">
+                  <label htmlFor="login-username" className="block text-xs font-bold opacity-80">
                     اسم المستخدم أو البريد الإلكتروني
                   </label>
                   <div className="relative">
                     <input
+                      id="login-username"
                       type="text"
                       dir="ltr"
                       value={username}
@@ -306,11 +313,12 @@ export default function LoginPage() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-bold opacity-80">
+                  <label htmlFor="login-password" className="block text-xs font-bold opacity-80">
                     كلمة المرور (Password)
                   </label>
                   <div className="relative">
                     <input
+                      id="login-password"
                       type={showPassword ? 'text' : 'password'}
                       dir="ltr"
                       value={password}
@@ -389,5 +397,22 @@ export default function LoginPage() {
         جميع الحقوق محفوظة © {new Date().getFullYear()} مدرسة الكاروز للكتاب المقدس • كنيسة مارمرقس المنشية
       </footer>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div
+          className="min-h-screen flex items-center justify-center"
+          style={{ backgroundColor: 'var(--bg-canvas)' }}
+        >
+          <Loader2 className="w-8 h-8 text-gold animate-spin" />
+        </div>
+      }
+    >
+      <LoginFormContent />
+    </Suspense>
   );
 }

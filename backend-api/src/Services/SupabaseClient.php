@@ -33,10 +33,9 @@ class SupabaseClient {
 
     public function query(string $endpoint, string $method = 'GET', ?array $body = null, array $extraHeaders = []): array {
         $ch = curl_init();
-        $credential = $this->actorToken ?? $this->serviceRoleKey;
         $headers = array_merge([
-            'apikey: ' . $credential,
-            'Authorization: Bearer ' . $credential,
+            'apikey: ' . $this->serviceRoleKey,
+            'Authorization: Bearer ' . ($this->actorToken ?? $this->serviceRoleKey),
             'Content-Type: application/json',
             'Prefer: return=representation'
         ], $extraHeaders);

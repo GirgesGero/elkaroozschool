@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Search, X, Loader2, BookOpen, Sparkles } from 'lucide-react';
 import { searchBibleEncyclopedia, getBibleStats, type BibleSearchResult } from '@/lib/api/bible';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 
 interface BibleSearchModalProps {
   isOpen: boolean;
@@ -120,19 +121,14 @@ export default function BibleSearchModal({ isOpen, onClose, onSelectArticle, sec
     }
   };
 
-  useEffect(() => {
-    if (!isOpen) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [isOpen, onClose]);
+  const containerRef = useFocusTrap(isOpen, onClose);
 
   if (!isOpen) return null;
 
   const { query, results, total, loading, searched, expandedTokens } = searchState;
 
   return (
-    <div role="dialog" aria-modal="true" aria-label="البحث في الموسوعة" onClick={onClose} className="fixed inset-0 z-50 flex items-start justify-center p-4 bg-nav/80 backdrop-blur-md overflow-y-auto" dir="rtl">
+    <div ref={containerRef} role="dialog" aria-modal="true" aria-label="البحث في الموسوعة" onClick={onClose} className="fixed inset-0 z-50 flex items-start justify-center p-4 bg-nav/80 backdrop-blur-md overflow-y-auto" dir="rtl">
       <div onClick={(e) => e.stopPropagation()} className="w-full max-w-3xl mt-20 rounded-3xl overflow-hidden shadow-2xl border border-line bg-canvas">
         {/* Header */}
         <div className="p-6 border-b border-line/80 flex items-center justify-between">

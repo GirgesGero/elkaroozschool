@@ -33,6 +33,7 @@ import {
 import type { Profile } from '@/types/database';
 import Avatar from '../components/Avatar';
 import { phpApi } from '@/lib/api/php';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 
 interface UnifiedProfileModalProps {
   profileId: string | null;
@@ -47,6 +48,7 @@ export default function UnifiedProfileModal({
   onClose,
   onProfileUpdated,
 }: UnifiedProfileModalProps) {
+  const containerRef = useFocusTrap(Boolean(profileId), onClose);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [stats, setStats] = useState<{
     attendanceRate: number;
@@ -297,7 +299,7 @@ export default function UnifiedProfileModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/85 backdrop-blur-md animate-fade-in p-0 sm:p-4" dir="rtl">
+    <div ref={containerRef} role="dialog" aria-modal="true" aria-label="الملف الشخصي" className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/85 backdrop-blur-md animate-fade-in p-0 sm:p-4" dir="rtl">
       <div className="w-full max-w-2xl bg-canvas border-t sm:border border-gold/40 rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[88vh] animate-slide-up sm:animate-scale-in">
         {/* Hidden File Input for Avatars */}
         <input
