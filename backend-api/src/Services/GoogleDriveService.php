@@ -320,30 +320,118 @@ class GoogleDriveService {
     }
 
     /**
-     * Delete a file permanently from Google Drive.
+     * Normalize Drive DELETE outcomes; 404 is idempotent success, not an ambiguous failure.
+     * @return array{success:bool,deleted:bool,already_missing:bool,retryable:bool,error_code:?string}
      */
-    public function deleteFile(string $driveFileId): bool {
+    public static function interpretDeleteResponse(int $httpCode, bool $networkError): array {
+        if ($networkError || $httpCode === 0) {
+            return ['success' => false, 'deleted' => false, 'already_missing' => false, 'retryable' => true, 'error_code' => 'NETWORK_ERROR'];
+        }
+        if ($httpCode === 200 || $httpCode === 204) {
+            return ['success' => true, 'deleted' => true, 'already_missing' => false, 'retryable' => false, 'error_code' => null];
+        }
+        if ($httpCode === 404) {
+            return ['success' => true, 'deleted' => false, 'already_missing' => true, 'retryable' => false, 'error_code' => null];
+        }
+        if ($httpCode === 408 || $httpCode === 429 || $httpCode >= 500) {
+            return ['success' => false, 'deleted' => false, 'already_missing' => false, 'retryable' => true, 'error_code' => 'HTTP_' . $httpCode];
+        }
+        return ['success' => false, 'deleted' => false, 'already_missing' => false, 'retryable' => false, 'error_code' => 'HTTP_' . $httpCode];
+    }
+
+    /** Delete a Drive file and return a retry-safe status without leaking response bodies. */
+    public function deleteFileDetailed(string $driveFileId): array {
         if (!preg_match('/^[a-zA-Z0-9_-]+$/', $driveFileId)) {
             throw new \InvalidArgumentException('Invalid Google Drive file ID');
         }
-
         $token = $this->getAccessToken();
         $ch = curl_init('https://www.googleapis.com/drive/v3/files/' . urlencode($driveFileId) . '?supportsAllDrives=true');
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_CUSTOMREQUEST => 'DELETE',
-            CURLOPT_HTTPHEADER => [
-                'Authorization: Bearer ' . $token,
-            ],
+            CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . $token],
             CURLOPT_TIMEOUT => $this->timeoutSeconds,
             CURLOPT_SSL_VERIFYPEER => true,
         ]);
-
-        curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $response = curl_exec($ch);
+        $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $networkError = $response === false || curl_errno($ch) !== 0;
         curl_close($ch);
+        return self::interpretDeleteResponse($httpCode, $networkError);
+    }
 
-        return ($httpCode === 204 || $httpCode === 200);
+    /** Backward-compatible bool wrapper for existing delete callers. */
+    public function deleteFile(string $driveFileId): bool {
+        return $this->deleteFileDetailed($driveFileId)['deleted'];
+    }
+
+    /**
+     * Enumerate all non-folder files under an app-owned Drive folder; any API error aborts
+     * the inventory so callers cannot treat a partial list as a complete audit.
+     * @return list<array{id:string,name:string,mimeType:string,parents:array}>
+     */
+    public function listFilesRecursively(string $rootFolderId, int $maxFiles = 10000, int $maxDepth = 20): array {
+        if (!preg_match('/^[a-zA-Z0-9_-]+$/', $rootFolderId)) {
+            throw new \InvalidArgumentException('Invalid Google Drive root folder ID');
+        }
+        if ($maxFiles < 1 || $maxFiles > 50000 || $maxDepth < 1 || $maxDepth > 50) {
+            throw new \InvalidArgumentException('Invalid Drive inventory limits');
+        }
+        $token = $this->getAccessToken();
+        $files = [];
+        $visited = [];
+        $queue = [[$rootFolderId, 0]];
+        $folderMime = 'application/vnd.google-apps.folder';
+        while ($queue !== []) {
+            [$folderId, $depth] = array_shift($queue);
+            if (isset($visited[$folderId])) continue;
+            if ($depth > $maxDepth) throw new \RuntimeException('Drive inventory exceeded maximum folder depth');
+            $visited[$folderId] = true;
+            $pageToken = null;
+            do {
+                $query = "'" . $folderId . "' in parents and trashed = false";
+                $url = 'https://www.googleapis.com/drive/v3/files?q=' . rawurlencode($query)
+                    . '&pageSize=1000&supportsAllDrives=true&includeItemsFromAllDrives=true'
+                    . '&fields=' . rawurlencode('nextPageToken,files(id,name,mimeType,parents)');
+                if ($pageToken !== null) $url .= '&pageToken=' . rawurlencode($pageToken);
+                $ch = curl_init($url);
+                curl_setopt_array($ch, [
+                    CURLOPT_RETURNTRANSFER => true,
+                    CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . $token],
+                    CURLOPT_TIMEOUT => $this->timeoutSeconds,
+                    CURLOPT_SSL_VERIFYPEER => true,
+                ]);
+                $body = curl_exec($ch);
+                $status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                $networkError = $body === false || curl_errno($ch) !== 0;
+                curl_close($ch);
+                if ($networkError || $status < 200 || $status >= 300) {
+                    throw new \RuntimeException('Drive inventory request failed (HTTP ' . $status . ')');
+                }
+                $page = json_decode((string) $body, true);
+                if (!is_array($page) || !is_array($page['files'] ?? null)) {
+                    throw new \RuntimeException('Drive inventory returned an invalid response');
+                }
+                foreach ($page['files'] as $item) {
+                    if (!is_array($item) || empty($item['id']) || empty($item['mimeType'])) {
+                        throw new \RuntimeException('Drive inventory returned an incomplete item');
+                    }
+                    if ($item['mimeType'] === $folderMime) {
+                        $queue[] = [(string) $item['id'], $depth + 1];
+                    } else {
+                        $files[] = [
+                            'id' => (string) $item['id'],
+                            'name' => (string) ($item['name'] ?? ''),
+                            'mimeType' => (string) $item['mimeType'],
+                            'parents' => is_array($item['parents'] ?? null) ? $item['parents'] : [],
+                        ];
+                        if (count($files) > $maxFiles) throw new \RuntimeException('Drive inventory exceeded maximum file count');
+                    }
+                }
+                $pageToken = isset($page['nextPageToken']) ? (string) $page['nextPageToken'] : null;
+            } while ($pageToken !== null && $pageToken !== '');
+        }
+        return $files;
     }
 
     /**

@@ -49,6 +49,7 @@ require_once $appRoot . '/src/Utils/AppRoot.php';
 require_once $appRoot . '/src/Controllers/SafeFailure.php';
 require_once $appRoot . '/src/Utils/Response.php';
 require_once $appRoot . '/src/Utils/Security.php';
+require_once $appRoot . '/src/Services/ResetAccessGate.php';
 require_once $appRoot . '/src/Middleware/CorsMiddleware.php';
 require_once $appRoot . '/src/Middleware/JwtAuthMiddleware.php';
 require_once $appRoot . '/src/Middleware/RbacMiddleware.php';
@@ -62,6 +63,10 @@ require_once $appRoot . '/src/Services/StorageBridgeService.php';
 require_once $appRoot . '/src/Services/ZipEncryptionService.php';
 require_once $appRoot . '/src/Services/ExcelParserService.php';
 require_once $appRoot . '/src/Services/BibleEncyclopediaService.php';
+require_once $appRoot . '/src/Services/GoogleDriveService.php';
+require_once $appRoot . '/src/Services/GoogleAppsScriptBridgeService.php';
+require_once $appRoot . '/src/Services/SupabaseAuthAdminClient.php';
+require_once $appRoot . '/src/Services/SystemResetStorageService.php';
 require_once $appRoot . '/src/Controllers/AuthController.php';
 require_once $appRoot . '/src/Controllers/StorageController.php';
 require_once $appRoot . '/src/Controllers/BackupController.php';
@@ -69,6 +74,7 @@ require_once $appRoot . '/src/Controllers/RestoreController.php';
 require_once $appRoot . '/src/Controllers/ImportController.php';
 require_once $appRoot . '/src/Controllers/ExportController.php';
 require_once $appRoot . '/src/Controllers/BibleController.php';
+require_once $appRoot . '/src/Controllers/SystemResetController.php';
 require_once $appRoot . '/src/Middleware/RateLimitMiddleware.php';
 
 use App\Middleware\CorsMiddleware;
@@ -122,6 +128,17 @@ try {
         // Streaming and media retrieval: 120/min per IP to support multi-chunk audio seeking and image loading.
         RateLimitMiddleware::check('stream', 120, 60);
         (new \App\Controllers\StorageController())->getFile($matches[1]);
+    }
+
+    // Administrator-only reset API. The controller re-checks the live DB role,
+    // recent auth_time, backup checksum, and storage inventory on every request.
+    elseif ($path === '/system-reset/preview' && $requestMethod === 'POST') {
+        RateLimitMiddleware::check('system_reset', 10, 60);
+        (new \App\Controllers\SystemResetController())->preview();
+    }
+    elseif ($path === '/system-reset/execute' && $requestMethod === 'POST') {
+        RateLimitMiddleware::check('system_reset', 20, 60);
+        (new \App\Controllers\SystemResetController())->execute();
     }
 
     // Backup & Restore Management

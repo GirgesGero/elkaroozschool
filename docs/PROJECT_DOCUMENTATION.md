@@ -1,7 +1,7 @@
 # مرجع مشروع مدرسة الكاروز — ELKAROOZ SCHOOL
 
 > **نوع الوثيقة:** توثيق تقني مبني على التنفيذ الحالي (as-built)، وليس إعادة صياغة لمتطلبات المشروع فقط.<br>
-> **مراجعة المصدر:** 3 أكتوبر 2026.<br>
+> **مراجعة المصدر:** 21 أكتوبر 2026.<br>
 > **مسار المستودع:** `E:\drive progect\ELKAROOZ SCHOOL`
 > **حدود مراجعة المصدر:** قُرئت ملفات التنفيذ والتهيئات والـmigrations والاختبارات؛ استُبعدت أشجار الاعتماديات والمخرجات مثل `node_modules/`, `.next/`, و`backend-api/vendor/` من جرد الكود. لم تُفحص Vercel أو استضافة PHP مباشرةً. **تحديث 4 أكتوبر 2026:** host Supabase MCP طابق `frontend/.env.local` والمضيف الذي أكده المالك؛ أُعيدت قراءات catalog/ledger للقراءة فقط. المشروع يحتوي 69 إصدار migration حيًا و50 جدولًا عليها RLS و31 ملف migration محليًا. تصنيف البيئة staging/production غير محسوم؛ لا كتابة دائمة أو deployment في هذا التحديث.
 
@@ -32,17 +32,19 @@
           └── قرص الخادم: storage/
 ```
 
-الواجهة هي **Next.js 14 App Router + React + TypeScript**. يحتوي المستودع على 31 ملف migration: 28 تاريخيًا، migration إصلاح موجودة في ledger، وproposalان غير مطبقين (`media_assets` وRPC hardening). ويعرّف 46 جدولًا بحسب المصدر المحلي. القراءات الأخيرة على مشروع Supabase المطابق للمضيف أعادت 69 إصدارًا حيًا و50 جدولًا عليها RLS؛ تصنيف البيئة staging/production غير محسوم. يُفصّل الاختلاف في تقريري المرحلة 0 والمصالحة. الـPHP API تطبيق Front Controller صغير بلا إطار عمل routing منفصل. الواجهة تتصل غالبًا بقاعدة Supabase مباشرةً عبر RLS، مع PHP API متاح لموارد وعمليات محددة.
+الواجهة هي **Next.js 14 App Router + React + TypeScript**. يحتوي migrations المحلية على **54 اسم جدول فريدًا** في أوامر `CREATE TABLE`، بينما أظهر الجرد الحالي للقراءة فقط **55 جدولًا في public**؛ توجد فروقات بين قائمة migrations والـsnapshot/المخطط الحي، ولا يُفترض التطابق. صُنفت جداول reset في [الخطة الآمنة](SAFE_SYSTEM_RESET_PLAN.md). نتيجة RLS التاريخية (50 جدولًا) لا تمثل تدقيقًا حديثًا لكل الجداول الـ55. لا يزال تصنيف المشروع كـstaging/production غير محسوم.
 
-### صورة الحالة من التحقق المحلي
+### صورة الحالة من التحقق المحلي — 21 أكتوبر 2026
 
-- Frontend typecheck: ناجح.
-- Vitest: **98 اختبارًا ناجحًا من 6 ملفات** (نتيجة محلية موثقة في تدقيق 4 أكتوبر 2026).
-- Next.js production build: ناجح، مع **9 تحذيرات lint** (اعتماديات `useEffect` وصور `<img>`).
-- PHP syntax: **61 ملف PHP** من `backend-api/` و`scripts/` دون أخطاء صياغة.
-- `verify_no_fake_success.mjs`: **18/18**.
-- `verify_no_credential_leaks.py`: **4/4**.
-- تحقق اتصال Supabase للقراءة فقط: host الذي أعاده MCP **لا يطابق** host `frontend/.env.local`؛ سجل migrations وقراءات schema تخص اتصال MCP فقط، ولا يمكن نسبها لقاعدة المستودع قبل تأكيد المشروع. لم يُنفّذ اتصال مباشر بـVercel أو Hostinger. نجاح البناء والاختبارات المحلية لا يثبت نجاح النظام المنشور.
+- Frontend `npm run typecheck`: ناجح.
+- Vitest: **213 اختبارًا عبر 20 ملفًا ناجحة**. ظهر تحذير JSDOM عن navigation غير مدعومة وتحذير `localStorage` تجريبي؛ لم تفشل الاختبارات.
+- `npm run lint`: exit 0 مع تحذيرات hooks وصور موجودة في المشروع.
+- `npm run build`: exit 0، واكتملت صفحات الموقع؛ البناء يعيد طباعة تحذيرات lint.
+- PHP lint لكل ملفات backend المعدلة والاختبارات الجديدة: ناجح.
+- اختبارات Backend الجديدة: **117/117** عبر خمسة سكربتات (contract 87، storage 11، gate 7، Auth 5، Drive 7).
+- محلل PostgreSQL/PLpgSQL محلي قبل migration؛ لا يعني اختبارًا على قاعدة فعلية.
+- قراءة Supabase للـcatalog وFK وStorage فقط: 55 جدولًا عامًا، 4 سجلات وسائط غير احتياطية كلها `HOSTINGER_LOCAL` (AVATAR/CURRICULUM/GENERAL/LECTURE_ATTACHMENT)، وبلا buckets أو objects. RLS مفعّل على جداول reset المستهدفة 36/36؛ فحص سياسات الكتابة لم يجد استهداف `anon`/`public`، والسياسات المرصودة موجهة إلى `authenticated`. لم تُطبق migration ولم تتغير بيانات.
+- لم يُفحص Vercel أو Hostinger مباشرةً، ولم يُجرَ restore تجريبي. نجاح المحلي لا يثبت التشغيل المنشور أو تصنيف البيئة.
 
 ---
 
@@ -191,6 +193,8 @@
 | `POST /import/trainees` | استيراد متدربين والتحقق التجريبي | JWT وadmin/super_user؛ ملف `file`, و`dry_run` | 10/300 ثانية، `import` |
 | `GET /import/history` | سجل الاستيراد؛ `limit` بين 1 و200 | JWT وadmin/super_user | 60/60 ثانية، `import` |
 | `GET /export/data` | تصدير كيان حسب format/group | JWT وadmin/super_user؛ query parameters | 5/300 ثانية، `export` |
+| `POST /system-reset/preview` | معاينة نطاق reset وإظهار run قابلة للاستئناف بلا حذف | JWT؛ admin نشط من قاعدة البيانات و`auth_time` حديث | 10 لكل 60 ثانية، bucket `system_reset` |
+| `POST /system-reset/execute` | تنفيذ/استئناف reset متعدد المراحل بعد تأكيد ونسخة حديثة متحققة | JWT؛ admin نشط، `auth_time` حديث، عبارة التأكيد، backup ZIP/SHA-256 صالح | 20 لكل 60 ثانية، bucket `system_reset` |
 
 المسارات المجهولة ترجع `404 ROUTE_NOT_FOUND`. `public/.htaccess` يعيد المسارات إلى index ويمنع بعض verbs/الملفات الحساسة. ملف `public/htaccess_root.template` مهم في نشر flattened لحماية ملفات التطبيق خارج public root.
 
@@ -204,11 +208,12 @@
 - `RestoreController.php`: preview وexecute.
 - `ImportController.php`: استيراد المتدربين وسجل الاستيراد.
 - `ExportController.php`: تصدير البيانات.
+- `SystemResetController.php`: معاينة وإعادة ضبط إدارية متعددة المراحل قابلة للاستئناف (محليًا فقط حتى تطبيق migration).
 - `SafeFailure.php`: تسجيل التفاصيل داخليًا وإخفاؤها عن العميل مع مرجع الخطأ.
 
-**Middleware:** `CorsMiddleware`, `JwtAuthMiddleware`, `RbacMiddleware`, `GroupScopeMiddleware`, `FileSecurityMiddleware`, `RateLimitMiddleware`.
+**Middleware:** `CorsMiddleware`, `JwtAuthMiddleware`, `RbacMiddleware`, `GroupScopeMiddleware`, `FileSecurityMiddleware`, `RateLimitMiddleware`, و`ResetAccessGate` (بوابة وصول أثناء reset).
 
-**Services:** `SupabaseClient`, `StorageBridgeService`, `AuditLogService`, `ZipEncryptionService`, `ArchiveExtractor`, `BackupArchiveInspector`, `DatabaseExportService`, `DatabaseRestoreService`, `AtomicRestoreService`, `ExcelParserService`, `SpreadsheetWriter`, `LectureAnnouncementService`.
+**Services:** `SupabaseClient`, `StorageBridgeService`, `AuditLogService`, `ZipEncryptionService`, `ArchiveExtractor`, `BackupArchiveInspector`, `DatabaseExportService`, `DatabaseRestoreService`, `AtomicRestoreService`, `ExcelParserService`, `SpreadsheetWriter`, `LectureAnnouncementService`, و`SystemResetStorageService`/`SupabaseAuthAdminClient` لخطة reset.
 
 **ملاحظات العقد:** `SupabaseClient::query()` و`rpc()` يعيدان envelope داخليًا من الشكل `['status' => HTTP status, 'data' => decoded response]`. أي مستهلك RPC يجب أن يقرأ النتيجة من `data` لا أن يفترض أن حقول PostgreSQL على المستوى الأعلى.
 
@@ -228,19 +233,21 @@
 
 ### جرد الجداول
 
-التحليل الآلي لنص migrations عثر على **46 اسم جدول فريد**. هذا يصف DDL في المستودع، وليس بالضرورة جدولًا حيًا بعد تطبيق/تعديل يدوي خارج Git.
+جرد Supabase للقراءة فقط بتاريخ **21 أكتوبر 2026** أعاد **55 جدولًا** في `public`. أما نص migrations المحلية فيحتوي 54 اسمًا فريدًا لـ`CREATE TABLE`؛ المجموعتان ليستا متطابقتين تمامًا، فلا يُستنتج من العدد أن ملفات migrations تمثل المخطط الحي كاملًا. تشمل قاعدة البيانات جداول Bible والمناهج والمراجعات و`media_assets` وبيانات التشغيل، إضافةً إلى جداول reset جديدة محلية لم تُطبق بعد.
 
-| المجال | الجداول |
+| المجال | الجداول الحالية في جرد Supabase |
 |---|---|
 | الهوية والصلاحيات | `roles`, `groups`, `profiles`, `permissions`, `servant_permissions`, `group_secretariat` |
-| الدراسة والمحاضرات | `terms`, `lecturers`, `lectures`, `curriculums` |
+| الدراسة والمناهج | `terms`, `lecturers`, `lectures`, `curriculums`, `curriculum_days`, `curriculum_entries`, `curriculum_revisions` |
 | الحضور والامتحانات | `attendance_sessions`, `attendance_records`, `exams`, `exam_grades` |
-| الماراثون | `marathons`, `marathon_sections`, `marathon_questions`, `marathon_answers`, `marathon_trainee_submissions`, `marathon_trainee_answers` |
-| المجتمع | `feed_posts`, `post_comments`, `reactions` |
+| الماراثون | `marathons`, `marathon_sections`, `marathon_questions`, `marathon_question_revisions`, `marathon_answers`, `marathon_trainee_submissions`, `marathon_trainee_answers` |
+| المجتمع | `feed_posts`, `post_comments`, `post_images`, `reactions` |
 | الإشعارات | `notification_templates`, `notifications`, `push_subscriptions`, `daily_verses`, `daily_verse_dispatch_state` |
-| الكتب والوسائط | `categories`, `books`, `researches`, `gallery_albums`, `gallery_items`, `mp3_tracks`, `user_favorites` |
-| الكتاب المقدس | `bible_testaments`, `bible_books`, `bible_chapters`, `bible_verses`, `bible_verse_words`, `bible_sources`, `bible_commentaries`, `bible_word_commentaries` |
+| الكتب والوسائط | `categories`, `books`, `researches`, `gallery_albums`, `gallery_items`, `mp3_tracks`, `media_assets`, `user_favorites` |
+| الكتاب المقدس | `bible_testaments`, `bible_books`, `bible_chapters`, `bible_verses`, `bible_verse_words`, `bible_sources`, `bible_commentaries`, `bible_word_commentaries`, `bible_dictionary_entries`, `word_dictionary_mappings`, `bible_content_versions` |
 | التشغيل والتدقيق | `audit_logs`, `backup_records`, `import_history` |
+
+مفعّل RLS في migrations المحلية على جداول baseline السابقة. لم يُجرَ تدقيق شامل حديث لكل سياسات RLS والمنح على الجداول الـ55؛ لكن استعلام catalog للقراءة فقط على عمليات الكتابة في نطاق reset (36 جدولًا) أعاد السياسات الموجودة موجهة إلى `authenticated` فقط، دون استهداف `anon` أو `public`. migration الجديدة تضيف سياسات تقييدية للـwrite على هذا النطاق عند وجود reset مفتوح؛ راجع [الخطة الآمنة](SAFE_SYSTEM_RESET_PLAN.md) للاختبارات المتبقية.
 
 **العلاقات الرئيسية المرصودة:** `profiles.id` مرتبط بـ`auth.users`; المستخدم يرتبط بدور ومجموعة. الصلاحية المفوضة تربط profile بـpermission. الدراسة مرتبطة بالمجموعات والفصول والمحاضرات والمناهج والامتحانات والماراثونات. الحضور يربط جلسة/مجموعة بمتدرب. درجات الامتحان تربط الامتحان بالمتدرب. الماراثون يضم أقسامًا وأسئلة وإجابات ثم submissions وإجابات المتدرب. الكتاب المقدس يتدرج من testament إلى book ثم chapter وverse وword مع مصادر وشروحات.
 
@@ -555,3 +562,37 @@ Next.js / PWA
 الخطة الدقيقة، بما فيها معرفات المهام ومعايير قبول كل مهمة واعتمادياتها ومخاطرها وخطة الرجوع وقائمة الأدلة النهائية، موجودة في [خطة نقل التخزين إلى Google Drive](GOOGLE_DRIVE_STORAGE_PLAN.md). نتائج ما أُنجز في المرحلة 0 موجودة في [تقرير التنفيذ](GOOGLE_DRIVE_PHASE0_AUDIT.md). لا توجد مدة تنفيذ مقدرة لأن نوع الحساب والحدود والبيانات الفعلية والاستضافة لم تُقَس بعد.
 
 **تغييرات تنفيذ المرحلة 0 حتى الآن:** تحديث الخطة وتقرير التدقيق توثيقي، مع استعلامات Supabase للقراءة فقط واختبارات محلية. لم تُنشأ credentials أو Google Drive folders، ولم تُجرَ كتابة على Supabase أو Vercel، ولم يُنقل أو يُحذف أي ملف. توجد تغييرات Git غير committed في ملفات أخرى؛ لا ينسبها هذا التقرير إلى نقل Google Drive ولا يستبدلها.
+
+## 14. تحديث تنفيذ الواجهة وخطة إعادة الضبط — 21 أكتوبر 2026
+
+### ما تغير محليًا
+
+- `frontend/src/app/curriculum/page.tsx`: فحص أخطاء استعلامات المناهج بدل تحويل فشل الشبكة/RLS إلى حالة فارغة، إضافة skeleton ورسالة خطأ وإعادة محاولة، وجلب بيانات المحاضر بواسطة `curriculum_entries.lecturer_id`. تغيّر الفصل المحدد لا يعيد تحميل كل استعلامات الصفحة.
+- `frontend/src/components/CurriculumManagementPanel.tsx`: رفع ملفات المنهج يرسل `activeGroupId` الذي اختاره المسؤول بدل `profile.group_id`.
+- `frontend/src/app/layout.tsx`: الشعار watermark ثابت وخفيف فوق خلفيات الصفحات المعتمة، وغير ذي أولوية تحميل.
+- `frontend/src/lib/curriculum/display.ts` و`frontend/tests/curriculum-display.test.ts`: دوال عرض صغيرة واختبارات حالات الخطأ وأسماء الفرق.
+
+### تحقق هذه الدفعة
+
+- `cd frontend && npx tsc --noEmit` — exit 0.
+- `cd frontend && npm test -- --reporter=dot` — **20 ملفًا، 213 اختبارًا ناجحًا**. ظهر تحذير JSDOM عن تنقل الرابط غير المدعوم وتحذير Node عن `localStorage` التجريبي؛ لم يفشل أي اختبار.
+- اختبارات خاصة بدوال المناهج: 4/4 ناجحة بعد مشاهدة فشل اختبارات الميزات الجديدة قبل إضافة التنفيذ.
+- `cd frontend && npm run build` — Next.js production build نجح بعد التعديلات؛ صفحة `/curriculum` 5.59 kB وFirst Load JS 198 kB. بقيت **17 تحذير lint** في ملفات/مكونات أخرى (بعضها في `CurriculumManagementPanel`؛ لا توجد أخطاء build).
+
+### إعادة ضبط النظام
+
+**تنفيذ محلي فقط — 21 أكتوبر 2026:** أضيفت migration `20261021170000_safe_system_reset.sql`، والـRPCs، وخدمتا التخزين/Auth، و`ResetAccessGate`، و`SystemResetController` ومسارا preview/execute، وواجهة المسؤول في `/settings`. قفل RLS المضاف يقيّد DML المباشر من `authenticated` على الجداول الـ36 المستهدفة أثناء reset؛ لكنه لا يوقف دوال `SECURITY DEFINER` التي تتجاوز RLS، ولا `service_role` ذي `BYPASSRLS`، ولا الطلبات الخلفية التي اجتازت بوابة PHP قبل بدء reset. فحص المراجعة أكد وجود RPCs متاحة لـ`authenticated` تكتب ضمن النطاق؛ لذلك تجميد كل مسارات الكتابة غير مكتمل، والمشروع غير جاهز للتشغيل.
+
+مطابقة المخطط للقراءة فقط صنفت 55/55 جدولًا عامًا: 35 جدولًا للحذف، `media_assets` لتنظيف ملفات التشغيل، `profiles` لحذف Auth انتقائي مع إبقاء admin، و18 جدولًا للحفظ. جرد الوسائط أعاد 4 سجلات غير احتياطية، كلها `HOSTINGER_LOCAL`؛ لم تُفحص bytes الملفات على Hostinger. لا توجد buckets/objects في Supabase Storage وقت الفحص. السياسات الكتابية المرصودة لنطاق الـ36 موجهة إلى `authenticated` فقط؛ علاقات FK الحالية ذات الصلة فُحصت ولم يظهر ترتيب حذف مخالف.
+
+**تصحيح نتيجة مراجعة مستقلة:** الشبهة بأن FK `profiles → auth.users` يمنع حذف حسابات Auth غير مدعومة بالمخطط الحالي؛ استعلام catalog الحي و`003_profiles_auth_mapping.sql` يثبتان `ON DELETE CASCADE`. لقطة `schema_live_snapshot.sql` المحلية قديمة في هذه العلاقة، لذا لا تُستخدم وحدها كدليل. لم يُختبر تنفيذ migration على PostgreSQL فعلي.
+
+**غير جاهز للتشغيل:** migration غير مطبقة، وجداول `system_reset_*` غير موجودة في قاعدة البيانات. اختبارات PHP المحلية التي شُغلت سابقًا 117/117، واختبارات Vitest 213/213؛ typecheck/build نجحا، وتحليل syntax المحلي قبل 44 statement وكتل PL/pgSQL. لم يُنفذ reset أو restore تجريبي؛ لا توجد تجربة migration/سياسات RLS على PostgreSQL فعلي ولا اختبار Hostinger/staging. هذه الفحوص لا تثبت التنفيذ الحي. تفاصيل النطاق والموانع في [خطة reset الآمنة](SAFE_SYSTEM_RESET_PLAN.md).
+
+### الأداء
+
+هذه التعديلات تعالج تكرار استعلام غير لازم وحالة عرض الصفحة، لكنها لا تثبت تحسنًا كميًا في السرعة. لا توجد قياسات جديدة LCP/INP/CLS أو p50/p95، ولا اختبار حمل. بقيت خطة القياس والخطوات التالية في [COMPLETION_PLAN.md](COMPLETION_PLAN.md) كما هي مع تحديث الحالة.
+
+### النشر وحالة Git
+
+هذه التغييرات محلية فقط؛ لم يحدث `git push` أو نشر إلى Vercel/Hostinger/Supabase. حالة العمل قبل تحديث الوثائق: الفرع `main`، مع تغييرات سابقة غير committed في ملفات الواجهة؛ افحص `git status` قبل commit.

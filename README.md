@@ -36,6 +36,8 @@ npm test
 - النشر: [Production Deployment](docs/PRODUCTION_DEPLOYMENT.md)
 - خطة نقل الملفات إلى Google Drive (المرحلة 0 قيد التنفيذ؛ لم يبدأ نقل الملفات أو تغيير كود التخزين): [Google Drive Storage Plan](docs/GOOGLE_DRIVE_STORAGE_PLAN.md)
 - نتائج الفحص الحي للقراءة فقط وحالة مهام المرحلة 0: [Google Drive Phase 0 Audit](docs/GOOGLE_DRIVE_PHASE0_AUDIT.md)
+- خطة ونطاق إعادة ضبط النظام الآمنة (الكود محلي فقط؛ قفل الكتابة غير مكتمل، migration غير مطبقة ولم يُنفذ حذف حي؛ الحالة `NOT READY`): [SAFE_SYSTEM_RESET_PLAN](docs/SAFE_SYSTEM_RESET_PLAN.md)
+- خطة تحسين الأداء وقياسه: [COMPLETION_PLAN — المرحلة 2](docs/COMPLETION_PLAN.md#-المرحلة-2---تحسين-الأداء)
 
 > قد تحتوي تقارير المراحل والنشر القديمة على معلومات لا تطابق المصدر الحالي؛ راجع قسم «سجل الاختلاف بين الوثائق والمصدر» في مرجع المشروع الشامل.
 "# elkaroozschool" 

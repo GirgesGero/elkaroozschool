@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { Cairo } from 'next/font/google';
+import Image from 'next/image';
 import './globals.css';
 import Providers from './providers';
 import ServiceWorkerRegistration from '@/components/ServiceWorkerRegistration';
@@ -64,7 +65,24 @@ export default function RootLayout({
       <body className="min-h-screen antialiased">
         <Providers>
           <ServiceWorkerRegistration />
-          {children}
+          {/* Global Ambient Brand Watermark */}
+          <div
+            aria-hidden="true"
+            className="fixed inset-0 z-10 flex items-center justify-center overflow-hidden opacity-[0.035] pointer-events-none select-none"
+          >
+            <div className="relative w-[500px] h-[500px] sm:w-[680px] sm:h-[680px] lg:w-[850px] lg:h-[850px]">
+              <Image
+                src="/logo.png"
+                alt=""
+                fill
+                sizes="(max-width: 640px) 500px, (max-width: 1024px) 680px, 850px"
+                className="object-contain"
+              />
+            </div>
+          </div>
+          <div className="relative z-[1] min-h-screen flex flex-col">
+            {children}
+          </div>
         </Providers>
       </body>
     </html>

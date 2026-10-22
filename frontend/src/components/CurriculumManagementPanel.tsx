@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { explainDbError } from '@/lib/errors/db';
+import { getCurriculumUploadGroupId } from '@/lib/curriculum/display';
 import { phpApi } from '@/lib/api/php';
 import { Paperclip, Loader2, FileText, Music, Upload } from 'lucide-react';
 import { createCurriculumDay, createCurriculumEntry, publishCurriculumDay, updateCurriculumDay, updateCurriculumEntry } from '@/lib/curriculum/management';
@@ -18,6 +19,8 @@ interface Props {
  */
 export default function CurriculumManagementPanel({ profile }: Props) {
   const supabase = useMemo(() => createClient(), []);
+  const isAdmin = profile.role_id === 'admin' || profile.role_id === 'super_user';
+  const [activeGroupId, setActiveGroupId] = useState<1 | 2 | 3>((profile.group_id as 1 | 2 | 3) || 1);
   const [days, setDays] = useState<CurriculumDay[]>([]);
   const [entries, setEntries] = useState<CurriculumEntry[]>([]);
   const [termId, setTermId] = useState('');
@@ -36,20 +39,21 @@ export default function CurriculumManagementPanel({ profile }: Props) {
   const [editingEntryTitle, setEditingEntryTitle] = useState('');
   const [uploadingEntryId, setUploadingEntryId] = useState<string | null>(null);
 
-  const load = async () => {
+  const load = async (targetGroup: 1 | 2 | 3 = activeGroupId) => {
     const [termResult, dayResult] = await Promise.all([
-      supabase.from('terms').select('id,name_ar,academic_year').eq('group_id', profile.group_id).is('deleted_at', null).order('created_at'),
-      supabase.from('curriculum_days').select('*').eq('group_id', profile.group_id).order('sort_order'),
+      supabase.from('terms').select('id,name_ar,academic_year').eq('group_id', targetGroup).is('deleted_at', null).order('created_at'),
+      supabase.from('curriculum_days').select('*').eq('group_id', targetGroup).is('deleted_at', null).order('sort_order'),
     ]);
     if (termResult.error) setError(explainDbError(termResult.error));
     if (dayResult.error) setError(explainDbError(dayResult.error));
     setTerms((termResult.data || []) as typeof terms);
     setDays((dayResult.data || []) as CurriculumDay[]);
-    if (!termId && termResult.data?.[0]) setTermId(termResult.data[0].id);
+    setTermId(termResult.data?.[0]?.id || '');
+    setSelectedDay(null);
   };
 
   const loadEntries = async (dayId: string) => {
-    const { data, error: queryError } = await supabase.from('curriculum_entries').select('*').eq('day_id', dayId).order('sort_order');
+    const { data, error: queryError } = await supabase.from('curriculum_entries').select('*').eq('day_id', dayId).is('deleted_at', null).order('sort_order');
     if (queryError) setError(explainDbError(queryError));
     setEntries((data || []) as CurriculumEntry[]);
   };
@@ -69,11 +73,16 @@ export default function CurriculumManagementPanel({ profile }: Props) {
       if (cancelled) return;
       setCanManage(allowed);
       setCheckingAccess(false);
-      if (allowed) void load();
+      if (allowed) void load(activeGroupId);
     };
     void resolveAccess();
     return () => { cancelled = true; };
-  }, [profile.id, profile.group_id, profile.role_id]);
+  }, [profile.id, profile.role_id]);
+
+  useEffect(() => {
+    if (canManage) void load(activeGroupId);
+  }, [activeGroupId]);
+
   useEffect(() => { if (selectedDay && canManage) void loadEntries(selectedDay); }, [selectedDay, canManage]);
 
   if (checkingAccess || !canManage) return null;
@@ -84,7 +93,7 @@ export default function CurriculumManagementPanel({ profile }: Props) {
     try {
       const maxDay = days.filter((d) => d.term_id === termId).reduce((n, d) => Math.max(n, d.day_number), 0);
       const day = await createCurriculumDay(supabase, {
-        term_id: termId, group_id: profile.group_id, day_number: maxDay + 1,
+        term_id: termId, group_id: activeGroupId, day_number: maxDay + 1,
         title: newDayTitle.trim() || `اليوم الدراسي ${maxDay + 1}`, study_date: null, sort_order: maxDay + 1,
       });
       setDays((current) => [...current, day]);
@@ -99,7 +108,7 @@ export default function CurriculumManagementPanel({ profile }: Props) {
     try {
       const next = entries.length + 1;
       const entry = await createCurriculumEntry(supabase, {
-        day_id: selectedDay, group_id: profile.group_id, title: newEntryTitle.trim(),
+        day_id: selectedDay, group_id: activeGroupId, title: newEntryTitle.trim(),
         description: null, lecturer_id: null, sort_order: next,
       });
       setEntries((current) => [...current, entry]); setNewEntryTitle(''); setNotice('تم حفظ المحاضرة كمسودة.');
@@ -116,7 +125,7 @@ export default function CurriculumManagementPanel({ profile }: Props) {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('folder_type', 'curriculum');
-      formData.append('group_id', String(profile.group_id));
+      formData.append('group_id', String(getCurriculumUploadGroupId(activeGroupId, profile.group_id)));
       formData.append('resource_type', file.type.startsWith('audio/') ? 'LECTURE_AUDIO' : 'LECTURE_ATTACHMENT');
       formData.append('resource_id', entryId);
       const res = await phpApi<{ file_url: string; filename: string; file_size: number; mime_type: string; asset_id: string }>('/storage/upload', {
@@ -160,7 +169,30 @@ export default function CurriculumManagementPanel({ profile }: Props) {
     <section className="space-y-4 rounded-3xl border border-line bg-canvas p-5 shadow-xl" dir="rtl">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-3">
         <div><h2 className="text-base font-black text-content">إدارة المنهج الديناميكي</h2><p className="mt-1 text-xs text-content-muted">أيام ومحاضرات غير محدودة — مسودة ثم نشر</p></div>
-        <span className="rounded-full border border-gold/30 bg-gold/10 px-3 py-1 text-[11px] font-bold text-gold">الفرقة {profile.group_id}</span>
+        {isAdmin ? (
+          <div className="flex items-center gap-1.5 p-1 bg-nav rounded-2xl border border-line">
+            {([
+              { id: 1 as const, name: 'الفرقة الأولى' },
+              { id: 2 as const, name: 'الفرقة الثانية' },
+              { id: 3 as const, name: 'الفرقة الثالثة' },
+            ] as const).map((g) => (
+              <button
+                key={g.id}
+                type="button"
+                onClick={() => setActiveGroupId(g.id)}
+                className={`py-1.5 px-3 rounded-xl text-xs font-bold transition-all ${
+                  activeGroupId === g.id
+                    ? 'bg-gold text-brand-on shadow-sm'
+                    : 'text-content-secondary hover:text-content'
+                }`}
+              >
+                {g.name}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <span className="rounded-full border border-gold/30 bg-gold/10 px-3 py-1 text-[11px] font-bold text-gold">الفرقة {profile.group_id}</span>
+        )}
       </div>
       {notice && <div className="rounded-xl border border-success/30 bg-success/10 p-3 text-xs font-bold text-success">{notice}</div>}
       {error && <div className="rounded-xl border border-danger/30 bg-danger/10 p-3 text-xs font-bold text-danger">{error}</div>}

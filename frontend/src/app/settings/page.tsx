@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
+import { phpApi, PhpApiError } from '@/lib/api/php';
 import { useAppTheme, AppTheme, AppAccent } from '@/context/ThemeContext';
 import SmartHeader from '@/components/SmartHeader';
 import SmartBottomNav from '@/components/SmartBottomNav';
@@ -33,10 +34,28 @@ import {
   Sliders,
   Laptop,
   Layers,
+  AlertTriangle,
+  Loader2,
+  ShieldAlert,
+  RotateCcw,
 } from 'lucide-react';
 import type { Profile } from '@/types/database';
 import Avatar from '../../components/Avatar';
 import CurriculumManagementPanel from '@/components/CurriculumManagementPanel';
+
+type ResetRun = { id: string; backup_id: string; status: string; data_cleared_at: string | null } | null;
+type ResetPreview = {
+  counts: Record<string, unknown>;
+  preserved: string[];
+  active_run: ResetRun;
+  blockers: Array<{ code: string; count?: number; names?: string[]; paths?: string[] }>;
+  storage: {
+    local: { known_files: number; blocked_paths: string[] };
+    google_drive: { audited: boolean; registered_files: number; unregistered_files: number; unregistered_names: string[] };
+  };
+  confirmation_phrase: string;
+};
+type ResetProgress = { run_id: string; status: string; continue?: boolean; message?: string };
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -46,6 +65,16 @@ export default function SettingsPage() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
   const [buttonTestCount, setButtonTestCount] = useState(0);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetAuthPassword, setResetAuthPassword] = useState('');
+  const [backupEncryptionPassword, setBackupEncryptionPassword] = useState('');
+  const [resetConfirmation, setResetConfirmation] = useState('');
+  const [resetPreview, setResetPreview] = useState<ResetPreview | null>(null);
+  const [resetBackupId, setResetBackupId] = useState('');
+  const [resetRunId, setResetRunId] = useState('');
+  const [resetBusy, setResetBusy] = useState(false);
+  const [resetError, setResetError] = useState('');
+  const [resetNotice, setResetNotice] = useState('');
 
   useEffect(() => {
     async function loadUser() {
@@ -59,6 +88,7 @@ export default function SettingsPage() {
           router.push('/login');
           return;
         }
+        if (user.email) setResetEmail(user.email);
 
         const { data: pData } = await supabase
           .from('profiles')
@@ -79,6 +109,7 @@ export default function SettingsPage() {
   }, [router]);
 
   const isAdminOrSuper = profile?.role_id === 'admin' || profile?.role_id === 'super_user';
+  const isSystemAdmin = profile?.role_id === 'admin';
   const isServant = profile?.role_id === 'servant';
   const isSecretariat = profile?.role_id === 'secretariat';
   const isTrainee = profile?.role_id === 'trainee';
@@ -102,6 +133,114 @@ export default function SettingsPage() {
     if (gId === 1) return 'الفرقة الأولى';
     if (gId === 2) return 'الفرقة الثانية';
     return 'الفرقة الثالثة';
+  };
+
+  const reauthenticateForReset = async () => {
+    if (!isSystemAdmin || !profile || !resetEmail || !resetAuthPassword) {
+      throw new Error('أدخل كلمة مرور حساب المدير الحالي لإعادة المصادقة.');
+    }
+    const supabase = createClient();
+    const { data, error } = await supabase.auth.signInWithPassword({ email: resetEmail, password: resetAuthPassword });
+    if (error || !data.session || data.user?.id !== profile.id) {
+      if (data.session && data.user?.id !== profile.id) await supabase.auth.signOut();
+      throw new Error('تعذرت إعادة المصادقة لهذا الحساب. تحقق من كلمة المرور والبريد المرتبط بحساب المدير الحالي.');
+    }
+    return data.session;
+  };
+
+  const loadResetPreview = async (session: Awaited<ReturnType<typeof reauthenticateForReset>>) => {
+    const data = await phpApi<ResetPreview>('/system-reset/preview', { session, timeoutMs: 180_000 });
+    setResetPreview(data);
+    setResetRunId(data.active_run?.id ?? '');
+    setResetBackupId(data.active_run?.backup_id ?? '');
+    return data;
+  };
+
+  const handleResetPreview = async () => {
+    setResetBusy(true);
+    setResetError('');
+    setResetNotice('');
+    try {
+      const session = await reauthenticateForReset();
+      const preview = await loadResetPreview(session);
+      setResetNotice(preview.active_run ? 'وُجدت عملية غير مكتملة؛ يمكنك استئنافها بعد مراجعة الحالة.' : 'اكتملت المعاينة. لم تُحذف أو تُعدّل أي بيانات.');
+    } catch (error) {
+      setResetError(error instanceof PhpApiError ? `${error.message} (${error.code})` : error instanceof Error ? error.message : 'تعذرت معاينة البيانات.');
+    } finally {
+      setResetAuthPassword('');
+      setResetBusy(false);
+    }
+  };
+
+  const handleResetExecute = async () => {
+    if (!resetPreview) {
+      setResetError('اعرض المعاينة أولًا قبل التنفيذ.');
+      return;
+    }
+    if (resetPreview.blockers.length > 0) {
+      setResetError('لا يمكن التنفيذ قبل معالجة كل موانع التخزين الظاهرة في المعاينة.');
+      return;
+    }
+    if (resetConfirmation !== resetPreview.confirmation_phrase) {
+      setResetError('اكتب عبارة التأكيد كما تظهر حرفيًا.');
+      return;
+    }
+    if (!resetRunId && !backupEncryptionPassword) {
+      setResetError('أدخل كلمة مرور لتشفير النسخة الاحتياطية الجديدة.');
+      return;
+    }
+
+    setResetBusy(true);
+    setResetError('');
+    setResetNotice('');
+    try {
+      let session = await reauthenticateForReset();
+      let runId = resetRunId;
+      let backupId = resetBackupId;
+      if (!runId) {
+        const backup = await phpApi<{ backup_id: string }>('/backup/create', {
+          session,
+          body: { encryption_password: backupEncryptionPassword, storage_option: 'HOSTINGER' },
+          timeoutMs: 300_000,
+        });
+        backupId = backup.backup_id;
+        setResetBackupId(backupId);
+        if (!backupId) throw new Error('لم يؤكد الخادم إنشاء نسخة احتياطية صالحة.');
+        // The export may take several minutes; refresh auth_time immediately before reset.
+        session = await reauthenticateForReset();
+      }
+
+      let progress: ResetProgress | null = null;
+      for (let batch = 0; batch < 5; batch += 1) {
+        progress = await phpApi<ResetProgress>('/system-reset/execute', {
+          session,
+          body: {
+            confirmation: resetPreview.confirmation_phrase,
+            ...(runId ? { run_id: runId } : { backup_id: backupId }),
+          },
+          timeoutMs: 180_000,
+        });
+        runId = progress.run_id;
+        setResetRunId(runId);
+        if (progress.status === 'COMPLETE') {
+          const supabase = createClient();
+          await supabase.auth.signOut();
+          router.replace('/login');
+          return;
+        }
+        if (!progress.continue) break;
+      }
+
+      if (progress) {
+        setResetNotice(`حالة العملية: ${progress.status}. نُفذت دفعة آمنة؛ اضغط «متابعة» لاستكمال ما تبقى.`);
+      }
+    } catch (error) {
+      setResetError(error instanceof PhpApiError ? `${error.message} (${error.code})` : error instanceof Error ? error.message : 'توقفت العملية؛ راجع الحالة وأعد المحاولة.');
+    } finally {
+      setResetAuthPassword('');
+      setBackupEncryptionPassword('');
+      setResetBusy(false);
+    }
   };
 
   return (
@@ -384,6 +523,99 @@ export default function SettingsPage() {
         )}
 
         {profile && <CurriculumManagementPanel profile={profile} />}
+
+        {isSystemAdmin && (
+          <section aria-labelledby="system-reset-title" className="space-y-4 rounded-3xl border border-red-500/40 bg-canvas p-5 shadow-xl">
+            <div className="flex items-start gap-3 border-b border-red-500/20 pb-4">
+              <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-3 text-red-400">
+                <ShieldAlert className="h-6 w-6" aria-hidden="true" />
+              </div>
+              <div className="min-w-0">
+                <h2 id="system-reset-title" className="text-base font-black text-content">إعادة ضبط بيانات التشغيل</h2>
+                <p className="mt-1 text-xs leading-6 text-content-muted">
+                  إجراء إداري نهائي يمسح سجلات التشغيل وحسابات غير المديرين والوسائط المصنفة فقط.
+                  تبقى بيانات الكتاب المقدس والمجموعات والصلاحيات وحسابات المديرين والنسخ الاحتياطية.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-3 rounded-2xl border border-red-500/25 bg-red-500/5 p-4 text-sm leading-6 text-content">
+              <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-red-400" aria-hidden="true" />
+              <p>لا يمكن التراجع عن الحذف. أنشئ النسخة المشفرة ثم نزّلها من مركز النسخ الاحتياطية، وتأكد من إمكانية استعادتها قبل التنفيذ.</p>
+              <Link href="/admin/backups" className="shrink-0 rounded-lg border border-line px-3 py-2 text-xs font-bold text-content hover:border-gold">مركز النسخ الاحتياطية</Link>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="space-y-1.5 text-xs font-bold text-content-secondary">
+                بريد حساب المدير الحالي
+                <input value={resetEmail} onChange={(event) => setResetEmail(event.target.value)} type="email" autoComplete="username" dir="ltr" className="min-h-11 w-full rounded-xl border border-line bg-card px-3 text-sm text-content outline-none focus:border-gold" />
+              </label>
+              <label className="space-y-1.5 text-xs font-bold text-content-secondary">
+                كلمة مرور المدير — مطلوبة لإعادة المصادقة
+                <input value={resetAuthPassword} onChange={(event) => setResetAuthPassword(event.target.value)} type="password" autoComplete="current-password" className="min-h-11 w-full rounded-xl border border-line bg-card px-3 text-sm text-content outline-none focus:border-gold" />
+              </label>
+            </div>
+
+            <button type="button" onClick={handleResetPreview} disabled={resetBusy || !resetAuthPassword || !isSystemAdmin} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-gold/40 bg-gold/10 px-4 text-sm font-bold text-content transition hover:bg-gold/20 disabled:cursor-not-allowed disabled:opacity-50">
+              {resetBusy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <RotateCcw className="h-4 w-4" aria-hidden="true" />}
+              معاينة النطاق والتحقق من التخزين
+            </button>
+
+            {resetPreview && (
+              <div className="space-y-3 rounded-2xl border border-line bg-card/60 p-4" aria-live="polite">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h3 className="text-sm font-black text-content">معاينة للقراءة فقط</h3>
+                  {resetPreview.active_run && <span className="rounded-full bg-amber-500/10 px-3 py-1 text-xs font-bold text-amber-400">عملية مفتوحة: {resetPreview.active_run.status}</span>}
+                </div>
+                <p className="text-xs leading-5 text-content-muted">لم تُحذف بيانات أثناء المعاينة. تُعرض الأعداد كما استرجعها الخادم من قاعدة البيانات المحلية.</p>
+                <dl className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                  {Object.entries(resetPreview.counts).map(([key, value]) => (
+                    <div key={key} className="flex items-center justify-between gap-2 rounded-lg border border-line/70 px-3 py-2 text-xs">
+                      <dt className="break-all text-content-muted">{key}</dt><dd className="font-black tabular-nums text-content">{typeof value === 'object' ? JSON.stringify(value) : String(value)}</dd>
+                    </div>
+                  ))}
+                </dl>
+                <p className="text-xs text-content-muted">الملفات المحلية المصنفة: {resetPreview.storage.local.known_files} — ملفات Google Drive المسجلة: {resetPreview.storage.google_drive.registered_files} — غير المسجلة: {resetPreview.storage.google_drive.unregistered_files}.</p>
+                {resetPreview.blockers.length > 0 && (
+                  <div className="rounded-xl border border-red-500/30 bg-red-500/5 p-3 text-xs text-red-300">
+                    <p className="font-black">التنفيذ متوقف حتى معالجة موانع التخزين:</p>
+                    <ul className="mt-2 list-inside list-disc space-y-1">
+                      {resetPreview.blockers.map((blocker, index) => <li key={`${blocker.code}-${index}`}>{blocker.code}{blocker.paths?.length ? `: ${blocker.paths.join('، ')}` : ''}{blocker.count ? ` (${blocker.count})` : ''}</li>)}
+                    </ul>
+                  </div>
+                )}
+                <p className="text-xs text-content-muted">سيُحفظ سجل التدقيق والنسخة الاحتياطية، وتُزال بيانات التشغيل والحسابات ذات الأدوار غير الإدارية. حذف Auth والملفات الخارجية يتم على دفعات قابلة للاستئناف.</p>
+              </div>
+            )}
+
+            {resetPreview && resetPreview.blockers.length === 0 && (
+              <div className="space-y-3 border-t border-line pt-4">
+                {!resetRunId && (
+                  <label className="block space-y-1.5 text-xs font-bold text-content-secondary">
+                    كلمة مرور تشفير النسخة الاحتياطية الجديدة (8 أحرف على الأقل)
+                    <input value={backupEncryptionPassword} onChange={(event) => setBackupEncryptionPassword(event.target.value)} type="password" autoComplete="new-password" minLength={8} className="min-h-11 w-full rounded-xl border border-line bg-card px-3 text-sm text-content outline-none focus:border-gold" />
+                  </label>
+                )}
+                <div className="rounded-xl border border-red-500/25 bg-red-500/5 p-3 text-xs leading-6 text-content-muted">
+                  اكتب العبارة التالية حرفيًا لتأكيد الحذف:
+                  <code className="mt-1 block select-all font-bold text-red-300" dir="rtl">{resetPreview.confirmation_phrase}</code>
+                </div>
+                <label className="block space-y-1.5 text-xs font-bold text-content-secondary">
+                  عبارة التأكيد
+                  <input value={resetConfirmation} onChange={(event) => setResetConfirmation(event.target.value)} autoComplete="off" className="min-h-11 w-full rounded-xl border border-line bg-card px-3 text-sm text-content outline-none focus:border-red-400" />
+                </label>
+                <button type="button" onClick={handleResetExecute} disabled={resetBusy || !resetAuthPassword || resetConfirmation !== resetPreview.confirmation_phrase || (!resetRunId && !backupEncryptionPassword) || resetPreview.blockers.length > 0} className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-red-500/40 bg-red-600 px-4 text-sm font-black text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50">
+                  {resetBusy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <AlertTriangle className="h-4 w-4" aria-hidden="true" />}
+                  {resetRunId ? 'إعادة المصادقة ومتابعة العملية' : 'إعادة المصادقة وإنشاء النسخة ثم بدء الحذف'}
+                </button>
+                {resetRunId && <p className="break-all text-[11px] text-content-muted">معرّف العملية القابلة للاستئناف: {resetRunId}</p>}
+              </div>
+            )}
+
+            {resetNotice && <p role="status" className="rounded-xl border border-success/30 bg-success/10 p-3 text-sm text-content">{resetNotice}</p>}
+            {resetError && <p role="alert" className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300">{resetError}</p>}
+          </section>
+        )}
 
         {/* 3. Role-Aware Administrative & Management Sections (أقسام الإدارة حسب الصلاحيات) */}
         

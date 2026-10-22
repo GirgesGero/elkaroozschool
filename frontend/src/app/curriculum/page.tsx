@@ -11,6 +11,8 @@ import GlobalSearchModal from '@/components/GlobalSearchModal';
 import UnifiedProfileModal from '@/components/UnifiedProfileModal';
 import {
   ArrowRight,
+  AlertTriangle,
+  RefreshCw,
   BookOpen,
   Calendar,
   Download,
@@ -26,6 +28,8 @@ import {
 import type { Profile } from '@/types/database';
 import type { CurriculumDay, CurriculumEntry } from '@/types/curriculum';
 import Avatar from '@/components/Avatar';
+import { explainDbError } from '@/lib/errors/db';
+import { getCurriculumGroupLabel, getCurriculumQueryError } from '@/lib/curriculum/display';
 
 interface LectureItem {
   id: string;
@@ -37,6 +41,13 @@ interface LectureItem {
     title: string;
     avatar_url?: string | null;
   } | null;
+}
+
+interface LecturerItem {
+  id: string;
+  full_name: string;
+  title: string;
+  avatar_url?: string | null;
 }
 
 interface CurriculumItem {
@@ -64,50 +75,81 @@ export default function CurriculumPage() {
   const [entries, setEntries] = useState<CurriculumEntry[]>([]);
   const [lectures, setLectures] = useState<LectureItem[]>([]);
   const [curriculums, setCurriculums] = useState<CurriculumItem[]>([]);
+  const [lecturers, setLecturers] = useState<LecturerItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [reloadVersion, setReloadVersion] = useState(0);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     async function loadData() {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.push('/login'); return; }
+      setLoading(true);
+      setLoadError(null);
+      try {
+        const supabase = createClient();
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        if (userError) throw userError;
+        if (!user) {
+          router.push('/login');
+          return;
+        }
 
-      const { data: userProfile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-      if (!userProfile) { setLoading(false); return; }
-      const nextProfile = userProfile as Profile;
-      if (cancelled) return;
-      setProfile(nextProfile);
+        const { data: userProfile, error: profileError } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+        if (profileError) throw profileError;
+        if (!userProfile) throw new Error('تعذر تحميل الملف الشخصي.');
+        const nextProfile = userProfile as Profile;
+        if (cancelled) return;
+        setProfile(nextProfile);
 
-      const [termResult, curriculumResult, dayResult, entryResult, lectureResult] = await Promise.all([
-        supabase.from('terms').select('id,name_ar,academic_year').eq('group_id', nextProfile.group_id).is('deleted_at', null).order('created_at'),
-        supabase.from('curriculums').select('*').eq('group_id', nextProfile.group_id).is('deleted_at', null).order('created_at'),
-        supabase.from('curriculum_days').select('*').eq('group_id', nextProfile.group_id).eq('status', 'PUBLISHED').is('deleted_at', null).order('sort_order'),
-        supabase.from('curriculum_entries').select('*').eq('group_id', nextProfile.group_id).eq('status', 'PUBLISHED').is('deleted_at', null).order('sort_order'),
-        supabase.from('lectures').select('id,title,description,audio_url,lecturer_id').eq('group_id', nextProfile.group_id).is('deleted_at', null).order('lecture_date'),
-      ]);
+        const [termResult, curriculumResult, dayResult, entryResult, lectureResult] = await Promise.all([
+          supabase.from('terms').select('id,name_ar,academic_year').eq('group_id', nextProfile.group_id).is('deleted_at', null).order('created_at'),
+          supabase.from('curriculums').select('*').eq('group_id', nextProfile.group_id).is('deleted_at', null).order('created_at'),
+          supabase.from('curriculum_days').select('*').eq('group_id', nextProfile.group_id).eq('status', 'PUBLISHED').is('deleted_at', null).order('sort_order'),
+          supabase.from('curriculum_entries').select('*').eq('group_id', nextProfile.group_id).eq('status', 'PUBLISHED').is('deleted_at', null).order('sort_order'),
+          supabase.from('lectures').select('id,title,description,audio_url,lecturer_id').eq('group_id', nextProfile.group_id).is('deleted_at', null).order('lecture_date'),
+        ]);
 
-      if (cancelled) return;
-      setTerms((termResult.data || []) as TermItem[]);
-      setCurriculums((curriculumResult.data || []) as CurriculumItem[]);
-      setDays((dayResult.data || []) as CurriculumDay[]);
-      setEntries((entryResult.data || []) as CurriculumEntry[]);
-      setLectures((lectureResult.data || []) as LectureItem[]);
-      if (!selectedTermId && termResult.data?.[0]) setSelectedTermId(termResult.data[0].id);
-      setLoading(false);
+        const queryError = getCurriculumQueryError([termResult, curriculumResult, dayResult, entryResult, lectureResult]);
+        if (queryError) throw queryError;
+
+        const lecturerIds = [...new Set(((entryResult.data || []) as CurriculumEntry[])
+          .map((entry) => entry.lecturer_id)
+          .filter((id): id is string => Boolean(id)))];
+        let lecturerRows: LecturerItem[] = [];
+        if (lecturerIds.length > 0) {
+          const lecturerResult = await supabase.from('lecturers').select('id,full_name,title,avatar_url').in('id', lecturerIds);
+          if (lecturerResult.error) throw lecturerResult.error;
+          lecturerRows = (lecturerResult.data || []) as LecturerItem[];
+        }
+
+        if (cancelled) return;
+        setTerms((termResult.data || []) as TermItem[]);
+        setCurriculums((curriculumResult.data || []) as CurriculumItem[]);
+        setDays((dayResult.data || []) as CurriculumDay[]);
+        setEntries((entryResult.data || []) as CurriculumEntry[]);
+        setLectures((lectureResult.data || []) as LectureItem[]);
+        setLecturers(lecturerRows);
+        setSelectedTermId((current) => termResult.data?.some((term) => term.id === current)
+          ? current
+          : termResult.data?.[0]?.id || '');
+      } catch (error) {
+        if (!cancelled) setLoadError(explainDbError(error));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     }
     void loadData();
     return () => { cancelled = true; };
-  }, [router, selectedTermId]);
-
+  }, [router, reloadVersion]);
 
   const selectedTerm = selectedTermId || terms[0]?.id || '';
   const selectedDays = days.filter((day) => day.term_id === selectedTerm);
   const selectedEntries = entries.filter((entry) => selectedDays.some((day) => day.id === entry.day_id));
   const selectedCurriculums = curriculums.filter((curriculum) => curriculum.term_id === selectedTerm);
   const lectureById = new Map(lectures.map((lecture) => [lecture.id, lecture]));
+  const lecturerById = new Map(lecturers.map((lecturer) => [lecturer.id, lecturer]));
 
   return (
     <div className="min-h-screen bg-canvas text-content flex flex-col selection:bg-gold selection:text-content" dir="rtl">
@@ -132,6 +174,15 @@ export default function CurriculumPage() {
         onClose={() => setSelectedProfileId(null)}
       />
 
+      {loadError && (
+        <div role="alert" className="mx-auto mt-4 flex w-full max-w-5xl items-center justify-between gap-3 rounded-2xl border border-danger/30 bg-danger/10 p-4 text-sm text-danger">
+          <span className="flex items-center gap-2"><AlertTriangle className="h-4 w-4 shrink-0" />{loadError}</span>
+          <button type="button" onClick={() => setReloadVersion((version) => version + 1)} className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl border border-danger/30 px-3 font-bold">
+            <RefreshCw className="h-4 w-4" /> إعادة المحاولة
+          </button>
+        </div>
+      )}
+
       {/* Main Container */}
       <main className="max-w-5xl w-full mx-auto px-4 py-6 flex-1 flex flex-col gap-6 pb-28 md:pb-12">
         {/* Banner */}
@@ -140,9 +191,7 @@ export default function CurriculumPage() {
             <div className="flex items-center gap-2 text-info mb-1 text-xs font-semibold">
               <GraduationCap className="w-4 h-4" />
               <span>
-                {profile?.group_id === 1 && 'الفرقة الأولى'}
-                {profile?.group_id === 2 && 'الفرقة الثانية'}
-                {profile?.group_id === 3 && 'الفرقة الثالثة'}
+                {getCurriculumGroupLabel(profile?.group_id ?? 0)}
               </span>
             </div>
             <h1 className="text-xl font-bold text-content">الخطة الأكاديمية والمحاضرات الأسبوعية</h1>
@@ -179,7 +228,14 @@ export default function CurriculumPage() {
             <span>المذكرات والمناهج الدراسية</span>
           </h3>
 
-          {selectedCurriculums.length === 0 ? (
+          {loading ? (
+            <div role="status" className="space-y-3" aria-label="جاري تحميل المناهج" aria-live="polite">
+              <div className="h-16 animate-pulse rounded-xl bg-canvas" />
+              <div className="h-16 animate-pulse rounded-xl bg-canvas" />
+            </div>
+          ) : loadError ? (
+            <p className="rounded-xl border border-danger/20 bg-danger/5 p-4 text-center text-xs text-content-muted">تعذر تحميل المذكرات. استخدم زر إعادة المحاولة بالأعلى.</p>
+          ) : selectedCurriculums.length === 0 ? (
             <div className="text-center py-6 text-content-muted text-xs bg-nav/50 rounded-xl border border-line/60">
               سيتم رفع مذكرات ومناهج التيرم قريباً من قِبل إدارة المدرسة.
             </div>
@@ -220,7 +276,14 @@ export default function CurriculumPage() {
             <h3 className="flex items-center gap-2 text-base font-bold text-content"><Calendar className="h-5 w-5 text-success" /><span>الأيام والمحاضرات المنشورة</span></h3>
             <span className="rounded-lg border border-line bg-nav px-3 py-1 text-xs text-content-muted">{selectedDays.length} أيام · {selectedEntries.length} محاضرات</span>
           </div>
-          {selectedDays.length === 0 ? (
+          {loading ? (
+            <div role="status" className="space-y-3" aria-label="جاري تحميل الأيام والمحاضرات" aria-live="polite">
+              <div className="h-28 animate-pulse rounded-xl bg-canvas" />
+              <div className="h-28 animate-pulse rounded-xl bg-canvas" />
+            </div>
+          ) : loadError ? (
+            <p className="rounded-xl border border-danger/20 bg-danger/5 p-4 text-center text-xs text-content-muted">تعذر تحميل الجدول. استخدم زر إعادة المحاولة بالأعلى.</p>
+          ) : selectedDays.length === 0 ? (
             <div className="rounded-xl border border-line/60 bg-nav/50 py-8 text-center text-xs text-content-muted">لا توجد أيام منشورة لهذا الترم حالياً.</div>
           ) : (
             <div className="space-y-4">
@@ -232,9 +295,10 @@ export default function CurriculumPage() {
                     {dayEntries.map((entry, index) => {
                       const legacyLecture = entry.lecture_id ? lectureById.get(entry.lecture_id) : undefined;
                       const audio = legacyLecture?.audio_url || (entry.content_metadata.legacy_audio_url as string | undefined);
+                      const lecturer = entry.lecturer_id ? lecturerById.get(entry.lecturer_id) : legacyLecture?.lecturer;
                       return <div key={entry.id} className="flex flex-col justify-between rounded-lg border border-line bg-nav/80 p-3.5">
                         <div><div className="mb-1.5 text-xs font-bold text-info">المحاضرة {index + 1}</div><h5 className="mb-2 text-sm font-bold text-content">{entry.title}</h5>{entry.description && <p className="mb-3 text-xs leading-6 text-content-secondary">{entry.description}</p>}
-                          {legacyLecture?.lecturer && <div className="mb-3 flex items-center gap-2 rounded-lg border border-line/60 bg-nav/60 p-2 text-xs text-content-secondary"><Avatar src={legacyLecture.lecturer.avatar_url} name={legacyLecture.lecturer.full_name} size={28} rounded="rounded-full" /><div><span className="block text-[10px] text-content-muted">{legacyLecture.lecturer.title}</span><span className="font-semibold">{legacyLecture.lecturer.full_name}</span></div></div>}
+                          {lecturer && <div className="mb-3 flex items-center gap-2 rounded-lg border border-line/60 bg-nav/60 p-2 text-xs text-content-secondary"><Avatar src={lecturer.avatar_url} name={lecturer.full_name} size={28} rounded="rounded-full" /><div><span className="block text-[10px] text-content-muted">{lecturer.title}</span><span className="font-semibold">{lecturer.full_name}</span></div></div>}
                         </div>
                         {audio ? <div className="flex items-center justify-between border-t border-line/80 pt-2"><span className="flex items-center gap-1.5 text-xs text-success"><Headphones className="h-4 w-4" />التسجيل متاح</span><a href={audio} target="_blank" rel="noreferrer" className="rounded-lg border border-success/50 bg-canvas/60 px-3 py-1 text-xs text-success">استماع</a></div> : <span className="text-[11px] text-content-muted">لا يوجد تسجيل مرفق</span>}
                       </div>;

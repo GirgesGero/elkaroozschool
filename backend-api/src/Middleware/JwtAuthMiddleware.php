@@ -6,6 +6,7 @@ use App\Utils\AppRoot;
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 use App\Utils\Response;
+use App\Services\ResetAccessGate;
 
 class JwtAuthMiddleware {
     public static function extractBearerToken(): ?string {
@@ -56,6 +57,23 @@ class JwtAuthMiddleware {
                     $claims = json_decode(json_encode($decoded), true);
                     if (!is_array($claims)) {
                         $claims = [];
+                    }
+
+                    $storageConfig = require AppRoot::path('config/storage.php');
+                    $cutoffFile = rtrim((string) $storageConfig['root_path'], '/\\\\')
+                        . DIRECTORY_SEPARATOR . 'system_reset' . DIRECTORY_SEPARATOR . 'auth-cutoff.json';
+                    $requestPath = parse_url((string) ($_SERVER['REQUEST_URI'] ?? ''), PHP_URL_PATH) ?: '';
+                    $resetDecision = (new ResetAccessGate($cutoffFile))->decision($claims, $requestPath);
+                    if ($resetDecision !== null) {
+                        $status = $resetDecision === 'RESET_STATE_INVALID' ? 503
+                            : ($resetDecision === 'RESET_IN_PROGRESS' ? 423 : 401);
+                        Response::error(
+                            $resetDecision === 'RESET_IN_PROGRESS'
+                                ? 'إعادة ضبط النظام جارية؛ أعد المحاولة بعد انتهائها.'
+                                : 'انتهت صلاحية الجلسة لهذا الإجراء. سجّل الدخول مجددًا.',
+                            $resetDecision,
+                            $status
+                        );
                     }
 
                     // A suspended account keeps a cryptographically valid token
