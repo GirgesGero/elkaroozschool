@@ -32,7 +32,7 @@ export default function SmartBottomNav({
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   const isAdminOrSuper =
-    profile?.role_id === 'admin' || profile?.role_id === 'super_user';
+    profile?.role_id === 'admin';
 
   // Slots are explicit so the bar stays stable no matter how PRIMARY_NAV is
   // edited: [groups, curriculum] | [home] | [profile, drawer].

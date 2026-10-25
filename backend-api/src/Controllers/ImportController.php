@@ -13,7 +13,7 @@ use App\Utils\Security;
 class ImportController {
     public function importTrainees(): void {
         $user = JwtAuthMiddleware::authenticate();
-        RbacMiddleware::requireAdminOrSuperUser($user);
+        RbacMiddleware::requireSystemAdmin($user);
 
         if (!isset($_FILES['file'])) {
             Response::error('يرجى رفع ملف Excel أو CSV للمتدربين', 'FILE_REQUIRED', 400);
@@ -98,7 +98,7 @@ class ImportController {
         $startedAt = microtime(true);
 
         // The user's own token, not the service-role key: the function gates on
-        // auth.uid() through is_admin_or_super_user(), and a service_role request
+        // auth.uid() through the current-system-admin check, and a service_role request
         // carries no sub, so auth.uid() is NULL and the gate always rejects.
         $client = (new SupabaseClient())->withActorToken($this->bearerToken());
 
@@ -161,12 +161,12 @@ class ImportController {
     /**
      * GET /import/history — SRS 35.
      *
-     * Admin/super_user only. Filenames and status are management data; the archived
+     * Current system administrator only. Filenames and status are management data; the archived
      * source file itself is reachable through the storage path already recorded.
      */
     public function history(): void {
         $user = JwtAuthMiddleware::authenticate();
-        RbacMiddleware::requireAdminOrSuperUser($user);
+        RbacMiddleware::requireSystemAdmin($user);
 
         $limit = (int) ($_GET['limit'] ?? 50);
         $limit = max(1, min(200, $limit));   // bounded: never build an unbounded response

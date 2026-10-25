@@ -42,6 +42,7 @@ import {
 import type { Profile } from '@/types/database';
 import Avatar from '../../components/Avatar';
 import CurriculumManagementPanel from '@/components/CurriculumManagementPanel';
+import SystemRoleManagementPanel from '@/components/SystemRoleManagementPanel';
 
 type ResetRun = { id: string; backup_id: string; status: string; data_cleared_at: string | null } | null;
 type ResetPreview = {
@@ -108,7 +109,7 @@ export default function SettingsPage() {
     loadUser();
   }, [router]);
 
-  const isAdminOrSuper = profile?.role_id === 'admin' || profile?.role_id === 'super_user';
+  const isAdminOrSuper = profile?.role_id === 'admin';
   const isSystemAdmin = profile?.role_id === 'admin';
   const isServant = profile?.role_id === 'servant';
   const isSecretariat = profile?.role_id === 'secretariat';
@@ -118,8 +119,8 @@ export default function SettingsPage() {
     switch (r) {
       case 'admin':
         return 'مدير النظام (Admin)';
-      case 'super_user':
-        return 'المسؤول المتميز (Super User)';
+      case 'supervisor':
+        return 'المشرف (صلاحيات نطاق محدد)';
       case 'servant':
         return 'خادم الفرقة الدراسية';
       case 'secretariat':
@@ -523,6 +524,8 @@ export default function SettingsPage() {
         )}
 
         {profile && <CurriculumManagementPanel profile={profile} />}
+
+        {isSystemAdmin && profile && <SystemRoleManagementPanel adminId={profile.id} />}
 
         {isSystemAdmin && (
           <section aria-labelledby="system-reset-title" className="space-y-4 rounded-3xl border border-red-500/40 bg-canvas p-5 shadow-xl">

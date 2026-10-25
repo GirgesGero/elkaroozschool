@@ -18,16 +18,31 @@ class AuthController {
             Response::error('الملف الشخصي للمستخدم غير موجود', 'PROFILE_NOT_FOUND', 404);
         }
 
-        // Fetch delegated permissions if servant
+        // Merge the user's existing group-scoped permissions with the separate
+        // general-secretariat appointment. The latter never changes role_id.
         $permissions = [];
-        if ($profile['role_id'] === 'servant') {
-            $permRes = $client->query('servant_permissions?profile_id=eq.' . $user['user_id'] . '&select=permission_id');
-            if (!empty($permRes['data'])) {
+        if (in_array($profile['role_id'], ['servant', 'supervisor', 'secretariat'], true)) {
+            $permRes = $client->query('servant_permissions?profile_id=eq.' . rawurlencode($user['user_id']) . '&select=permission_id');
+            if (!empty($permRes['data']) && is_array($permRes['data'])) {
                 $permissions = array_column($permRes['data'], 'permission_id');
             }
-        } elseif (in_array($profile['role_id'], ['admin', 'super_user'])) {
+        } elseif ($profile['role_id'] === 'admin') {
             $permissions = ['MANAGE_LECTURES', 'MANAGE_CURRICULUM', 'MANAGE_MARATHON', 'GRADE_EXAMS', 'MANAGE_BOOKS'];
         }
+
+        $secretariatRes = $client->query(
+            'general_secretariat_members?profile_id=eq.' . rawurlencode($user['user_id']) . '&is_active=eq.true&select=profile_id'
+        );
+        $isGeneralSecretariat = !empty($secretariatRes['data']);
+        if ($isGeneralSecretariat) {
+            $generalPermRes = $client->query(
+                'general_secretariat_permissions?profile_id=eq.' . rawurlencode($user['user_id']) . '&select=permission_id'
+            );
+            if (!empty($generalPermRes['data']) && is_array($generalPermRes['data'])) {
+                $permissions = array_merge($permissions, array_column($generalPermRes['data'], 'permission_id'));
+            }
+        }
+        $permissions = array_values(array_unique($permissions));
 
         Response::success([
             'user_id' => $profile['id'],
@@ -35,6 +50,7 @@ class AuthController {
             'full_name' => $profile['full_name'],
             'role' => $profile['role_id'],
             'group_id' => $profile['group_id'],
+            'general_secretariat' => $isGeneralSecretariat,
             'permissions' => $permissions
         ], 'تم التحقق من الجلسة بنجاح');
     }

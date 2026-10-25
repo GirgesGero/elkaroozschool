@@ -71,7 +71,6 @@ export default function FeedPostCard({
 
   const canDelete =
     currentUser?.role_id === 'admin' ||
-    currentUser?.role_id === 'super_user' ||
     currentUser?.id === post.author_id;
 
   const handleToggleReaction = async (type: ReactionType) => {
@@ -196,7 +195,7 @@ export default function FeedPostCard({
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-nav/80 text-content-secondary border border-line">
                 {post.author?.role_id === 'admin'
                   ? 'مسؤول'
-                  : post.author?.role_id === 'super_user'
+                  : post.author?.role_id === 'supervisor'
                   ? 'مشرف عام'
                   : post.author?.role_id === 'servant'
                   ? 'خادم'

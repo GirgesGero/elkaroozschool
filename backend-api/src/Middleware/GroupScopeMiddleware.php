@@ -7,8 +7,8 @@ class GroupScopeMiddleware {
     public static function enforceGroupScope(array $user, int $targetGroupId): void {
         $role = $user['role'] ?? 'trainee';
 
-        // Admin & Super User bypass group isolation
-        if ($role === 'admin' || $role === 'super_user') {
+        // Only the current system administrator has cross-group access.
+        if ($role === 'admin') {
             return;
         }
 

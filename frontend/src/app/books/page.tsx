@@ -98,16 +98,11 @@ export default function BooksAndResearchPage() {
         const prof = userProfile as Profile;
         setProfile(prof);
 
-        // Check if user has MANAGE_LIBRARY or Admin/Super
-        let hasMgmt = ['admin', 'super_user'].includes(prof.role_id);
-        if (prof.role_id === 'servant') {
-          const { data: perm } = await supabase
-            .from('servant_permissions')
-            .select('*')
-            .eq('profile_id', prof.id)
-            .eq('permission_id', 'MANAGE_LIBRARY')
-            .single();
-          if (perm) hasMgmt = true;
+        // Resolve management through the supported permission ID; RLS scopes writes.
+        let hasMgmt = prof.role_id === 'admin';
+        if (!hasMgmt) {
+          const { data: perm } = await supabase.rpc('has_servant_permission', { perm_id: 'MANAGE_BOOKS' });
+          hasMgmt = Boolean(perm);
         }
         setCanManage(hasMgmt);
 

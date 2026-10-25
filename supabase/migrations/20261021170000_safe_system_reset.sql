@@ -47,37 +47,280 @@ CREATE TABLE IF NOT EXISTS public.system_reset_run_users (
     PRIMARY KEY (run_id, user_id)
 );
 
+-- One database row is the serialization barrier for every ordinary writer.
+-- Writers hold FOR SHARE until their transaction ends; begin holds FOR UPDATE,
+-- which drains already-running writers before it publishes the active run.
+CREATE TABLE IF NOT EXISTS public.system_reset_gate (
+    singleton boolean PRIMARY KEY DEFAULT true CHECK (singleton),
+    active_run_id uuid REFERENCES public.system_reset_runs(id) ON DELETE RESTRICT,
+    last_completed_at timestamptz,
+    auth_cutoff_iat bigint,
+    updated_at timestamptz NOT NULL DEFAULT clock_timestamp()
+);
+INSERT INTO public.system_reset_gate (singleton)
+VALUES (true)
+ON CONFLICT (singleton) DO NOTHING;
+
+-- Write permits are private transaction-scoped capabilities: finalization can
+-- write the reset targets; an exact staged Auth deletion can authorize only its
+-- nested FK-cascade statements until that Auth DELETE statement ends.
+CREATE TABLE IF NOT EXISTS public.system_reset_write_permits (
+    transaction_id bigint PRIMARY KEY,
+    run_id uuid NOT NULL REFERENCES public.system_reset_runs(id) ON DELETE CASCADE,
+    scope text NOT NULL DEFAULT 'RESET_FINALIZE' CHECK (scope IN ('RESET_FINALIZE', 'AUTH_CASCADE')),
+    created_at timestamptz NOT NULL DEFAULT clock_timestamp()
+);
+
+-- Supabase Auth writes happen through a separate HTTP service, not through the
+-- PHP router or PostgREST table triggers. Permit only the exact staged delete
+-- performed by the reset worker; all signup/profile/session writes stay frozen.
+CREATE TABLE IF NOT EXISTS public.system_reset_auth_delete_permits (
+    run_id uuid NOT NULL REFERENCES public.system_reset_runs(id) ON DELETE CASCADE,
+    user_id uuid NOT NULL,
+    expires_at timestamptz NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+    PRIMARY KEY (run_id, user_id)
+);
+REVOKE ALL ON public.system_reset_auth_delete_permits FROM PUBLIC, anon, authenticated, service_role;
+
 ALTER TABLE public.system_reset_runs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.system_reset_run_assets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.system_reset_run_users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.system_reset_gate ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.system_reset_write_permits ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.system_reset_auth_delete_permits ENABLE ROW LEVEL SECURITY;
 
 REVOKE ALL ON public.system_reset_runs, public.system_reset_run_assets, public.system_reset_run_users FROM PUBLIC, anon, authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.system_reset_runs, public.system_reset_run_assets, public.system_reset_run_users TO service_role;
 
 CREATE OR REPLACE FUNCTION public.system_reset_writes_allowed()
 RETURNS boolean
-LANGUAGE sql
--- VOLATILE avoids reusing a command-start snapshot for a write racing reset start.
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = pg_catalog, public, auth
+AS $$
+DECLARE
+    v_active_run_id uuid;
+    v_last_completed_at timestamptz;
+    v_auth_cutoff_iat bigint;
+    v_claims jsonb;
+    v_iat bigint;
+BEGIN
+    SELECT active_run_id, last_completed_at, auth_cutoff_iat
+      INTO v_active_run_id, v_last_completed_at, v_auth_cutoff_iat
+      FROM public.system_reset_gate
+     WHERE singleton = true;
+    IF NOT FOUND OR v_active_run_id IS NOT NULL THEN
+        RETURN false;
+    END IF;
+    IF v_last_completed_at IS NOT NULL AND transaction_timestamp() <= v_last_completed_at THEN
+        RETURN false;
+    END IF;
+
+    v_claims := auth.jwt();
+    IF v_claims ->> 'role' = 'authenticated' AND v_auth_cutoff_iat IS NOT NULL THEN
+        BEGIN
+            v_iat := NULLIF(v_claims ->> 'iat', '')::bigint;
+        EXCEPTION WHEN invalid_text_representation THEN
+            RETURN false;
+        END;
+        IF v_iat IS NULL OR v_iat < v_auth_cutoff_iat THEN
+            RETURN false;
+        END IF;
+    END IF;
+    RETURN true;
+END;
+$$;
+
+-- Called by statement triggers and the restore wrapper. FOR SHARE is held until
+-- transaction end, so reset_begin's FOR UPDATE drains earlier writes and makes
+-- later writes wait until they can observe and reject the active reset.
+CREATE OR REPLACE FUNCTION public.system_reset_acquire_write_lock()
+RETURNS void
+LANGUAGE plpgsql
 VOLATILE
+SECURITY DEFINER
+SET search_path = pg_catalog, public, auth
+AS $$
+DECLARE
+    v_active_run_id uuid;
+    v_last_completed_at timestamptz;
+    v_auth_cutoff_iat bigint;
+    v_claims jsonb;
+    v_iat bigint;
+BEGIN
+    SELECT active_run_id, last_completed_at, auth_cutoff_iat
+      INTO v_active_run_id, v_last_completed_at, v_auth_cutoff_iat
+      FROM public.system_reset_gate
+     WHERE singleton = true
+       FOR SHARE;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'SYSTEM_RESET_GATE_UNAVAILABLE' USING ERRCODE = '55000';
+    END IF;
+
+    IF v_active_run_id IS NOT NULL THEN
+        IF EXISTS (
+            SELECT 1 FROM public.system_reset_write_permits
+             WHERE transaction_id = txid_current() AND run_id = v_active_run_id
+               AND (scope = 'RESET_FINALIZE' OR (scope = 'AUTH_CASCADE' AND pg_trigger_depth() > 1))
+        ) THEN
+            RETURN;
+        END IF;
+        RAISE EXCEPTION 'SYSTEM_RESET_WRITE_FROZEN' USING ERRCODE = '55000';
+    END IF;
+
+    -- A transaction/request that began before the gate was released stays stale
+    -- even if it reaches this trigger only after reset completion.
+    IF v_last_completed_at IS NOT NULL AND transaction_timestamp() <= v_last_completed_at THEN
+        RAISE EXCEPTION 'SYSTEM_RESET_STALE_TRANSACTION' USING ERRCODE = '55000';
+    END IF;
+
+    v_claims := auth.jwt();
+    IF v_claims ->> 'role' = 'authenticated' AND v_auth_cutoff_iat IS NOT NULL THEN
+        BEGIN
+            v_iat := NULLIF(v_claims ->> 'iat', '')::bigint;
+        EXCEPTION WHEN invalid_text_representation THEN
+            RAISE EXCEPTION 'SYSTEM_RESET_STALE_TOKEN' USING ERRCODE = '42501';
+        END;
+        IF v_iat IS NULL OR v_iat < v_auth_cutoff_iat THEN
+            RAISE EXCEPTION 'SYSTEM_RESET_STALE_TOKEN' USING ERRCODE = '42501';
+        END IF;
+    END IF;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.system_reset_write_barrier()
+RETURNS trigger
+LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = pg_catalog, public
 AS $$
-    SELECT NOT EXISTS (
-        SELECT 1 FROM public.system_reset_runs
-        WHERE status IN ('PREPARED', 'MEDIA_CLEANUP', 'DATA_CLEARED', 'PARTIAL')
-    );
+BEGIN
+    PERFORM public.system_reset_acquire_write_lock();
+    RETURN NULL;
+END;
 $$;
+
+-- Auth GoTrue mutations bypass the PHP request lease and do not execute the
+-- public-table statement triggers. Fence those rows separately; the only active
+-- reset exception is a short-lived permit for a user already staged for deletion.
+CREATE OR REPLACE FUNCTION public.system_reset_auth_user_write_barrier()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog, public, auth
+AS $$
+DECLARE
+    v_active_run_id uuid;
+    v_last_completed_at timestamptz;
+    v_auth_cutoff_iat bigint;
+    v_claims jsonb;
+    v_iat bigint;
+BEGIN
+    SELECT active_run_id, last_completed_at, auth_cutoff_iat
+      INTO v_active_run_id, v_last_completed_at, v_auth_cutoff_iat
+      FROM public.system_reset_gate
+     WHERE singleton = true
+       FOR SHARE;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'SYSTEM_RESET_GATE_UNAVAILABLE' USING ERRCODE = '55000';
+    END IF;
+
+    IF v_active_run_id IS NOT NULL THEN
+        IF TG_OP = 'DELETE' THEN
+            IF EXISTS (
+                SELECT 1 FROM public.system_reset_auth_delete_permits p
+                 WHERE p.run_id = v_active_run_id
+                   AND p.user_id = OLD.id
+                   AND p.expires_at > clock_timestamp()
+            ) THEN
+                INSERT INTO public.system_reset_write_permits (transaction_id, run_id, scope)
+                VALUES (txid_current(), v_active_run_id, 'AUTH_CASCADE')
+                ON CONFLICT (transaction_id) DO UPDATE
+                   SET run_id = EXCLUDED.run_id, scope = EXCLUDED.scope;
+                RETURN OLD;
+            END IF;
+        END IF;
+        RAISE EXCEPTION 'SYSTEM_RESET_AUTH_WRITE_FROZEN' USING ERRCODE = '55000';
+    END IF;
+
+    IF v_last_completed_at IS NOT NULL AND transaction_timestamp() <= v_last_completed_at THEN
+        RAISE EXCEPTION 'SYSTEM_RESET_STALE_TRANSACTION' USING ERRCODE = '55000';
+    END IF;
+    v_claims := auth.jwt();
+    IF v_claims ->> 'role' = 'authenticated' AND v_auth_cutoff_iat IS NOT NULL THEN
+        BEGIN
+            v_iat := NULLIF(v_claims ->> 'iat', '')::bigint;
+        EXCEPTION WHEN invalid_text_representation THEN
+            RAISE EXCEPTION 'SYSTEM_RESET_STALE_TOKEN' USING ERRCODE = '42501';
+        END;
+        IF v_iat IS NULL OR v_iat < v_auth_cutoff_iat THEN
+            RAISE EXCEPTION 'SYSTEM_RESET_STALE_TOKEN' USING ERRCODE = '42501';
+        END IF;
+    END IF;
+
+    IF TG_OP = 'DELETE' THEN
+        RETURN OLD;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.system_reset_auth_user_write_barrier() FROM PUBLIC, anon, authenticated, service_role;
+
+CREATE OR REPLACE FUNCTION public.system_reset_auth_delete_cleanup()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog, public
+AS $$
+BEGIN
+    DELETE FROM public.system_reset_write_permits
+     WHERE transaction_id = txid_current() AND scope = 'AUTH_CASCADE';
+    RETURN NULL;
+END;
+$$;
+REVOKE ALL ON FUNCTION public.system_reset_auth_delete_cleanup() FROM PUBLIC, anon, authenticated, service_role;
+
 REVOKE ALL ON FUNCTION public.system_reset_writes_allowed() FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.system_reset_writes_allowed() TO authenticated, service_role;
+REVOKE ALL ON FUNCTION public.system_reset_acquire_write_lock() FROM PUBLIC, anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION public.system_reset_write_barrier() FROM PUBLIC, anon, authenticated, service_role;
+REVOKE ALL ON public.system_reset_gate, public.system_reset_write_permits FROM PUBLIC, anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION public.restore_database(jsonb, boolean) FROM service_role;
+REVOKE ALL ON FUNCTION public.restore_table(text, jsonb) FROM service_role;
+REVOKE ALL ON FUNCTION public.restore_accounts(jsonb) FROM service_role;
 
--- The PHP gate cannot stop clients that write to Supabase directly. These restrictive
--- policies freeze every operational table for authenticated clients after begin commits,
--- while preserving reads. SECURITY DEFINER reset RPCs and service_role bypass ordinary RLS.
+-- Keep the existing all-or-nothing restore semantics, but take the same shared
+-- barrier before restore_database changes session_replication_role or writes any
+-- table (including Auth/profile rows outside the reset target list).
+CREATE OR REPLACE FUNCTION public.system_reset_guarded_restore_database(
+    p_tables jsonb,
+    p_truncate boolean DEFAULT false
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog, public, pg_temp
+AS $$
+BEGIN
+    PERFORM public.system_reset_acquire_write_lock();
+    RETURN public.restore_database(p_tables, p_truncate);
+END;
+$$;
+REVOKE ALL ON FUNCTION public.system_reset_guarded_restore_database(jsonb, boolean) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.system_reset_guarded_restore_database(jsonb, boolean) TO service_role;
+
+-- The PHP gate cannot stop clients that write to Supabase directly. Restrictive RLS policies
+-- are defense in depth for authenticated DML; ALWAYS statement triggers below are the
+-- authoritative barrier for SECURITY DEFINER, service_role, restore and in-flight writers.
 DO $$
 DECLARE
     v_table text;
 BEGIN
     FOREACH v_table IN ARRAY ARRAY[
+        'profiles', 'backup_records', 'bible_content_versions', 'notification_templates',
         'attendance_records', 'attendance_sessions', 'exam_grades', 'exams',
         'marathon_trainee_answers', 'marathon_trainee_submissions', 'marathon_question_revisions',
         'marathon_answers', 'marathon_questions', 'marathon_sections', 'marathons',
@@ -104,7 +347,33 @@ BEGIN
             'CREATE POLICY system_reset_write_guard_delete ON public.%I AS RESTRICTIVE FOR DELETE TO authenticated USING (public.system_reset_writes_allowed())',
             v_table
         );
+
+        EXECUTE format('DROP TRIGGER IF EXISTS system_reset_write_barrier ON public.%I', v_table);
+        EXECUTE format(
+            'CREATE TRIGGER system_reset_write_barrier BEFORE INSERT OR UPDATE OR DELETE OR TRUNCATE ON public.%I FOR EACH STATEMENT EXECUTE FUNCTION public.system_reset_write_barrier()',
+            v_table
+        );
+        -- ALWAYS is required because the privileged restore RPC sets
+        -- session_replication_role=replica to preserve auth/profile semantics.
+        EXECUTE format('ALTER TABLE public.%I ENABLE ALWAYS TRIGGER system_reset_write_barrier', v_table);
     END LOOP;
+END;
+$$;
+
+DO $$
+BEGIN
+    IF to_regclass('auth.users') IS NULL THEN
+        RAISE EXCEPTION 'Supabase Auth schema is unavailable; cannot install reset write barrier';
+    END IF;
+    EXECUTE 'DROP TRIGGER IF EXISTS system_reset_auth_user_write_barrier ON auth.users';
+    EXECUTE 'CREATE TRIGGER system_reset_auth_user_write_barrier BEFORE INSERT OR UPDATE OR DELETE ON auth.users FOR EACH ROW EXECUTE FUNCTION public.system_reset_auth_user_write_barrier()';
+    EXECUTE 'ALTER TABLE auth.users ENABLE ALWAYS TRIGGER system_reset_auth_user_write_barrier';
+    EXECUTE 'DROP TRIGGER IF EXISTS system_reset_auth_truncate_barrier ON auth.users';
+    EXECUTE 'CREATE TRIGGER system_reset_auth_truncate_barrier BEFORE TRUNCATE ON auth.users FOR EACH STATEMENT EXECUTE FUNCTION public.system_reset_write_barrier()';
+    EXECUTE 'ALTER TABLE auth.users ENABLE ALWAYS TRIGGER system_reset_auth_truncate_barrier';
+    EXECUTE 'DROP TRIGGER IF EXISTS system_reset_auth_delete_cleanup ON auth.users';
+    EXECUTE 'CREATE TRIGGER system_reset_auth_delete_cleanup AFTER DELETE ON auth.users FOR EACH STATEMENT EXECUTE FUNCTION public.system_reset_auth_delete_cleanup()';
+    EXECUTE 'ALTER TABLE auth.users ENABLE ALWAYS TRIGGER system_reset_auth_delete_cleanup';
 END;
 $$;
 
@@ -127,6 +396,54 @@ BEGIN
     END IF;
 END;
 $$;
+
+CREATE OR REPLACE FUNCTION public.system_reset_authorize_auth_delete(
+    p_actor_id uuid,
+    p_run_id uuid,
+    p_user_id uuid
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog, public
+AS $$
+DECLARE
+    v_active_run_id uuid;
+BEGIN
+    PERFORM public.system_reset_assert_admin(p_actor_id);
+    SELECT active_run_id INTO v_active_run_id
+      FROM public.system_reset_gate
+     WHERE singleton = true
+       FOR SHARE;
+    IF NOT FOUND OR v_active_run_id IS DISTINCT FROM p_run_id THEN
+        RAISE EXCEPTION 'SYSTEM_RESET_AUTH_PERMIT_RUN_MISMATCH' USING ERRCODE = '55000';
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM public.system_reset_runs
+         WHERE id = p_run_id AND actor_id = p_actor_id
+           AND status IN ('DATA_CLEARED', 'PARTIAL')
+           AND data_cleared_at IS NOT NULL
+    ) OR NOT EXISTS (
+        SELECT 1 FROM public.system_reset_run_users
+         WHERE run_id = p_run_id AND user_id = p_user_id
+           AND status IN ('PENDING', 'FAILED')
+    ) OR EXISTS (
+        SELECT 1 FROM public.profiles
+         WHERE id = p_user_id AND role_id = 'admin'
+           AND is_active = true AND deleted_at IS NULL
+    ) THEN
+        RAISE EXCEPTION 'SYSTEM_RESET_AUTH_USER_NOT_STAGED' USING ERRCODE = '42501';
+    END IF;
+
+    INSERT INTO public.system_reset_auth_delete_permits (run_id, user_id, expires_at)
+    VALUES (p_run_id, p_user_id, clock_timestamp() + interval '2 minutes')
+    ON CONFLICT (run_id, user_id) DO UPDATE
+       SET expires_at = EXCLUDED.expires_at,
+           created_at = clock_timestamp();
+END;
+$$;
+REVOKE ALL ON FUNCTION public.system_reset_authorize_auth_delete(uuid, uuid, uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.system_reset_authorize_auth_delete(uuid, uuid, uuid) TO service_role;
 
 CREATE OR REPLACE FUNCTION public.system_reset_preview(p_actor_id uuid)
 RETURNS jsonb
@@ -217,25 +534,39 @@ SET search_path = pg_catalog, public
 AS $$
 DECLARE
     v_run_id uuid;
+    v_active_run_id uuid;
+    v_active_actor_id uuid;
+    v_active_backup_id uuid;
     v_counts jsonb;
 BEGIN
     PERFORM public.system_reset_assert_admin(p_actor_id);
 
-    SELECT id INTO v_run_id
-    FROM public.system_reset_runs
-    WHERE actor_id = p_actor_id AND backup_id = p_backup_id
-      AND status IN ('PREPARED', 'MEDIA_CLEANUP', 'DATA_CLEARED', 'PARTIAL')
-    ORDER BY created_at DESC
-    LIMIT 1;
-    IF v_run_id IS NOT NULL THEN
-        RETURN v_run_id;
+    -- This UPDATE-conflicting row lock waits for all prior guarded writer
+    -- transactions, and makes every later writer wait for the active-run commit.
+    SELECT active_run_id INTO v_active_run_id
+      FROM public.system_reset_gate
+     WHERE singleton = true
+       FOR UPDATE;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'SYSTEM_RESET_GATE_UNAVAILABLE' USING ERRCODE = '55000';
+    END IF;
+
+    IF v_active_run_id IS NOT NULL THEN
+        SELECT actor_id, backup_id INTO v_active_actor_id, v_active_backup_id
+          FROM public.system_reset_runs
+         WHERE id = v_active_run_id
+           AND status IN ('PREPARED', 'MEDIA_CLEANUP', 'DATA_CLEARED', 'PARTIAL');
+        IF FOUND AND v_active_actor_id = p_actor_id AND v_active_backup_id = p_backup_id THEN
+            RETURN v_active_run_id;
+        END IF;
+        RAISE EXCEPTION 'SYSTEM_RESET_OPEN_RUN_EXISTS' USING ERRCODE = '55000';
     END IF;
 
     IF EXISTS (
         SELECT 1 FROM public.system_reset_runs
         WHERE status IN ('PREPARED', 'MEDIA_CLEANUP', 'DATA_CLEARED', 'PARTIAL')
     ) THEN
-        RAISE EXCEPTION 'SYSTEM_RESET_OPEN_RUN_EXISTS' USING ERRCODE = '55000';
+        RAISE EXCEPTION 'SYSTEM_RESET_GATE_STATE_INCONSISTENT' USING ERRCODE = '55000';
     END IF;
 
     IF NOT EXISTS (
@@ -277,6 +608,9 @@ BEGIN
     UPDATE public.system_reset_runs
        SET status = 'MEDIA_CLEANUP', updated_at = now()
      WHERE id = v_run_id;
+    UPDATE public.system_reset_gate
+       SET active_run_id = v_run_id, updated_at = clock_timestamp()
+     WHERE singleton = true;
 
     RETURN v_run_id;
 END;
@@ -375,6 +709,9 @@ BEGIN
         RAISE EXCEPTION 'SYSTEM_RESET_MEDIA_INCOMPLETE' USING ERRCODE = '55000';
     END IF;
 
+    INSERT INTO public.system_reset_write_permits (transaction_id, run_id)
+    VALUES (txid_current(), p_run_id);
+
     DELETE FROM public.post_images; GET DIAGNOSTICS v_rows = ROW_COUNT; v_counts := v_counts || jsonb_build_object('post_images', v_rows);
     DELETE FROM public.post_comments; GET DIAGNOSTICS v_rows = ROW_COUNT; v_counts := v_counts || jsonb_build_object('post_comments', v_rows);
     DELETE FROM public.reactions; GET DIAGNOSTICS v_rows = ROW_COUNT; v_counts := v_counts || jsonb_build_object('reactions', v_rows);
@@ -442,9 +779,49 @@ BEGIN
     VALUES (p_actor_id, 'إدارة', 'admin', 'SYSTEM_RESET_DATA_CLEARED', 'system_reset_runs', p_run_id::text,
             jsonb_build_object('deleted_rows', v_counts, 'backup_id', (SELECT backup_id FROM public.system_reset_runs WHERE id = p_run_id)));
 
+    DELETE FROM public.system_reset_write_permits
+     WHERE transaction_id = txid_current() AND run_id = p_run_id;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'SYSTEM_RESET_WRITE_PERMIT_MISSING' USING ERRCODE = '55000';
+    END IF;
+
     RETURN jsonb_build_object('run_id', p_run_id, 'deleted_rows', v_counts, 'status', 'DATA_CLEARED');
 END;
 $$;
+
+CREATE OR REPLACE FUNCTION public.system_reset_release_gate(p_run_id uuid)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog, public
+AS $$
+DECLARE
+    v_completed_at timestamptz := clock_timestamp();
+    v_active_run_id uuid;
+BEGIN
+    DELETE FROM public.system_reset_auth_delete_permits WHERE run_id = p_run_id;
+    UPDATE public.system_reset_gate
+       SET active_run_id = NULL,
+           last_completed_at = v_completed_at,
+           auth_cutoff_iat = floor(extract(epoch FROM v_completed_at))::bigint + 1,
+           updated_at = v_completed_at
+     WHERE singleton = true AND active_run_id = p_run_id;
+    IF FOUND THEN
+        RETURN;
+    END IF;
+
+    -- Idempotent retry after a lost COMPLETE response is safe only if the gate
+    -- is already open; a different active run must remain fail-closed.
+    SELECT active_run_id INTO v_active_run_id
+      FROM public.system_reset_gate
+     WHERE singleton = true
+       FOR UPDATE;
+    IF NOT FOUND OR v_active_run_id IS NOT NULL THEN
+        RAISE EXCEPTION 'SYSTEM_RESET_GATE_STATE_INCONSISTENT' USING ERRCODE = '55000';
+    END IF;
+END;
+$$;
+REVOKE ALL ON FUNCTION public.system_reset_release_gate(uuid) FROM PUBLIC, anon, authenticated, service_role;
 
 CREATE OR REPLACE FUNCTION public.system_reset_mark_user_result(
     p_actor_id uuid,
@@ -479,6 +856,8 @@ BEGIN
     IF NOT FOUND THEN
         RAISE EXCEPTION 'SYSTEM_RESET_USER_NOT_FOUND' USING ERRCODE = '42501';
     END IF;
+    DELETE FROM public.system_reset_auth_delete_permits
+     WHERE run_id = p_run_id AND user_id = p_user_id;
 
     SELECT count(*) FILTER (WHERE status = 'PENDING'), count(*) FILTER (WHERE status = 'FAILED')
       INTO v_pending, v_failed
@@ -491,6 +870,7 @@ BEGIN
         INSERT INTO public.audit_logs (actor_id, actor_name, actor_role, action, entity_type, entity_id, new_values)
         VALUES (p_actor_id, 'إدارة', 'admin', 'SYSTEM_RESET_COMPLETE', 'system_reset_runs', p_run_id::text,
                 jsonb_build_object('run_id', p_run_id));
+        PERFORM public.system_reset_release_gate(p_run_id);
     ELSE
         UPDATE public.system_reset_runs
            SET status = CASE WHEN v_failed > 0 THEN 'PARTIAL' ELSE 'DATA_CLEARED' END,
@@ -499,7 +879,8 @@ BEGIN
     END IF;
 
     RETURN jsonb_build_object('pending', v_pending, 'failed', v_failed,
-        'status', (SELECT status FROM public.system_reset_runs WHERE id = p_run_id));
+        'status', (SELECT status FROM public.system_reset_runs WHERE id = p_run_id),
+        'auth_cutoff_iat', (SELECT auth_cutoff_iat FROM public.system_reset_gate WHERE singleton = true));
 END;
 $$;
 
@@ -535,9 +916,11 @@ BEGIN
             VALUES (p_actor_id, 'إدارة', 'admin', 'SYSTEM_RESET_COMPLETE', 'system_reset_runs', p_run_id::text,
                     jsonb_build_object('run_id', p_run_id));
         END IF;
+        PERFORM public.system_reset_release_gate(p_run_id);
     END IF;
     SELECT status INTO v_status FROM public.system_reset_runs WHERE id = p_run_id;
-    RETURN jsonb_build_object('pending', v_pending, 'failed', v_failed, 'status', v_status);
+    RETURN jsonb_build_object('pending', v_pending, 'failed', v_failed, 'status', v_status,
+        'auth_cutoff_iat', (SELECT auth_cutoff_iat FROM public.system_reset_gate WHERE singleton = true));
 END;
 $$;
 

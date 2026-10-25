@@ -19,7 +19,7 @@ interface Props {
  */
 export default function CurriculumManagementPanel({ profile }: Props) {
   const supabase = useMemo(() => createClient(), []);
-  const isAdmin = profile.role_id === 'admin' || profile.role_id === 'super_user';
+  const isAdmin = profile.role_id === 'admin';
   const [activeGroupId, setActiveGroupId] = useState<1 | 2 | 3>((profile.group_id as 1 | 2 | 3) || 1);
   const [days, setDays] = useState<CurriculumDay[]>([]);
   const [entries, setEntries] = useState<CurriculumEntry[]>([]);
@@ -61,9 +61,9 @@ export default function CurriculumManagementPanel({ profile }: Props) {
   useEffect(() => {
     let cancelled = false;
     const resolveAccess = async () => {
-      const baseAllowed = profile.role_id === 'admin' || profile.role_id === 'super_user' || profile.role_id === 'secretariat';
+      const baseAllowed = profile.role_id === 'admin' || profile.role_id === 'secretariat';
       let allowed = baseAllowed;
-      if (profile.role_id === 'servant') {
+      if (!baseAllowed) {
         const [curriculumPermission, lecturePermission] = await Promise.all([
           supabase.rpc('has_servant_permission', { perm_id: 'MANAGE_CURRICULUM' }),
           supabase.rpc('has_servant_permission', { perm_id: 'MANAGE_LECTURES' }),

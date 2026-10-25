@@ -14,21 +14,14 @@ namespace App\Services;
  * correct fail-closed behaviour, but it also meant a restore archive was a
  * one-way trip -- you could back up and then never recover.
  *
- * Three RPCs close the loop, all service_role only and all SECURITY DEFINER:
+ * The guarded RPC invokes the existing restore_database body in the same
+ * PostgREST transaction. The raw restore_database/restore_table/restore_accounts
+ * RPC grants are revoked from service_role so callers cannot skip the barrier.
  *
- *   restore_accounts(jsonb)        -> re-create missing auth.users rows
- *   restore_table(text, jsonb)     -> upsert one table
- *   restore_database(jsonb, bool)  -> the entry point, in dependency order
- *
- * SECURITY DEFINER, not INVOKER, and that is the whole safety argument. The
- * restore has to write auth.users, which service_role cannot touch over
- * PostgREST, and it has to suspend sync_profile_app_metadata() via
- * session_replication_role so that a legitimate super_user row in the archive
- * does not abort the restore. Both of those require privileges no PostgREST-
- * reachable role holds -- anon, authenticated and service_role were each
- * verified to be refused `SET LOCAL session_replication_role` with 42501. The
- * function is owned by postgres, so only its own body can do it. There is no
- * RPC that exposes that capability on its own.
+ * The inner SECURITY DEFINER functions are required to write auth.users and to
+ * set session_replication_role while restoring profile metadata. The guarded
+ * entry point first acquires the reset write barrier and holds it for the whole
+ * transaction; the database triggers remain ENABLE ALWAYS as defense in depth.
  *
  * ALL OR NOTHING
  *
@@ -206,7 +199,7 @@ final class DatabaseRestoreService
         // contain one. Without this check a truncated archive would restore
         // nothing and the operator would read the success response as "the
         // database was restored".
-        $report = $this->client()->rpc('restore_database', [
+        $report = $this->client()->rpc('system_reset_guarded_restore_database', [
             'p_tables'   => $decoded,
             'p_truncate' => $truncate,
         ]);

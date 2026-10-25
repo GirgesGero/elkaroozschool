@@ -9,7 +9,7 @@ import SmartHeader from '@/components/SmartHeader';
 import SmartBottomNav from '@/components/SmartBottomNav';
 import GlobalSearchModal from '@/components/GlobalSearchModal';
 import UnifiedProfileModal from '@/components/UnifiedProfileModal';
-import WingSelector from '@/components/Bible/WingSelector';
+import TenSectionSelector from '@/components/Bible/TenSectionSelector';
 import BibleSearchModal from '@/components/Bible/BibleSearchModal';
 import {
   getBibleCategories,
@@ -600,7 +600,7 @@ function BiblePageContent() {
                 <p className="text-content-muted text-sm">جاري تحميل شجرة الموسوعة الكنسية...</p>
               </div>
             ) : (
-              <WingSelector
+              <TenSectionSelector
                 categories={encyclopedia.categories}
                 onSelectCategory={handleSelectCategory}
                 stats={encyclopedia.stats}

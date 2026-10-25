@@ -35,7 +35,6 @@ export default function PostComposer({ currentUser, onPostCreated }: PostCompose
   // Check if current user can create posts (Staff or Admin)
   const canPost =
     currentUser?.role_id === 'admin' ||
-    currentUser?.role_id === 'super_user' ||
     currentUser?.role_id === 'servant' ||
     currentUser?.role_id === 'secretariat';
 

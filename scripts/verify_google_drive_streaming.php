@@ -93,10 +93,18 @@ foreach ($invalidUuids as $badUuid) {
 }
 
 // 6. Test Group Isolation Logic in StorageController
+$controllerSource = file_get_contents(ELKAROOZ_APP_ROOT . '/src/Controllers/StorageController.php');
+check('streaming controller grants global scope only to admin',
+    str_contains($controllerSource, "\$isAdmin = (\$user['role'] === 'admin');"));
+check('system assets are explicitly restricted to admin',
+    str_contains($controllerSource, 'if ($isSystemAsset && !$isAdmin)'));
+
 $testCases = [
     // [userRole, userGroup, uploaderId, assetGroup, resourceType, expectedAccess, testName]
     ['admin', 1, 'user-1', 2, 'GENERAL', true, 'Admin can access any group asset'],
-    ['super_user', 2, 'user-2', 1, 'GENERAL', true, 'Super User can access any group asset'],
+    ['supervisor', 2, 'user-2', 1, 'GENERAL', false, 'Supervisor cannot access another group asset'],
+    ['supervisor', 2, 'user-12', 2, 'GENERAL', true, 'Supervisor can access same-group asset'],
+    ['super_user', 2, 'user-13', 1, 'GENERAL', false, 'Legacy super_user is not globally privileged'],
     ['servant', 1, 'user-3', null, 'GENERAL', true, 'Servant can access global asset (group_id is null)'],
     ['trainee', 2, 'user-4', null, 'GENERAL', true, 'Trainee can access global asset (group_id is null)'],
     ['trainee', 1, 'user-5', 1, 'GENERAL', true, 'Trainee can access own group asset'],
@@ -109,7 +117,7 @@ $testCases = [
 ];
 
 foreach ($testCases as [$role, $uGroup, $uId, $aGroup, $resType, $expected, $label]) {
-    $isAdmin = in_array($role, ['admin', 'super_user'], true);
+    $isAdmin = ($role === 'admin');
     $isSystemAsset = in_array($resType, ['BACKUP_ARCHIVE', 'IMPORT_FILE'], true);
     
     if ($isSystemAsset && !$isAdmin) {

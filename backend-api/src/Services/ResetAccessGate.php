@@ -10,10 +10,74 @@ use RuntimeException;
 final class ResetAccessGate
 {
     private string $path;
+    private string $leasePath;
+    private string $executionLeasePath;
 
     public function __construct(string $stateFilePath)
     {
         $this->path = $stateFilePath;
+        $this->leasePath = $stateFilePath . '.lock';
+        $this->executionLeasePath = $stateFilePath . '.execution.lock';
+    }
+
+    /**
+     * Hold this shared lease through the lifetime of every mutating PHP request.
+     * Reset start takes an exclusive lease before publishing its durable gate.
+     *
+     * @return resource
+     */
+    public function acquireMutationLease(): mixed
+    {
+        return $this->acquireLease(LOCK_SH);
+    }
+
+    /**
+     * Drain already-running mutation requests before reset_begin can proceed.
+     *
+     * @return resource
+     */
+    public function acquireExclusiveResetLease(): mixed
+    {
+        return $this->acquireLease(LOCK_EX);
+    }
+
+    /**
+     * Serialize reset execute requests without blocking unrelated request leases.
+     *
+     * @return resource
+     */
+    public function acquireResetExecutionLease(): mixed
+    {
+        return $this->acquireLease(LOCK_EX, $this->executionLeasePath);
+    }
+
+    /** @param resource $lease */
+    public function releaseLease(mixed $lease): void
+    {
+        if (is_resource($lease)) {
+            flock($lease, LOCK_UN);
+            fclose($lease);
+        }
+    }
+
+    /** @return resource */
+    private function acquireLease(int $mode, ?string $path = null): mixed
+    {
+        $path ??= $this->leasePath;
+        $directory = dirname($path);
+        if (!is_dir($directory) && !mkdir($directory, 0700, true) && !is_dir($directory)) {
+            throw new RuntimeException('Reset request gate directory is unavailable');
+        }
+        $handle = @fopen($path, 'c+');
+        if ($handle === false) {
+            throw new RuntimeException('Reset request gate is unavailable');
+        }
+        if (!flock($handle, $mode)) {
+            fclose($handle);
+            throw new RuntimeException('Reset request gate is locked');
+        }
+        @chmod($path, 0600);
+        return $handle;
     }
 
     /** @param array{run_id:mixed,status:mixed,cutoff_iat:mixed} $state */
@@ -54,6 +118,14 @@ final class ResetAccessGate
             flock($handle, LOCK_UN);
         } finally {
             fclose($handle);
+        }
+    }
+
+    /** Caller must hold acquireExclusiveResetLease() while clearing the durable gate. */
+    public function clearState(): void
+    {
+        if (file_exists($this->path) && !unlink($this->path)) {
+            throw new RuntimeException('Reset access state could not be cleared');
         }
     }
 

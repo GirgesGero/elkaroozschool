@@ -1,4 +1,4 @@
-export type UserRole = 'admin' | 'super_user' | 'servant' | 'secretariat' | 'trainee';
+export type UserRole = 'admin' | 'supervisor' | 'servant' | 'secretariat' | 'trainee';
 
 export type DelegatedPermission =
   | 'MANAGE_LECTURES'

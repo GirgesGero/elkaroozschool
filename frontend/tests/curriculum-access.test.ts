@@ -17,6 +17,6 @@ describe('phase 1 curriculum access contract', () => {
 
   it('matches nested admin routes by longest prefix', () => {
     expect(canAccessPath('secretariat', '/admin/backups')).toBe(false);
-    expect(canAccessPath('super_user', '/admin/backups')).toBe(true);
+    expect(canAccessPath('supervisor', '/admin/backups')).toBe(false);
   });
 });

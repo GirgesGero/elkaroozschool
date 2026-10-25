@@ -86,7 +86,7 @@ export default function AdminBackupsPage() {
         .eq('id', user.id)
         .single();
 
-      if (!userProfile || !['admin', 'super_user'].includes(userProfile.role_id)) {
+      if (!userProfile || userProfile.role_id !== 'admin') {
         setIsAdmin(false);
         setLoading(false);
         return;

@@ -57,7 +57,7 @@ export default function TraineesDirectoryPage() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
-  const isAdminOrSuper = profile?.role_id === 'admin' || profile?.role_id === 'super_user';
+  const isAdminOrSuper = profile?.role_id === 'admin';
   const isSecretariat = profile?.role_id === 'secretariat';
   const canAddTrainee = isAdminOrSuper || isSecretariat;
 
@@ -67,7 +67,7 @@ export default function TraineesDirectoryPage() {
 
     let query = supabase.from('profiles').select('*').eq('role_id', 'trainee');
 
-    if (!['admin', 'super_user'].includes(currentUser.role_id)) {
+    if (currentUser.role_id !== 'admin' && currentUser.group_id) {
       query = query.eq('group_id', currentUser.group_id);
     } else if (targetGroup > 0) {
       query = query.eq('group_id', targetGroup);
@@ -99,7 +99,7 @@ export default function TraineesDirectoryPage() {
       if (userProfile) {
         const prof = userProfile as Profile;
         setProfile(prof);
-        const defaultGroup = ['admin', 'super_user'].includes(prof.role_id) ? 0 : prof.group_id;
+        const defaultGroup = prof.role_id === 'admin' ? 0 : prof.group_id;
         setSelectedGroupId(defaultGroup);
         loadTrainees(prof, defaultGroup);
       }

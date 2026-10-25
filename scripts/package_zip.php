@@ -107,8 +107,8 @@ foreach ($iterator as $file) {
     $path = $file->getPathname();
     $rel  = str_replace('\\', '/', substr($path, strlen($beRoot) + 1));
 
-    // Skip scanning inside vendor/ and storage/ for performance (vendor is third-party, storage is local uploads)
-    if (str_starts_with($rel, 'vendor/') || str_starts_with($rel, 'storage/')) {
+    // Skip scanning inside vendor/, storage/, and tests/ for performance and packaging boundary (vendor is third-party, storage is local uploads, tests are CI/verification)
+    if (str_starts_with($rel, 'vendor/') || str_starts_with($rel, 'storage/') || str_starts_with($rel, 'tests/')) {
         continue;
     }
 

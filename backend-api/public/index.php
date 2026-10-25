@@ -92,6 +92,29 @@ $path = preg_replace('#^/api#', '', $requestUri);
 $path = rtrim($path, '/');
 if (empty($path)) $path = '/';
 
+// A request-entry check alone does not drain a mutation that already passed it.
+// Hold a shared lease for each mutating request until PHP exits; reset start takes
+// the exclusive lease, waits for those requests, writes the persistent gate, and
+// only then opens the database barrier. Reset endpoints are managed explicitly.
+if (in_array($requestMethod, ['POST', 'PUT', 'PATCH', 'DELETE'], true)
+    && !in_array($path, ['/system-reset/preview', '/system-reset/execute'], true)) {
+    $requestGate = new \App\Services\ResetAccessGate(
+        \App\Utils\AppRoot::path('storage/system_reset/auth-cutoff.json')
+    );
+    try {
+        $mutationLease = $requestGate->acquireMutationLease();
+        register_shutdown_function(static function () use ($requestGate, $mutationLease): void {
+            $requestGate->releaseLease($mutationLease);
+        });
+        $resetState = $requestGate->readState();
+        if ($resetState !== null && in_array($resetState['status'], ['IN_PROGRESS', 'PARTIAL'], true)) {
+            Response::error('توجد عملية إعادة ضبط جارية؛ تم إيقاف طلب الكتابة.', 'RESET_IN_PROGRESS', 423);
+        }
+    } catch (\Throwable) {
+        Response::error('تعذر التحقق من قفل الكتابة؛ تم رفض الطلب احترازيًا.', 'RESET_STATE_UNAVAILABLE', 503);
+    }
+}
+
 // Router Dispatcher
 try {
     if ($path === '/' || $path === '/health') {

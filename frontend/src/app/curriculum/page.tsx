@@ -103,12 +103,14 @@ export default function CurriculumPage() {
         if (cancelled) return;
         setProfile(nextProfile);
 
+        const effectiveGroupId = nextProfile.group_id || 1;
+
         const [termResult, curriculumResult, dayResult, entryResult, lectureResult] = await Promise.all([
-          supabase.from('terms').select('id,name_ar,academic_year').eq('group_id', nextProfile.group_id).is('deleted_at', null).order('created_at'),
-          supabase.from('curriculums').select('*').eq('group_id', nextProfile.group_id).is('deleted_at', null).order('created_at'),
-          supabase.from('curriculum_days').select('*').eq('group_id', nextProfile.group_id).eq('status', 'PUBLISHED').is('deleted_at', null).order('sort_order'),
-          supabase.from('curriculum_entries').select('*').eq('group_id', nextProfile.group_id).eq('status', 'PUBLISHED').is('deleted_at', null).order('sort_order'),
-          supabase.from('lectures').select('id,title,description,audio_url,lecturer_id').eq('group_id', nextProfile.group_id).is('deleted_at', null).order('lecture_date'),
+          supabase.from('terms').select('id,name_ar,academic_year').eq('group_id', effectiveGroupId).is('deleted_at', null).order('created_at'),
+          supabase.from('curriculums').select('*').eq('group_id', effectiveGroupId).is('deleted_at', null).order('created_at'),
+          supabase.from('curriculum_days').select('*').eq('group_id', effectiveGroupId).eq('status', 'PUBLISHED').is('deleted_at', null).order('sort_order'),
+          supabase.from('curriculum_entries').select('*').eq('group_id', effectiveGroupId).eq('status', 'PUBLISHED').is('deleted_at', null).order('sort_order'),
+          supabase.from('lectures').select('id,title,description,audio_url,lecturer_id').eq('group_id', effectiveGroupId).is('deleted_at', null).order('lecture_date'),
         ]);
 
         const queryError = getCurriculumQueryError([termResult, curriculumResult, dayResult, entryResult, lectureResult]);

@@ -36,7 +36,7 @@ export default function CreateTraineeModal({
   defaultGroupId = 1,
   onTraineeCreated,
 }: CreateTraineeModalProps) {
-  const isAdminOrSuper = currentUser?.role_id === 'admin' || currentUser?.role_id === 'super_user';
+  const isAdminOrSuper = currentUser?.role_id === 'admin';
   const isSecretariat = currentUser?.role_id === 'secretariat';
   const allowedGroupId = isSecretariat ? (currentUser?.group_id || 1) : defaultGroupId;
 

@@ -38,7 +38,7 @@ export default function GroupsIndexPage() {
         setProfile(prof);
 
         // If regular user (Trainee/Servant/Secretariat), direct them to their group
-        if (!['admin', 'super_user'].includes(prof.role_id)) {
+        if (!['admin'].includes(prof.role_id)) {
           router.push(`/groups/${prof.group_id}`);
           return;
         }

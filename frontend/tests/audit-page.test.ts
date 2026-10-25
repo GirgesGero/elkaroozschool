@@ -44,11 +44,11 @@ describe('Admin Audit Page Logic', () => {
   });
 
   describe('Role gating', () => {
-    const ALLOWED_ROLES = ['admin', 'super_user'];
+    const ALLOWED_ROLES = ['admin'];
 
-    it('allows admin and super_user roles', () => {
+    it('allows only the system administrator role', () => {
       expect(ALLOWED_ROLES.includes('admin')).toBe(true);
-      expect(ALLOWED_ROLES.includes('super_user')).toBe(true);
+      expect(ALLOWED_ROLES.includes('supervisor')).toBe(false);
     });
 
     it('rejects servant, trainee and other roles', () => {

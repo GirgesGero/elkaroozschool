@@ -121,16 +121,11 @@ check('forged unsigned JWT is REJECTED (401 INVALID_TOKEN)',
     'got: ' . substr(trim((string) $outcome), 0, 90));
 
 // --------------------------------------- 3b. export is ADMIN-ONLY
-// Product decision 2026-09-30: bulk PII export belongs to admin + super_user
-// only. Assert on the literal allowlist, because the failure mode of this
-// control is someone re-adding 'servant' to make a workflow pass -- and that
-// would still be contained to their own group, so no behavioural test would
-// ever flag it. The allowlist itself is the security property here.
+// System-admin-only export is the security property: the legacy super_user role
+// is migrated to supervisor and must not retain global access.
 $export = file_get_contents($root . '/backend-api/src/Controllers/ExportController.php');
-$exportAllowlist = '/requireRoles\(\$user,\s*\[\s*' . "'admin'" . '\s*,\s*' . "'super_user'" . '\s*\]\s*\)/';
-check('export: role allowlist is exactly [admin, super_user]',
-    (bool) preg_match($exportAllowlist, $export),
-    'no exact admin+super_user allowlist found');
+check('export: requires current system-admin guard',
+    str_contains($export, 'RbacMiddleware::requireSystemAdmin($user);'));
 foreach (['servant', 'secretariat', 'trainee'] as $banned) {
     check("export: '$banned' is NOT in the export allowlist",
         !preg_match("/requireRoles\([^)]*'" . $banned . "'/", $export));
@@ -271,16 +266,16 @@ check('restore/preview refuses an invalid archive before any restore',
 
 // 7b. RBAC runs before the upload is read on every new admin-only route.
 check('restore/preview authorises before reading $_FILES',
-    strpos($previewBlock, 'requireAdminOrSuperUser') !== false
-    && strpos($previewBlock, 'requireAdminOrSuperUser') < strpos($previewBlock, "isset(\$_FILES"));
+    strpos($previewBlock, 'requireSystemAdmin') !== false
+    && strpos($previewBlock, 'requireSystemAdmin') < strpos($previewBlock, "isset(\$_FILES"));
 $execStart = strpos($restore, 'function execute');
 $execBlock = $execStart === false ? '' : substr($restore, $execStart);
 check('restore/execute exists and requires explicit confirmation',
     str_contains($execBlock, 'CONFIRMATION_REQUIRED')
     && str_contains($execBlock, "confirm_restore"));
 check('restore/execute authorises before reading $_FILES',
-    strpos($execBlock, 'requireAdminOrSuperUser') !== false
-    && strpos($execBlock, 'requireAdminOrSuperUser') < strpos($execBlock, "isset(\$_FILES"));
+    strpos($execBlock, 'requireSystemAdmin') !== false
+    && strpos($execBlock, 'requireSystemAdmin') < strpos($execBlock, "isset(\$_FILES"));
 check('restore/execute routes through AtomicRestoreService',
     str_contains($execBlock, 'AtomicRestoreService'));
 check('restore/execute reports rollback honestly rather than as success',
@@ -460,7 +455,7 @@ $restoreSvcPath = $root . '/backend-api/src/Services/DatabaseRestoreService.php'
 check('DatabaseRestoreService exists', is_file($restoreSvcPath));
 $restoreSvc = is_file($restoreSvcPath) ? file_get_contents($restoreSvcPath) : '';
 
-check('restore calls the database, not a placeholder', str_contains($restoreSvc, "'restore_database'"));
+check('restore calls the database, not a placeholder', str_contains($restoreSvc, "'system_reset_guarded_restore_database'"));
 check('restore no longer demands pg_dump',
     !str_contains($restoreSvc, 'pg_restore') && !str_contains($restoreSvc, 'dump.sql'));
 check('restore refuses a missing database.json',
@@ -470,7 +465,7 @@ check('restore rejects unsafe table names before the RPC',
 check('restore refuses the bookkeeping tables',
     str_contains($restoreSvc, "'backup_records'") && str_contains($restoreSvc, "'import_history'"));
 check('restore sends the archive in one call, not per table',
-    substr_count($restoreSvc, "->rpc('restore_database'") === 1);
+    substr_count($restoreSvc, "->rpc('system_reset_guarded_restore_database'") === 1);
 check('restore treats a zero-table report as failure',
     str_contains($restoreSvc, 'tables_restored')
     && str_contains($restoreSvc, '$tables < 1'));
@@ -480,14 +475,21 @@ check('restore builds its Supabase client lazily',
     str_contains($restoreSvc, '?SupabaseClient $client = null')
     && !str_contains($restoreSvc, '$this->client = $client ?? new SupabaseClient()'));
 
-// The RPC name has to match the migration exactly; a rename on either side would
-// otherwise only fail at restore time, on a live system.
-$migrationPath = $root . '/supabase/migrations/20261001170000_logical_restore_rpcs.sql';
-$restoreMigration = is_file($migrationPath) ? file_get_contents($migrationPath) : '';
-check('the restore migration is tracked', trim($restoreMigration) !== '');
-check('the RPC name matches the migration',
-    str_contains($restoreSvc, "'restore_database'")
-    && str_contains($restoreMigration, 'CREATE OR REPLACE FUNCTION public.restore_database'));
+// The guarded RPC name has to match the live service and the role migration.
+// The wrapper delegates to the legacy database implementation only after
+// preserving the current admin and demoting archived privileged roles.
+$guardedMigrationPath = $root . '/supabase/migrations/20261023180000_system_admin_and_general_secretariat.sql';
+$guardedMigration = is_file($guardedMigrationPath) ? file_get_contents($guardedMigrationPath) : '';
+$restoreMigrationPath = $root . '/supabase/migrations/20261001170000_logical_restore_rpcs.sql';
+$restoreMigration = is_file($restoreMigrationPath) ? file_get_contents($restoreMigrationPath) : '';
+check('the legacy restore implementation remains tracked', trim($restoreMigration) !== '');
+check('guarded restore RPC name matches the service and migration',
+    str_contains($restoreSvc, "'system_reset_guarded_restore_database'")
+    && str_contains($guardedMigration, 'CREATE OR REPLACE FUNCTION public.system_reset_guarded_restore_database'));
+check('guarded restore preserves the current admin and demotes archived admins',
+    str_contains($guardedMigration, 'row_data->>\'id\' = v_current_admin_id::text')
+    && str_contains($guardedMigration, "IN ('admin','super_user')")
+    && str_contains($guardedMigration, 'RETURN public.restore_database(v_tables, p_truncate);'));
 check('the escalation guard survives in the migration',
     str_contains($restoreMigration, 'would be granted super_user'));
 check('the migration suspends triggers only transaction-locally',
@@ -515,7 +517,7 @@ $restoreCtlPath = $root . '/backend-api/src/Controllers/RestoreController.php';
 $restoreCtl = is_file($restoreCtlPath) ? file_get_contents($restoreCtlPath) : '';
 check('truncate_mode is opt-in, defaulting to MERGE',
     str_contains($restoreCtl, "truncate_mode'] ?? 'MERGE'"));
-check('restore still requires admin or super_user', str_contains($restoreCtl, 'requireAdminOrSuperUser'));
+check('restore requires the current system admin only', str_contains($restoreCtl, 'requireSystemAdmin'));
 check('restore still requires explicit confirmation',
     str_contains($restoreCtl, 'confirm_restore') && str_contains($restoreCtl, "'YES'"));
 

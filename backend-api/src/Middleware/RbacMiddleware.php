@@ -7,17 +7,19 @@ class RbacMiddleware {
     public static function requireRoles(array $user, array $allowedRoles): void {
         $role = $user['role'] ?? 'trainee';
         
-        // Admin and Super User always have global access
-        if ($role === 'admin' || $role === 'super_user') {
+        // Only the relationally resolved current system administrator is global.
+        // JwtAuthMiddleware refreshes role/group claims from profiles on every
+        // request, so a transferred admin cannot keep privilege via an old JWT.
+        if ($role === 'admin') {
             return;
         }
 
-        if (!in_array($role, $allowedRoles)) {
+        if (!in_array($role, $allowedRoles, true)) {
             Response::error('ليس لديك الصلاحية لتنفيذ هذا الإجراء', 'FORBIDDEN', 403);
         }
     }
 
-    public static function requireAdminOrSuperUser(array $user): void {
-        self::requireRoles($user, ['admin', 'super_user']);
+    public static function requireSystemAdmin(array $user): void {
+        self::requireRoles($user, ['admin']);
     }
 }

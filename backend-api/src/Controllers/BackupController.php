@@ -31,7 +31,7 @@ class BackupController {
 
     public function create(): void {
         $user = JwtAuthMiddleware::authenticate();
-        RbacMiddleware::requireAdminOrSuperUser($user);
+        RbacMiddleware::requireSystemAdmin($user);
 
         $body = json_decode(file_get_contents('php://input'), true) ?: [];
         $password = $body['encryption_password'] ?? '';
@@ -207,7 +207,7 @@ class BackupController {
 
     public function list(): void {
         $user = JwtAuthMiddleware::authenticate();
-        RbacMiddleware::requireAdminOrSuperUser($user);
+        RbacMiddleware::requireSystemAdmin($user);
 
         $client = new SupabaseClient();
         $res = $client->query('backup_records?order=created_at.desc&deleted_at=is.null');
@@ -226,7 +226,7 @@ class BackupController {
          */
         public function validateZip(): void {
             $user = JwtAuthMiddleware::authenticate();
-            RbacMiddleware::requireAdminOrSuperUser($user);
+            RbacMiddleware::requireSystemAdmin($user);
 
             if (!isset($_FILES['backup_zip'])) {
                 Response::error('يرجى اختيار ملف النسخة الاحتياطية', 'FILE_REQUIRED', 400);
@@ -354,7 +354,7 @@ class BackupController {
          */
         public function delete(): void {
             $user = JwtAuthMiddleware::authenticate();
-            RbacMiddleware::requireAdminOrSuperUser($user);
+            RbacMiddleware::requireSystemAdmin($user);
 
             $body = json_decode(file_get_contents('php://input'), true) ?: [];
             $backupId = $body['backup_id'] ?? ($_POST['backup_id'] ?? null);

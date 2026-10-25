@@ -61,7 +61,7 @@ export default function TraineeProfileDrawer({
   const [editGroupId, setEditGroupId] = useState<number>(1);
   const [editBirthDate, setEditBirthDate] = useState('');
 
-  const isAdminOrSuper = currentUserProfile?.role_id === 'admin' || currentUserProfile?.role_id === 'super_user';
+  const isAdminOrSuper = currentUserProfile?.role_id === 'admin';
   const isSecretariat = currentUserProfile?.role_id === 'secretariat';
   const canEdit = isAdminOrSuper || isSecretariat;
 

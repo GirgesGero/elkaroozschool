@@ -11,7 +11,7 @@ class SupabaseClient {
      * Actor token to present instead of the service-role key.
      *
      * Several SECURITY DEFINER functions gate on auth.uid(), e.g.
-     * import_trainees_bulk_atomic raises unless is_admin_or_super_user() is true.
+     * The SQL RPC now requires the current system administrator. The legacy role
      * A service_role request carries no user sub, so auth.uid() is NULL and the
      * gate always fails. When the controller already authenticated a real user
      * via JwtAuthMiddleware, passing that token through makes auth.uid() resolve

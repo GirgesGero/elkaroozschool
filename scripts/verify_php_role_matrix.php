@@ -94,27 +94,33 @@ function actorFromToken(string $userId, string $role, int $groupId): array {
 
     // Decode through the production code path rather than re-implementing it.
     $_SERVER['HTTP_AUTHORIZATION'] = 'Bearer ' . $token;
-    return JwtAuthMiddleware::authenticate();
+    return JwtAuthMiddleware::authenticate(static fn(string $id): array => [
+        'id' => $id,
+        'role_id' => $role,
+        'group_id' => $groupId,
+        'is_active' => true,
+        'deleted_at' => null,
+    ]);
 }
 
 // ---------------------------------------------------------------------------
 // 1. Endpoint authorization matrix, using each endpoint's real gate.
 // ---------------------------------------------------------------------------
 $endpoints = [
-    '/backup/create'       => ['admin', 'super_user'],
-    '/backup/list'         => ['admin', 'super_user'],
-    '/backup/validate-zip' => ['admin', 'super_user'],
-    '/backup/delete'       => ['admin', 'super_user'],
-    '/restore/preview'     => ['admin', 'super_user'],
-    '/restore/execute'     => ['admin', 'super_user'],
-    '/import/trainees'     => ['admin', 'super_user'],
-    '/import/history'      => ['admin', 'super_user'],
-    '/storage/delete'      => ['admin', 'super_user'],
-    '/export/data'         => ['admin', 'super_user'],
-    '/storage/upload'      => ['admin', 'super_user', 'servant', 'secretariat'],
+    '/backup/create'       => ['admin'],
+    '/backup/list'         => ['admin'],
+    '/backup/validate-zip' => ['admin'],
+    '/backup/delete'       => ['admin'],
+    '/restore/preview'     => ['admin'],
+    '/restore/execute'     => ['admin'],
+    '/import/trainees'     => ['admin'],
+    '/import/history'      => ['admin'],
+    '/storage/delete'      => ['admin'],
+    '/export/data'         => ['admin'],
+    '/storage/upload'      => ['admin', 'supervisor', 'servant', 'secretariat'],
 ];
 
-$allRoles = ['super_user', 'admin', 'secretariat', 'servant', 'trainee'];
+$allRoles = ['super_user', 'admin', 'supervisor', 'secretariat', 'servant', 'trainee'];
 
 echo "=== 1. Endpoint authorization matrix ===\n";
 foreach ($endpoints as $path => $allowedRoles) {
@@ -137,13 +143,11 @@ foreach ($endpoints as $path => $allowedRoles) {
 // ---------------------------------------------------------------------------
 echo "=== 2. Group isolation (GroupScopeMiddleware) ===\n";
 $groupCases = [
-    ['trainee',     1, 2, false, 'trainee cannot write into another group'],
-    ['servant',     1, 2, false, 'servant cannot write into another group'],
-    ['secretariat', 1, 2, false, 'secretariat cannot write into another group'],
+    ['supervisor',  1, 2, false, 'supervisor cannot write into another group'],
+    ['super_user',  1, 2, false, 'legacy role cannot write into another group'],
     ['trainee',     3, 3, true,  'trainee writing to its own group'],
     ['servant',     1, 1, true,  'servant writing to its own group'],
-    ['admin',       1, 3, true,  'admin is global'],
-    ['super_user',  1, 3, true,  'super_user is global'],
+    ['admin',       1, 3, true,  'current admin is global'],
 ];
 foreach ($groupCases as [$role, $own, $target, $should, $why]) {
     $user   = actorFromToken('u-' . $role, $role, $own);
@@ -211,7 +215,7 @@ echo "\n=== 4. Suspended account handling ===\n";
 // A suspended user still holds a cryptographically valid token, so the check has
 // to happen in the middleware. authenticate() exits on refusal, so this runs in a
 // child process: the verdict line is present only if the token was accepted.
-function tokenAccepted(array $meta, ?string $expectRole = null): bool {
+function tokenAccepted(array $meta, ?string $expectRole = null, ?array $liveProfile = null): bool {
     $now = time();
     $tok = JWT::encode([
         'aud' => 'authenticated', 'exp' => $now + 3600, 'iat' => $now,
@@ -219,10 +223,17 @@ function tokenAccepted(array $meta, ?string $expectRole = null): bool {
         'app_metadata' => $meta,
     ], TEST_SECRET, 'HS256');
 
+    $profile = $liveProfile ?? [
+        'id' => 'u-test',
+        'role_id' => $meta['role'] ?? 'trainee',
+        'group_id' => $meta['group_id'] ?? null,
+        'is_active' => $meta['is_active'] ?? true,
+        'deleted_at' => null,
+    ];
     $out = (string) shell_exec(
         escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg(__DIR__ . '/gate_probe.php')
       . ' token ' . escapeshellarg(base64_encode((string) json_encode([
-            'token' => $tok, 'expectRole' => $expectRole,
+            'token' => $tok, 'expectRole' => $expectRole, 'profile' => $profile,
       ])))
       . ' 2>&1');
     return trim($out) === 'ALLOWED';
@@ -234,6 +245,16 @@ check('suspended admin token is REFUSED',    !tokenAccepted(['role' => 'admin', 
 check('is_active absent -> treated as active', tokenAccepted(['role' => 'servant', 'group_id' => 2], 'servant'));
 check('is_active sent as the string "false" is REFUSED',
       !tokenAccepted(['role' => 'servant', 'group_id' => 2, 'is_active' => 'false'], 'servant'));
+check('stale admin claim is replaced by live supervisor role',
+      tokenAccepted(['role' => 'admin', 'group_id' => 1, 'is_active' => true], 'supervisor', [
+          'id' => 'u-test', 'role_id' => 'supervisor', 'group_id' => 1,
+          'is_active' => true, 'deleted_at' => null,
+      ]));
+check('stale admin claim cannot retain administrator access',
+      !tokenAccepted(['role' => 'admin', 'group_id' => 1, 'is_active' => true], 'admin', [
+          'id' => 'u-test', 'role_id' => 'supervisor', 'group_id' => 1,
+          'is_active' => true, 'deleted_at' => null,
+      ]));
 
 printf("\n=== SUMMARY ===\n%d passed, %d failed, %d warnings\n", $pass, $fail, $warn);
 exit($fail === 0 ? 0 : 1);

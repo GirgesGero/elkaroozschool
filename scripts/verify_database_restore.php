@@ -122,7 +122,7 @@ check('tables_restored surfaced', ($out['tables_restored'] ?? -1) === 2, json_en
 check('accounts_created surfaced', ($out['accounts_created'] ?? -1) === 0);
 check('super_user_preserved surfaced', ($out['super_user_preserved'] ?? -1) === 1);
 check('one RPC call only', count($client->calls) === 1, (string) count($client->calls));
-check('RPC name is restore_database', ($client->calls[0]['fn'] ?? '') === 'restore_database');
+check('RPC name is system_reset_guarded_restore_database', ($client->calls[0]['fn'] ?? '') === 'system_reset_guarded_restore_database');
 check('whole payload in one call', count($client->calls[0]['params']['p_tables'] ?? []) === 2,
     'archive had 2 tables, RPC got ' . count($client->calls[0]['params']['p_tables'] ?? []));
 check('truncate flag forwarded', ($client->calls[0]['params']['p_truncate'] ?? null) === false);

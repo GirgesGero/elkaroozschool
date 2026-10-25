@@ -78,7 +78,7 @@ export default function AttendancePage() {
   const [selectedTraineeId, setSelectedTraineeId] = useState<string | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
-  const isAdminOrSuper = profile?.role_id === 'admin' || profile?.role_id === 'super_user';
+  const isAdminOrSuper = profile?.role_id === 'admin';
 
   const loadSessionsAndTrainees = async (targetGroupId: number) => {
     setLoading(true);

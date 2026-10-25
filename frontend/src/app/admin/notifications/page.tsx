@@ -52,7 +52,7 @@ export default function AdminNotificationsPage() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
   // SRS 8.1: the pastoral (absence) template is admin-only. SRS 8.2 keeps
-  // birthday at admin + super_user. The DB enforces this per row; this flag
+  // Birthday template editing is system-admin-only; RLS independently checks each write.
   // exists so the UI does not offer a control the server will refuse.
   const [canEditPastoral, setCanEditPastoral] = useState(false);
   const [activeTab, setActiveTab] = useState<'TEMPLATES' | 'DAILY_VERSES' | 'DISPATCH'>('TEMPLATES');
@@ -89,7 +89,7 @@ export default function AdminNotificationsPage() {
         .eq('id', user.id)
         .single();
 
-      if (!userProfile || !['admin', 'super_user'].includes(userProfile.role_id)) {
+      if (!userProfile || userProfile.role_id !== 'admin') {
         setIsAdmin(false);
         setLoading(false);
         return;
@@ -97,7 +97,7 @@ export default function AdminNotificationsPage() {
 
       setProfile(userProfile as Profile);
       setIsAdmin(true);
-      setCanEditPastoral(['admin', 'super_user'].includes(userProfile.role_id));
+      setCanEditPastoral(userProfile.role_id === 'admin');
 
       // 1. Fetch Templates
       const { data: tmpls } = await supabase.from('notification_templates').select('*');

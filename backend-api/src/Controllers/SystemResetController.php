@@ -33,6 +33,36 @@ final class SystemResetController
             Response::error('تعذر قراءة حالة عمليات إعادة الضبط المفتوحة.', 'SYSTEM_RESET_STATE_UNAVAILABLE', 503);
         }
         $activeRun = $activeResponse['data'][0] ?? null;
+        $gate = $this->gate();
+        $localGateState = $gate->readState();
+        if ($activeRun === null && $localGateState !== null
+            && str_starts_with($localGateState['run_id'], 'STARTING-')
+            && in_array($localGateState['status'], ['IN_PROGRESS', 'PARTIAL'], true)) {
+            $lease = $gate->acquireExclusiveResetLease();
+            $reconcileFailed = false;
+            try {
+                $localGateState = $gate->readState();
+                if ($localGateState !== null && str_starts_with($localGateState['run_id'], 'STARTING-')) {
+                    $confirmed = $db->query('system_reset_runs?actor_id=eq.' . rawurlencode((string) $user['user_id'])
+                        . '&status=in.(PREPARED,MEDIA_CLEANUP,DATA_CLEARED,PARTIAL)&select=id,backup_id,status,data_cleared_at,created_at&order=created_at.desc&limit=1');
+                    if (($confirmed['status'] ?? 0) !== 200 || !is_array($confirmed['data'] ?? null)) {
+                        $reconcileFailed = true;
+                    } else {
+                        $activeRun = $confirmed['data'][0] ?? null;
+                        if ($activeRun === null) {
+                            $gate->clearState();
+                        } else {
+                            $this->setResetGate((string) $activeRun['id'], 'IN_PROGRESS', $user['claims'], false);
+                        }
+                    }
+                }
+            } finally {
+                $gate->releaseLease($lease);
+            }
+            if ($reconcileFailed) {
+                Response::error('تعذر مزامنة حالة بدء إعادة الضبط؛ ظل قفل الكتابة مغلقًا.', 'SYSTEM_RESET_STATE_UNAVAILABLE', 503);
+            }
+        }
         $local = $this->storageService()->inventoryOperationalRoots();
         $drive = $this->auditDrive($db);
         $blockers = [];
@@ -70,6 +100,15 @@ final class SystemResetController
             Response::error('عبارة التأكيد غير مطابقة. لم يبدأ الحذف.', 'SYSTEM_RESET_CONFIRMATION_REQUIRED', 400);
         }
 
+        $executionGate = $this->gate();
+        $executionLease = $executionGate->acquireResetExecutionLease();
+        register_shutdown_function(static function () use ($executionGate, $executionLease): void {
+            $executionGate->releaseLease($executionLease);
+        });
+        // The mutex may have waited behind a long reset request; re-check freshness
+        // after acquisition rather than trusting auth performed before the wait.
+        $user = $this->requireFreshAdmin();
+
         $actorId = (string) $user['user_id'];
         $db = new SupabaseClient();
         $runId = (string) ($body['run_id'] ?? '');
@@ -91,10 +130,33 @@ final class SystemResetController
                 );
             }
 
-            $runId = (string) $this->rpc($db, 'system_reset_begin', [
-                'p_actor_id' => $actorId,
-                'p_backup_id' => $backupId,
-            ]);
+            $gate = $this->gate();
+            $beginLease = $gate->acquireExclusiveResetLease();
+            $beginFailure = null;
+            $startingId = 'STARTING-' . bin2hex(random_bytes(12));
+            $cutoff = is_numeric($user['claims']['iat'] ?? null) ? (int) $user['claims']['iat'] + 1 : time() + 1;
+            try {
+                // Persist the local fail-closed state before the RPC. Requests that
+                // arrive behind this lease will reject after it is released.
+                $gate->writeState(['run_id' => $startingId, 'status' => 'IN_PROGRESS', 'cutoff_iat' => $cutoff]);
+                $runId = (string) $this->rpc($db, 'system_reset_begin', [
+                    'p_actor_id' => $actorId,
+                    'p_backup_id' => $backupId,
+                ]);
+            } catch (Throwable $error) {
+                // The RPC response may be lost after commit. Keep STARTING locked;
+                // preview reconciles it against the authoritative database run.
+                $beginFailure = $error;
+            } finally {
+                $gate->releaseLease($beginLease);
+            }
+            if ($beginFailure !== null) {
+                Response::error(
+                    'حالة بدء العملية غير محسومة؛ أبقينا قفل الكتابة. افتح المعاينة لمزامنة الحالة قبل المتابعة.',
+                    'SYSTEM_RESET_BEGIN_UNCERTAIN',
+                    502
+                );
+            }
             if (!$this->isUuid($runId)) {
                 Response::error('تعذر إنشاء سجل عملية إعادة الضبط.', 'SYSTEM_RESET_RUN_CREATE_FAILED', 502);
             }
@@ -109,7 +171,15 @@ final class SystemResetController
             Response::error('عملية إعادة الضبط غير موجودة أو لا تخص حسابك.', 'SYSTEM_RESET_RUN_NOT_FOUND', 404);
         }
         if (($run['status'] ?? '') === 'COMPLETE') {
-            $this->setResetGate($runId, 'COMPLETE', $user['claims']);
+            $completion = $this->rpc($db, 'system_reset_complete_if_no_users', [
+                'p_actor_id' => $actorId,
+                'p_run_id' => $runId,
+            ]);
+            if (!is_array($completion) || ($completion['status'] ?? null) !== 'COMPLETE'
+                || !is_numeric($completion['auth_cutoff_iat'] ?? null)) {
+                Response::error('حالة اكتمال العملية غير متسقة؛ ظل قفل الكتابة مغلقًا.', 'SYSTEM_RESET_STATE_UNAVAILABLE', 503);
+            }
+            $this->setResetGate($runId, 'COMPLETE', $user['claims'], false, (int) $completion['auth_cutoff_iat']);
             Response::success(['run_id' => $runId, 'status' => 'COMPLETE'], 'عملية إعادة الضبط مكتملة بالفعل');
         }
 
@@ -202,7 +272,11 @@ final class SystemResetController
                 ], 'تم حذف دفعة حسابات؛ اضغط متابعة لإكمال العملية');
             }
 
-            $this->setResetGate($runId, 'COMPLETE', $user['claims'], false);
+            $cutoff = $userResult['auth_cutoff_iat'] ?? null;
+            if (!is_numeric($cutoff)) {
+                throw new \RuntimeException('SYSTEM_RESET_AUTH_CUTOFF_MISSING');
+            }
+            $this->setResetGate($runId, 'COMPLETE', $user['claims'], false, (int) $cutoff);
             Response::success([
                 'run_id' => $runId,
                 'status' => 'COMPLETE',
@@ -435,6 +509,11 @@ final class SystemResetController
                 $deleted = false;
                 $errorCode = null;
                 try {
+                    $this->rpc($db, 'system_reset_authorize_auth_delete', [
+                        'p_actor_id' => $actorId,
+                        'p_run_id' => $runId,
+                        'p_user_id' => $targetId,
+                    ]);
                     $outcome = $auth->deleteUser($targetId);
                     $deleted = (bool) $outcome['success'];
                     $errorCode = $outcome['error_code'];
@@ -472,6 +551,9 @@ final class SystemResetController
             'pending' => (int) ($statusResult['pending'] ?? 0),
             'failed' => (int) ($statusResult['failed'] ?? 0),
             'status' => (string) ($statusResult['status'] ?? ''),
+            'auth_cutoff_iat' => is_numeric($statusResult['auth_cutoff_iat'] ?? null)
+                ? (int) $statusResult['auth_cutoff_iat']
+                : null,
         ];
     }
 
@@ -501,15 +583,23 @@ final class SystemResetController
         ]);
     }
 
-    private function setResetGate(string $runId, string $status, array $claims, bool $onlyIfMissing = true): void
+    private function setResetGate(
+        string $runId,
+        string $status,
+        array $claims,
+        bool $onlyIfMissing = true,
+        ?int $cutoffOverride = null
+    ): void
     {
         $gate = $this->gate();
         $state = $gate->readState();
-        if ($onlyIfMissing && $state !== null && ($state['run_id'] ?? null) === $runId) {
+        if ($onlyIfMissing && $status !== 'COMPLETE' && $state !== null && ($state['run_id'] ?? null) === $runId) {
             return;
         }
-        $cutoff = is_numeric($claims['iat'] ?? null) ? (int) $claims['iat'] + 1 : time() + 1;
-        if ($state !== null && ($state['run_id'] ?? null) === $runId) {
+        $cutoff = $status === 'COMPLETE'
+            ? ($cutoffOverride ?? time() + 1)
+            : (is_numeric($claims['iat'] ?? null) ? (int) $claims['iat'] + 1 : time() + 1);
+        if ($status !== 'COMPLETE' && $state !== null && ($state['run_id'] ?? null) === $runId) {
             $cutoff = (int) $state['cutoff_iat'];
         }
         $gate->writeState(['run_id' => $runId, 'status' => $status, 'cutoff_iat' => $cutoff]);

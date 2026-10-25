@@ -12,7 +12,7 @@ use App\Utils\Response;
 /**
  * Restore endpoints (SRS 25).
  *
- * SRS 24.1 reserves backup and restore to admin and super_user only, so every
+ * Only the current system administrator may execute backups and restores.
  * method authenticates and authorises BEFORE touching the uploaded file — a denied
  * request must never make the server decrypt anything.
  */
@@ -24,7 +24,7 @@ class RestoreController {
      */
     public function preview(): void {
         $user = JwtAuthMiddleware::authenticate();
-        RbacMiddleware::requireAdminOrSuperUser($user);
+        RbacMiddleware::requireSystemAdmin($user);
 
         if (!isset($_FILES['backup_zip'])) {
             Response::error('يرجى اختيار ملف النسخة الاحتياطية', 'FILE_REQUIRED', 400);
@@ -92,7 +92,7 @@ class RestoreController {
      */
     public function execute(): void {
         $user = JwtAuthMiddleware::authenticate();
-        RbacMiddleware::requireAdminOrSuperUser($user);
+        RbacMiddleware::requireSystemAdmin($user);
 
         if (!isset($_FILES['backup_zip'])) {
             Response::error('يرجى اختيار ملف النسخة الاحتياطية', 'FILE_REQUIRED', 400);

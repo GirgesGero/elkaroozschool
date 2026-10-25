@@ -118,7 +118,7 @@ export default function AdminAuditPage() {
         .eq('id', user.id)
         .single();
 
-      if (!pData || !['admin', 'super_user'].includes(pData.role_id)) {
+      if (!pData || pData.role_id !== 'admin') {
         setIsAdmin(false);
         setLoading(false);
         return;

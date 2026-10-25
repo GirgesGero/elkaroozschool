@@ -421,7 +421,7 @@ describe('Mobile Readiness & Capability Layer Suite', () => {
     const trainee = { role_id: 'trainee', group_id: 1 };
 
     const canCreateInGroup = (user: { role_id: string; group_id: number }, targetGroup: number): boolean => {
-      if (user.role_id === 'admin' || user.role_id === 'super_user') return true;
+      if (user.role_id === 'admin') return true;
       if (user.role_id === 'secretariat') return user.group_id === targetGroup;
       return false;
     };

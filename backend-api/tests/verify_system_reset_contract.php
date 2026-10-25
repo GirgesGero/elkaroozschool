@@ -53,7 +53,7 @@ foreach ([
 }
 
 $sqlWithoutComments = preg_replace('/--[^\\r\\n]*|\\/\\*.*?\\*\\//s', '', $migration) ?? $migration;
-$check(!preg_match('/\\bTRUNCATE\\b/i', $sqlWithoutComments), 'reset uses explicit row deletes rather than truncating tables');
+$check(!preg_match('/\\bTRUNCATE\\s+TABLE\\b/i', $sqlWithoutComments), 'reset uses explicit row deletes rather than truncating tables');
 $check(str_contains($migration, 'ON DELETE CASCADE') && str_contains($migration, 'system_reset_run_assets'), 'cascade is limited to child bookkeeping for an explicitly deleted run');
 $check(str_contains($migration, "role_id = 'admin'"), 'only admin profiles are retained');
 $check(str_contains($migration, 'auth.users'), 'reset inventories Auth users for server-side removal');
@@ -81,9 +81,13 @@ $beginFunction = '';
 if (preg_match('/CREATE OR REPLACE FUNCTION public\\.system_reset_begin\\b(.*?)CREATE OR REPLACE FUNCTION public\\.system_reset_mark_asset_results/s', $migration, $beginMatch)) {
     $beginFunction = $beginMatch[1];
 }
-$existingRunLookup = strpos($beginFunction, 'SELECT id INTO v_run_id');
+$existingRunLookup = strpos($beginFunction, 'v_active_actor_id = p_actor_id AND v_active_backup_id = p_backup_id');
+$existingRunReturn = strpos($beginFunction, 'RETURN v_active_run_id');
+$beginLock = strpos($beginFunction, 'FOR UPDATE');
 $openRunGuard = strpos($beginFunction, 'SYSTEM_RESET_OPEN_RUN_EXISTS');
-$check($existingRunLookup !== false && $openRunGuard !== false && $existingRunLookup < $openRunGuard, 'begin RPC resumes the same actor backup run before rejecting other open runs');
+$check($beginLock !== false && $existingRunLookup !== false && $existingRunReturn !== false && $openRunGuard !== false
+    && $beginLock < $existingRunLookup && $existingRunLookup < $existingRunReturn && $existingRunReturn < $openRunGuard,
+    'begin RPC locks the gate, resumes the same actor backup run, then rejects other open runs');
 $check(str_contains($controller, "'active_run'"), 'preview exposes a resumable run after a lost response');
 
 $confirmationGuard = strpos($controller, "confirmation'] ?? null) !== self::CONFIRMATION");

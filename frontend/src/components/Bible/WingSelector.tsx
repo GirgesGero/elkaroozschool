@@ -1,20 +1,10 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import {
-  BookOpen,
-  Search,
-  Map,
-  Church,
-  Sparkles,
-  ArrowRight,
-  FolderTree,
-  LayoutGrid,
-  ChevronDown,
-  ChevronLeft,
-} from 'lucide-react';
-import type { BibleCategory } from '@/lib/api/bible';
+import { ChevronDown, ChevronLeft, Search, Sparkles, FolderTree, LayoutGrid, ArrowRight, BookOpen, Church, Map as MapIcon } from 'lucide-react';
+import type { BibleCategory, BibleSection } from '@/lib/api/bible';
+import { ENCYCLOPEDIA_SECTIONS } from '@/lib/bible/encyclopedia-sections';
 
 interface WingSelectorProps {
   categories: BibleCategory[];
@@ -71,7 +61,7 @@ export default function WingSelector({
       label: 'التفاسير والعلوم الآبائية',
     },
     refs: {
-      icon: Map,
+      icon: MapIcon,
       bgGradient: 'from-emerald-950/25 via-canvas to-emerald-950/10',
       borderClass: 'border-emerald-500/30 hover:border-emerald-500/70',
       accentText: 'text-emerald-400',

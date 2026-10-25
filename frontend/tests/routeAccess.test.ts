@@ -12,14 +12,14 @@
 import { describe, it, expect } from 'vitest';
 import { canAccessPath, requiredRolesFor, isKnownRole, roleFromVerifiedClaims, type AppRole } from '@/lib/auth/routeAccess';
 
-const ALL_ROLES: AppRole[] = ['admin', 'super_user', 'secretariat', 'servant', 'trainee'];
+const ALL_ROLES: AppRole[] = ['admin', 'supervisor', 'secretariat', 'servant', 'trainee'];
 
 describe('requiredRolesFor', () => {
-  it('gates the admin section to admin and super_user', () => {
-    expect(requiredRolesFor('/admin')).toEqual(['admin', 'super_user']);
-    expect(requiredRolesFor('/admin/backups')).toEqual(['admin', 'super_user']);
-    expect(requiredRolesFor('/admin/imports')).toEqual(['admin', 'super_user']);
-    expect(requiredRolesFor('/admin/notifications')).toEqual(['admin', 'super_user']);
+  it('gates the admin section to the system administrator', () => {
+    expect(requiredRolesFor('/admin')).toEqual(['admin']);
+    expect(requiredRolesFor('/admin/backups')).toEqual(['admin']);
+    expect(requiredRolesFor('/admin/imports')).toEqual(['admin']);
+    expect(requiredRolesFor('/admin/notifications')).toEqual(['admin']);
   });
 
   it('leaves ungated pages open to any signed-in role', () => {
@@ -48,11 +48,10 @@ describe('canAccessPath', () => {
     }
   });
 
-  it('admits both admin and super_user to every admin page', () => {
-    for (const role of ['admin', 'super_user'] as AppRole[]) {
-      for (const path of ['/admin', '/admin/backups', '/admin/imports', '/admin/notifications']) {
-        expect(canAccessPath(role, path)).toBe(true);
-      }
+  it('admits only the system administrator to every admin page', () => {
+    for (const path of ['/admin', '/admin/backups', '/admin/imports', '/admin/notifications']) {
+      expect(canAccessPath('admin', path)).toBe(true);
+      expect(canAccessPath('supervisor', path)).toBe(false);
     }
   });
 
@@ -79,7 +78,7 @@ describe('canAccessPath', () => {
   it('denies a gated path when the role is missing or unrecognised', () => {
     // The claim can be absent if the mirror trigger has not run, and a role the app
     // does not know must never be treated as safe.
-    for (const bad of [undefined, null, '', 'ADMIN', 'root', 'owner', 0, 1, {}]) {
+    for (const bad of [undefined, null, '', 'ADMIN', 'root', 'owner', 'super_user', 0, 1, {}]) {
       expect(canAccessPath(bad, '/admin')).toBe(false);
     }
   });
@@ -121,7 +120,7 @@ describe('roleFromVerifiedClaims', () => {
 describe('isKnownRole', () => {
   it('recognises exactly the five application roles', () => {
     for (const role of ALL_ROLES) expect(isKnownRole(role)).toBe(true);
-    for (const role of ['moderator', 'superuser', 'ADMIN', '', null, undefined, 1]) {
+    for (const role of ['moderator', 'superuser', 'super_user', 'ADMIN', '', null, undefined, 1]) {
       expect(isKnownRole(role)).toBe(false);
     }
   });
@@ -132,22 +131,22 @@ describe('full role-by-path matrix', () => {
   // reads its expectations out of the code under test cannot fail, so it would only ever
   // confirm that the implementation agrees with itself.
   const expected: Record<string, AppRole[]> = {
-    '/admin': ['admin', 'super_user'],
-    '/admin/backups': ['admin', 'super_user'],
-    '/admin/imports': ['admin', 'super_user'],
-    '/admin/notifications': ['admin', 'super_user'],
-    '/trainees': ['admin', 'super_user', 'secretariat', 'servant'],
-    '/attendance': ['admin', 'super_user', 'secretariat', 'servant'],
-    '/exams': ['admin', 'super_user', 'secretariat', 'servant'],
-    '/marathon/manage': ['admin', 'super_user', 'servant', 'secretariat'],
-    '/': ['admin', 'super_user', 'secretariat', 'servant', 'trainee'],
-    '/books': ['admin', 'super_user', 'secretariat', 'servant', 'trainee'],
-    '/bible': ['admin', 'super_user', 'secretariat', 'servant', 'trainee'],
-    '/marathon': ['admin', 'super_user', 'secretariat', 'servant', 'trainee'],
-    '/gallery': ['admin', 'super_user', 'secretariat', 'servant', 'trainee'],
-    '/favorites': ['admin', 'super_user', 'secretariat', 'servant', 'trainee'],
-    '/mp3': ['admin', 'super_user', 'secretariat', 'servant', 'trainee'],
-    '/research': ['admin', 'super_user', 'secretariat', 'servant', 'trainee'],
+    '/admin': ['admin'],
+    '/admin/backups': ['admin'],
+    '/admin/imports': ['admin'],
+    '/admin/notifications': ['admin'],
+    '/trainees': ['admin', 'supervisor', 'secretariat', 'servant'],
+    '/attendance': ['admin', 'supervisor', 'secretariat', 'servant'],
+    '/exams': ['admin', 'supervisor', 'secretariat', 'servant'],
+    '/marathon/manage': ['admin', 'supervisor', 'servant', 'secretariat'],
+    '/': ['admin', 'supervisor', 'secretariat', 'servant', 'trainee'],
+    '/books': ['admin', 'supervisor', 'secretariat', 'servant', 'trainee'],
+    '/bible': ['admin', 'supervisor', 'secretariat', 'servant', 'trainee'],
+    '/marathon': ['admin', 'supervisor', 'secretariat', 'servant', 'trainee'],
+    '/gallery': ['admin', 'supervisor', 'secretariat', 'servant', 'trainee'],
+    '/favorites': ['admin', 'supervisor', 'secretariat', 'servant', 'trainee'],
+    '/mp3': ['admin', 'supervisor', 'secretariat', 'servant', 'trainee'],
+    '/research': ['admin', 'supervisor', 'secretariat', 'servant', 'trainee'],
   };
 
   it('admits exactly the listed roles on every path', () => {

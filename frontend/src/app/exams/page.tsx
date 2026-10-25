@@ -73,25 +73,20 @@ export default function ExamsPage() {
         const prof = userProfile as Profile;
         setProfile(prof);
 
-        // Check if servant has GRADE_EXAMS or is Admin/Super User
-        let hasGradePerm = ['admin', 'super_user'].includes(prof.role_id);
-        if (prof.role_id === 'servant') {
-          const { data: perm } = await supabase
-            .from('servant_permissions')
-            .select('*')
-            .eq('profile_id', prof.id)
-            .eq('permission_id', 'GRADE_EXAMS')
-            .single();
-          if (perm) hasGradePerm = true;
+        // Check the database-resolved permission; RLS enforces the user's group scope.
+        let hasGradePerm = prof.role_id === 'admin';
+        if (!hasGradePerm) {
+          const { data: perm } = await supabase.rpc('has_servant_permission', { perm_id: 'GRADE_EXAMS' });
+          hasGradePerm = Boolean(perm);
         }
         setCanGrade(hasGradePerm);
 
-        // Fetch Exam for user's group
-        const { data: examsList } = await supabase
-          .from('exams')
-          .select('*')
-          .eq('group_id', prof.group_id)
-          .single();
+        // Fetch Exam for user's group (or first active exam if admin / no group)
+        let examQuery = supabase.from('exams').select('*');
+        if (prof.role_id !== 'admin' && prof.group_id) {
+          examQuery = examQuery.eq('group_id', prof.group_id);
+        }
+        const { data: examsList } = await examQuery.limit(1).maybeSingle();
 
         if (examsList) {
           setExam(examsList);
@@ -103,17 +98,21 @@ export default function ExamsPage() {
               .select('*')
               .eq('exam_id', examsList.id)
               .eq('trainee_id', prof.id)
-              .single();
+              .maybeSingle();
             if (grade) setPersonalGrade(grade);
           } else if (hasGradePerm) {
             // Load all trainees and their grades for staff
-            const { data: trainees } = await supabase
+            let traineesQuery = supabase
               .from('profiles')
               .select('id, full_name, username')
-              .eq('group_id', prof.group_id)
               .eq('role_id', 'trainee')
-              .eq('is_active', true)
-              .order('full_name', { ascending: true });
+              .eq('is_active', true);
+
+            if (prof.role_id !== 'admin' && prof.group_id) {
+              traineesQuery = traineesQuery.eq('group_id', prof.group_id);
+            }
+
+            const { data: trainees } = await traineesQuery.order('full_name', { ascending: true });
 
             const { data: grades } = await supabase
               .from('exam_grades')

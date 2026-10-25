@@ -62,7 +62,7 @@ export default function Mp3Page() {
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
 
-  const canManage = profile && ['admin', 'super_user', 'servant', 'secretariat'].includes(profile.role_id);
+  const canManage = profile && ['admin', 'servant', 'secretariat'].includes(profile.role_id);
 
   useEffect(() => {
     async function init() {
@@ -88,7 +88,7 @@ export default function Mp3Page() {
 
         // Fetch tracks for group
         let trackQuery = supabase.from('mp3_tracks').select('*').is('deleted_at', null);
-        if (!['admin', 'super_user'].includes(prof.role_id)) {
+        if (prof.role_id !== 'admin') {
           trackQuery = trackQuery.eq('group_id', prof.group_id);
         }
 
@@ -162,7 +162,7 @@ export default function Mp3Page() {
 
       // Refresh
       let trackQuery = supabase.from('mp3_tracks').select('*').is('deleted_at', null);
-      if (!['admin', 'super_user'].includes(profile.role_id)) {
+      if (profile.role_id !== 'admin') {
         trackQuery = trackQuery.eq('group_id', profile.group_id);
       }
       const { data: trackList } = await trackQuery.order('created_at', { ascending: false });

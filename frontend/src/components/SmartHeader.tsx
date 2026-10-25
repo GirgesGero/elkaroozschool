@@ -101,8 +101,7 @@ export default function SmartHeader({ profile, onOpenSearch, onOpenProfile }: Sm
     router.push('/login');
   };
 
-  const isAdminOrSuper =
-    profile?.role_id === 'admin' || profile?.role_id === 'super_user';
+  const isAdminOrSuper = profile?.role_id === 'admin';
 
   const THEME_OPTIONS: ThemeOption[] = [
     { id: 'luxury', label: 'الملكي القبطي', Icon: Crown },

@@ -12,11 +12,9 @@ use App\Utils\Response;
 /**
  * Bulk data export (SRS 35).
  *
- * Export is admin-only by product decision: bulk exfiltration of trainee PII
- * (name, phone, birth date) must not be reachable by any group-scoped role. Only
- * admin and super_user keep it; super_user stays global because that is its role
- * everywhere else. This tightens the previous rule that allowed servant and
- * secretariat to export their own group — "contained" is not the requirement.
+ * Export is system-admin-only by product decision: bulk exfiltration of trainee
+ * PII (name, phone, birth date) must not be reachable by any group-scoped role.
+ * The legacy super_user role no longer grants global access.
  */
 class ExportController {
     use SafeFailure;
@@ -85,7 +83,7 @@ class ExportController {
 
     public function exportData(): void {
         $user = JwtAuthMiddleware::authenticate();
-        RbacMiddleware::requireRoles($user, ['admin', 'super_user']);
+        RbacMiddleware::requireSystemAdmin($user);
 
         $entity = (string) ($_GET['entity'] ?? 'trainees');
         $format = strtolower((string) ($_GET['format'] ?? 'csv'));

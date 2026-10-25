@@ -66,7 +66,7 @@ export default function ServantProfileDrawer({
   const [editGroupId, setEditGroupId] = useState<number>(1);
   const [isEditing, setIsEditing] = useState(false);
 
-  const isAdminOrSuper = currentUserProfile?.role_id === 'admin' || currentUserProfile?.role_id === 'super_user';
+  const isAdminOrSuper = currentUserProfile?.role_id === 'admin';
 
   useEffect(() => {
     if (!isOpen || !servantId) return;

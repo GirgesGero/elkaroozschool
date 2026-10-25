@@ -67,26 +67,24 @@ export default function MarathonListPage() {
         const prof = userProfile as Profile;
         setProfile(prof);
 
-        // Check if user has MANAGE_MARATHON
-        let hasManage = ['admin', 'super_user'].includes(prof.role_id);
-        if (prof.role_id === 'servant') {
-          const { data: perm } = await supabase
-            .from('servant_permissions')
-            .select('*')
-            .eq('profile_id', prof.id)
-            .eq('permission_id', 'MANAGE_MARATHON')
-            .single();
-          if (perm) hasManage = true;
+        let hasManage = prof.role_id === 'admin';
+        if (!hasManage) {
+          const { data: perm } = await supabase.rpc('has_servant_permission', { perm_id: 'MANAGE_MARATHON' });
+          hasManage = Boolean(perm);
         }
         setCanManage(hasManage);
 
-        // Fetch Marathons for user's group
-        const { data: mList } = await supabase
+        // Fetch Marathons for user's group (or all active if admin / no group)
+        let mQuery = supabase
           .from('marathons')
           .select('*, marathon_questions(count)')
-          .eq('group_id', prof.group_id)
-          .eq('is_active', true)
-          .order('created_at', { ascending: false });
+          .eq('is_active', true);
+
+        if (prof.role_id !== 'admin' && prof.group_id) {
+          mQuery = mQuery.eq('group_id', prof.group_id);
+        }
+
+        const { data: mList } = await mQuery.order('created_at', { ascending: false });
 
         if (mList) {
           // Fetch trainee progress for each marathon

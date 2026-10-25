@@ -14,7 +14,7 @@ class StorageController {
 
     public function upload(): void {
         $user = JwtAuthMiddleware::authenticate();
-        RbacMiddleware::requireRoles($user, ['admin', 'super_user', 'servant', 'secretariat']);
+        RbacMiddleware::requireRoles($user, ['admin', 'supervisor', 'servant', 'secretariat']);
 
         if (!isset($_FILES['file'])) {
             Response::error('يرجى اختيار ملف لرفعه', 'NO_FILE_PROVIDED', 400);
@@ -101,7 +101,7 @@ class StorageController {
 
     public function delete(): void {
         $user = JwtAuthMiddleware::authenticate();
-        RbacMiddleware::requireAdminOrSuperUser($user);
+        RbacMiddleware::requireSystemAdmin($user);
 
         $body = json_decode(file_get_contents('php://input'), true);
         $filePath = $body['file_path'] ?? '';
@@ -148,7 +148,7 @@ class StorageController {
         $asset = $res['data'][0];
 
         // Scope check
-        $isAdmin = in_array($user['role'], ['admin', 'super_user'], true);
+        $isAdmin = ($user['role'] === 'admin');
         $resourceType = $asset['resource_type'] ?? 'GENERAL';
         $isSystemAsset = in_array($resourceType, ['BACKUP_ARCHIVE', 'IMPORT_FILE'], true);
 

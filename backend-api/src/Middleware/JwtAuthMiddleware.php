@@ -27,7 +27,7 @@ class JwtAuthMiddleware {
         return null;
     }
 
-    public static function authenticate(): array {
+    public static function authenticate(?callable $profileResolver = null): array {
         // Shared hosts (Hostinger runs LiteSpeed) strip the Authorization header from
         // $_SERVER unless the vhost sets `CGIPassAuth On`. Every authenticated route then
         // answers UNAUTHORIZED no matter what token the client sent -- which is
@@ -58,6 +58,38 @@ class JwtAuthMiddleware {
                     if (!is_array($claims)) {
                         $claims = [];
                     }
+
+                    // Resolve mutable authorization state from the database on
+                    // every API request. A still-valid JWT may contain the old
+                    // admin claim immediately after a transfer; never trust that
+                    // stale claim for PHP endpoints backed by service-role calls.
+                    $userId = (string) ($claims['sub'] ?? '');
+                    if ($userId === '') {
+                        Response::error('رمز المصادقة لا يحتوي على هوية مستخدم صالحة', 'INVALID_TOKEN', 401);
+                    }
+                    if ($profileResolver !== null) {
+                        // Explicit seam for deterministic authorization tests.
+                        $profile = $profileResolver($userId);
+                    } else {
+                        $profileRes = (new \App\Services\SupabaseClient())->query(
+                            'profiles?id=eq.' . rawurlencode($userId) . '&select=id,role_id,group_id,is_active,deleted_at'
+                        );
+                        if (($profileRes['status'] ?? 0) !== 200) {
+                            Response::error('تعذر التحقق من صلاحيات الحساب حاليًا', 'AUTHORIZATION_STATE_UNAVAILABLE', 503);
+                        }
+                        $profile = $profileRes['data'][0] ?? null;
+                    }
+                    if (!$profile || ($profile['deleted_at'] ?? null) !== null) {
+                        Response::error('الحساب غير موجود أو لم يعد نشطًا', 'ACCOUNT_UNAVAILABLE', 401);
+                    }
+                    if (($profile['is_active'] ?? false) !== true) {
+                        Response::error('الحساب موقوف. راجع إدارة المدرسة.', 'ACCOUNT_SUSPENDED', 403);
+                    }
+                    $claims['app_metadata'] = is_array($claims['app_metadata'] ?? null)
+                        ? $claims['app_metadata'] : [];
+                    $claims['app_metadata']['role'] = $profile['role_id'];
+                    $claims['app_metadata']['group_id'] = $profile['group_id'];
+                    $claims['app_metadata']['is_active'] = true;
 
                     $storageConfig = require AppRoot::path('config/storage.php');
                     $cutoffFile = rtrim((string) $storageConfig['root_path'], '/\\\\')

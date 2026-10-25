@@ -115,7 +115,7 @@ export default function GroupDetailsPage({ params }: PageProps) {
   const [notice, setNotice] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [updatingAttendance, setUpdatingAttendance] = useState(false);
 
-  const isAdminOrSuper = profile?.role_id === 'admin' || profile?.role_id === 'super_user';
+  const isAdminOrSuper = profile?.role_id === 'admin';
   const isGroupSecretariat = profile?.role_id === 'secretariat' && profile?.group_id === groupId;
   const isGroupServant = profile?.role_id === 'servant' && profile?.group_id === groupId;
   const canMarkAttendance = isAdminOrSuper || isGroupSecretariat;
@@ -221,7 +221,7 @@ export default function GroupDetailsPage({ params }: PageProps) {
         setProfile(prof);
 
         // Security check: If not Admin/Super and trying to access other group, enforce isolation
-        if (!['admin', 'super_user'].includes(prof.role_id) && prof.group_id !== groupId) {
+        if (prof.role_id !== 'admin' && prof.group_id !== groupId) {
           router.push(`/groups/${prof.group_id}`);
           return;
         }

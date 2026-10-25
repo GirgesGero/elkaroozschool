@@ -46,7 +46,11 @@ if ($mode === 'group') {
     // authenticate() ends in exit() on failure, so reaching the echo at all is
     // the proof that the token was accepted.
     $_SERVER['HTTP_AUTHORIZATION'] = 'Bearer ' . ($args['token'] ?? '');
-    $actor = \App\Middleware\JwtAuthMiddleware::authenticate();
+    $profile = $args['profile'] ?? null;
+    $resolver = is_array($profile)
+        ? static fn(string $id): array => $profile
+        : null;
+    $actor = \App\Middleware\JwtAuthMiddleware::authenticate($resolver);
     if (($actor['role'] ?? null) === ($args['expectRole'] ?? null)) {
         echo 'EK_AUTHENTICATED';
     } else {

@@ -1,0 +1,481 @@
+<style>
+    /* ==========================================================================
+       CSS RESET & LUXURY SACRED PALETTE
+       ========================================================================== */
+    :root {
+      --bg-dark: #020614;
+      --bg-midnight: #071026;
+      --card-bg: rgba(9, 20, 50, 0.84);
+      --card-border: rgba(218, 178, 60, 0.42);
+      --card-border-hover: rgba(252, 222, 128, 0.95);
+      --gold: #dab23c;
+      --gold-bright: #fcde80;
+      --gold-glow: rgba(218, 178, 60, 0.45);
+      --cyan: #00c4ec;
+      --cyan-bright: #4fe3ff;
+      --cyan-glow: rgba(0, 196, 236, 0.45);
+      --burgundy: #8e143a;
+      --crimson: #e13244;
+      --emerald: #10c48a;
+      --emerald-bright: #38efb0;
+      --white: #ffffff;
+      --muted: #d5e1f0;
+      --font-main: 'Cairo', 'Dubai', 'Segoe UI', Tahoma, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--white);
+      font-family: var(--font-main);
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+      user-select: none;
+      cursor: default;
+    }
+
+    /* Interactive Golden Dust Particles Canvas */
+    #particleCanvas {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* Ambient Glowing Orbs Background */
+    .ambient-bg {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 1;
+      overflow: hidden;
+    }
+    .orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(75px);
+      opacity: 0.65;
+      animation: floatOrb 18s ease-in-out infinite alternate;
+    }
+    .orb-1 {
+      top: -160px;
+      left: -160px;
+      width: 780px;
+      height: 780px;
+      background: radial-gradient(circle, rgba(16, 46, 110, 0.65) 0%, rgba(2, 6, 20, 0) 70%);
+      animation-duration: 22s;
+    }
+    .orb-2 {
+      bottom: -180px;
+      right: -180px;
+      width: 820px;
+      height: 820px;
+      background: radial-gradient(circle, rgba(142, 20, 58, 0.48) 0%, rgba(2, 6, 20, 0) 70%);
+      animation-duration: 25s;
+    }
+    .orb-3 {
+      top: 30%;
+      right: 25%;
+      width: 550px;
+      height: 550px;
+      background: radial-gradient(circle, rgba(0, 196, 236, 0.25) 0%, rgba(2, 6, 20, 0) 70%);
+      animation-duration: 18s;
+    }
+
+    @keyframes floatOrb {
+      0% { transform: translate(0, 0) scale(1); }
+      50% { transform: translate(45px, -35px) scale(1.08); }
+      100% { transform: translate(-35px, 40px) scale(0.94); }
+    }
+
+    /* ==========================================================================
+       DISTINCT TYPOGRAPHY & TEXT DISPLAY EFFECTS
+       ========================================================================== */
+    .text-liquid-gold {
+      background: linear-gradient(90deg, #dab23c 0%, #fcde80 25%, #ffffff 50%, #fcde80 75%, #dab23c 100%);
+      background-size: 200% auto;
+      color: transparent;
+      -webkit-background-clip: text;
+      background-clip: text;
+      animation: textShimmer 4s linear infinite;
+      text-shadow: 0 4px 20px rgba(218, 178, 60, 0.35);
+    }
+    @keyframes textShimmer {
+      0% { background-position: 200% center; }
+      100% { background-position: -200% center; }
+    }
+
+    .text-cyan-neon {
+      color: var(--cyan-bright);
+      text-shadow: 0 0 12px rgba(0, 196, 236, 0.8), 0 0 28px rgba(0, 196, 236, 0.45);
+    }
+
+    .text-emerald-glow {
+      color: var(--emerald-bright);
+      text-shadow: 0 0 12px rgba(16, 196, 138, 0.8), 0 0 25px rgba(16, 196, 138, 0.4);
+    }
+
+    .text-ruby-glow {
+      color: #ff6b81;
+      text-shadow: 0 0 12px rgba(225, 50, 68, 0.8), 0 0 28px rgba(225, 50, 68, 0.45);
+    }
+
+    .text-depth-3d {
+      color: var(--white);
+      text-shadow: 0 3px 6px rgba(0, 0, 0, 0.9), 0 8px 20px rgba(0, 0, 0, 0.75);
+    }
+
+    /* Presentation Stage Container */
+    .deck-container {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2;
+      cursor: pointer;
+      perspective: 1200px;
+    }
+
+    .slide {
+      position: absolute;
+      width: 100%;
+      max-width: 1620px;
+      height: 920px;
+      max-height: 100vh;
+      padding: 30px 55px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transform-style: preserve-3d;
+      transform-origin: center center;
+    }
+
+    .slide.active {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+    }
+
+    /* Header Bar */
+    .slide-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: relative;
+      padding-bottom: 16px;
+      border-bottom: 2px solid var(--card-border);
+    }
+    .slide-header::after {
+      content: '';
+      position: absolute;
+      bottom: -2px;
+      right: 0;
+      width: 38%;
+      height: 4px;
+      background: linear-gradient(90deg, var(--gold), var(--cyan), transparent);
+      border-radius: 4px;
+      box-shadow: 0 0 14px var(--gold-glow);
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+    }
+    .church-logo {
+      width: 68px;
+      height: 68px;
+      border-radius: 50%;
+      border: 2.5px solid var(--gold);
+      box-shadow: 0 0 22px var(--gold-glow);
+      background-color: #0b1531;
+      object-fit: cover;
+      animation: pulseLogo 4s ease-in-out infinite;
+    }
+    @keyframes pulseLogo {
+      0%, 100% { box-shadow: 0 0 15px var(--gold-glow); transform: scale(1); }
+      50% { box-shadow: 0 0 30px rgba(218, 178, 60, 0.7); transform: scale(1.04); }
+    }
+
+    .slide-title {
+      font-size: 38px;
+      font-weight: 900;
+      color: var(--white);
+      letter-spacing: -0.5px;
+      text-shadow: 0 2px 12px rgba(0,0,0,0.85);
+    }
+
+    .slide-badge {
+      font-size: 18px;
+      font-weight: 800;
+      padding: 10px 24px;
+      border-radius: 35px;
+      background: rgba(14, 30, 68, 0.8);
+      border: 1.5px solid var(--card-border);
+      color: var(--gold-bright);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 0 18px rgba(0, 0, 0, 0.5);
+    }
+
+    
+    .enc-sec-card {
+      transition: border-color 0.25s ease, box-shadow 0.25s ease, background 0.25s ease !important;
+    }
+    .enc-sec-card:hover {
+      background: rgba(20, 42, 90, 0.85) !important;
+      border-color: var(--card-border-hover) !important;
+    }
+    .enc-sec-card.active {
+      background: rgba(24, 52, 110, 0.95) !important;
+      box-shadow: 0 0 16px rgba(0, 196, 236, 0.35) !important;
+    }
+
+    /* Glass Cards with 3D Tilt */
+    .glass-card {
+      background: var(--card-bg);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1.5px solid var(--card-border);
+      border-radius: 24px;
+      box-shadow: 0 20px 45px rgba(0, 0, 0, 0.55);
+      transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.2s ease-out;
+      transform-style: preserve-3d;
+      position: relative;
+      overflow: hidden;
+    }
+    .glass-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 50%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.12), transparent);
+      transform: skewX(-20deg);
+      transition: left 0.75s ease;
+      pointer-events: none;
+    }
+    .glass-card:hover::before {
+      left: 150%;
+    }
+    .glass-card:hover {
+      border-color: var(--card-border-hover);
+      box-shadow: 0 24px 55px rgba(218, 178, 60, 0.35);
+    }
+
+    /* Floating Animation Utility */
+    .floating-anim {
+      animation: floatElement 5s ease-in-out infinite;
+    }
+    .floating-anim-delay {
+      animation: floatElement 5s ease-in-out infinite;
+      animation-delay: 2.5s;
+    }
+    @keyframes floatElement {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+
+    /* Bottom Control Dock */
+    #deckControls {
+      position: fixed;
+      bottom: 18px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 100;
+      background: rgba(9, 21, 51, 0.94);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1.5px solid var(--card-border);
+      border-radius: 45px;
+      padding: 10px 28px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      box-shadow: 0 14px 40px rgba(0,0,0,0.7), 0 0 28px var(--gold-glow);
+    }
+
+    .ctrl-btn {
+      background: transparent;
+      border: 1px solid rgba(218, 178, 60, 0.4);
+      color: var(--white);
+      font-family: var(--font-main);
+      font-size: 16px;
+      font-weight: 800;
+      padding: 9px 20px;
+      border-radius: 22px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      transition: all 0.25s ease;
+    }
+    .ctrl-btn:hover {
+      background: rgba(218, 178, 60, 0.25);
+      border-color: var(--gold-bright);
+      color: var(--gold-bright);
+      box-shadow: 0 0 16px var(--gold-glow);
+      transform: scale(1.05);
+    }
+    .ctrl-btn.primary {
+      background: linear-gradient(135deg, var(--gold), #b89127);
+      color: #040918;
+      border: none;
+      font-weight: 900;
+      box-shadow: 0 0 20px var(--gold-glow);
+    }
+    .ctrl-btn.primary:hover {
+      background: linear-gradient(135deg, #fcde80, var(--gold));
+      transform: scale(1.07);
+    }
+
+    .dots-container {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+    }
+    .dot-step {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.28);
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    .dot-step:hover {
+      background: var(--gold-bright);
+      transform: scale(1.3);
+    }
+    .dot-step.active {
+      width: 32px;
+      border-radius: 10px;
+      background: linear-gradient(90deg, var(--gold), var(--gold-bright));
+      box-shadow: 0 0 14px var(--gold-glow);
+    }
+
+    .slide-counter {
+      font-size: 17px;
+      font-weight: 900;
+      color: var(--muted);
+      min-width: 55px;
+      text-align: center;
+    }
+
+    /* Progress Bar */
+    .progress-bar-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 5px;
+      background: rgba(255, 255, 255, 0.08);
+      z-index: 110;
+    }
+    .progress-bar {
+      height: 100%;
+      width: 11.1%;
+      background: linear-gradient(90deg, var(--cyan), var(--gold), var(--gold-bright));
+      box-shadow: 0 0 16px var(--gold-glow);
+      transition: width 0.4s ease;
+    }
+
+    /* Footer Metadata */
+    .slide-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-top: 14px;
+      border-top: 1px solid rgba(218, 178, 60, 0.25);
+      font-size: 16px;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    /* Interactive Golden Sparkle Click Particles */
+    .sparkle-particle {
+      position: fixed;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--gold-bright);
+      box-shadow: 0 0 12px var(--gold-bright), 0 0 22px var(--gold);
+      pointer-events: none;
+      z-index: 9999;
+    }
+    .click-ripple {
+      position: fixed;
+      border: 2.5px solid var(--gold-bright);
+      border-radius: 50%;
+      pointer-events: none;
+      transform: translate(-50%, -50%) scale(0);
+      z-index: 9998;
+      box-shadow: 0 0 30px var(--gold-glow);
+    }
+
+    /* Real Screen Frame Styles */
+    .screen-mockup-frame {
+      border-radius: 20px;
+      overflow: hidden;
+      border: 2px solid rgba(218, 178, 60, 0.48);
+      background: #020617;
+      box-shadow: 0 20px 45px rgba(0, 0, 0, 0.7), 0 0 32px rgba(218, 178, 60, 0.2);
+      position: relative;
+    }
+    .screen-mockup-header {
+      background: rgba(15, 23, 42, 0.96);
+      padding: 10px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(218, 178, 60, 0.28);
+    }
+    .browser-dots {
+      display: flex;
+      gap: 8px;
+    }
+    .browser-dot {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+    }
+    .browser-dot.red { background: #ef4444; }
+    .browser-dot.yellow { background: #f59e0b; }
+    .browser-dot.green { background: #10b981; }
+
+    .browser-address {
+      font-family: var(--font-main);
+      font-size: 14.5px;
+      font-weight: 800;
+      color: var(--gold-bright);
+      background: rgba(0, 0, 0, 0.5);
+      padding: 4px 18px;
+      border-radius: 16px;
+      border: 1px solid rgba(218, 178, 60, 0.35);
+    }
+
+    /* Official Church Stamp/Badge */
+    .church-seal {
+      display: inline-flex;
+      align-items: center;
+      gap: 14px;
+      padding: 12px 26px;
+      background: rgba(218, 178, 60, 0.16);
+      border: 2.5px solid var(--gold);
+      border-radius: 40px;
+      box-shadow: 0 0 28px var(--gold-glow);
+    }
+  </style>

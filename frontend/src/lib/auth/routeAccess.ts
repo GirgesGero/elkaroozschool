@@ -13,7 +13,7 @@
  * they still cover in-app navigation, where the middleware has already run.
  */
 
-export type AppRole = 'admin' | 'super_user' | 'secretariat' | 'servant' | 'trainee';
+export type AppRole = 'admin' | 'supervisor' | 'secretariat' | 'servant' | 'trainee';
 
 /**
  * Paths that require a specific role. A path not listed here needs only a signed-in
@@ -21,23 +21,23 @@ export type AppRole = 'admin' | 'super_user' | 'secretariat' | 'servant' | 'trai
  * gated shut.
  */
 const ROLE_RULES: { prefix: string; roles: AppRole[] }[] = [
-  { prefix: '/admin', roles: ['admin', 'super_user'] },
-  { prefix: '/trainees', roles: ['admin', 'super_user', 'secretariat', 'servant'] },
-  { prefix: '/marathon/manage', roles: ['admin', 'super_user', 'servant', 'secretariat'] },
-  { prefix: '/attendance', roles: ['admin', 'super_user', 'secretariat', 'servant'] },
-  { prefix: '/exams', roles: ['admin', 'super_user', 'secretariat', 'servant'] },
+  { prefix: '/admin', roles: ['admin'] },
+  { prefix: '/trainees', roles: ['admin', 'supervisor', 'secretariat', 'servant'] },
+  { prefix: '/marathon/manage', roles: ['admin', 'supervisor', 'servant', 'secretariat'] },
+  { prefix: '/attendance', roles: ['admin', 'supervisor', 'secretariat', 'servant'] },
+  { prefix: '/exams', roles: ['admin', 'supervisor', 'secretariat', 'servant'] },
 ];
 
-/** Roles that may administer a group's own members but not the whole platform. */
-export const ADMIN_ONLY: AppRole[] = ['admin', 'super_user'];
+/** Only the single system administrator has system-wide authority. */
+export const ADMIN_ONLY: AppRole[] = ['admin'];
 
-/** Roles whose reach is limited to their own group. */
-export const GROUP_SCOPED: AppRole[] = ['secretariat', 'servant', 'trainee'];
+/** Roles whose reach is limited to their own group unless a DB permission says otherwise. */
+export const GROUP_SCOPED: AppRole[] = ['supervisor', 'secretariat', 'servant', 'trainee'];
 
 export function isKnownRole(value: unknown): value is AppRole {
   return (
     value === 'admin' ||
-    value === 'super_user' ||
+    value === 'supervisor' ||
     value === 'secretariat' ||
     value === 'servant' ||
     value === 'trainee'

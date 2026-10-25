@@ -267,7 +267,7 @@ class StorageBridgeService {
 
         // 3. FALLBACK UPLOADER: Resolve an active admin if uploaded_by is missing
         if (!$uploadedBy) {
-            $adminRes = $supabase->query('profiles?role_id=in.(admin,super_user)&deleted_at=is.null&limit=1');
+            $adminRes = $supabase->query('profiles?role_id=eq.admin&is_active=eq.true&deleted_at=is.null&limit=1');
             $uploadedBy = $adminRes['data'][0]['id'] ?? null;
             if (!$uploadedBy) {
                 throw new \RuntimeException('لا يمكن تسجيل الملف بدون مُحدّد المستخدم (uploaded_by). لم يتم العثور على حساب إداري نشط.');

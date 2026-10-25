@@ -65,7 +65,7 @@ export default function GalleryPage() {
   const [uploading, setUploading] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
 
-  const canManage = profile && ['admin', 'super_user', 'servant', 'secretariat'].includes(profile.role_id);
+  const canManage = profile && ['admin', 'servant', 'secretariat'].includes(profile.role_id);
 
   useEffect(() => {
     async function init() {
@@ -91,7 +91,7 @@ export default function GalleryPage() {
 
         // Fetch albums for group (or all if admin)
         let albQuery = supabase.from('gallery_albums').select('*').is('deleted_at', null);
-        if (!['admin', 'super_user'].includes(prof.role_id)) {
+        if (prof.role_id !== 'admin') {
           albQuery = albQuery.eq('group_id', prof.group_id);
         }
 
@@ -100,7 +100,7 @@ export default function GalleryPage() {
 
         // Fetch photos for group
         let photoQuery = supabase.from('gallery_items').select('*').is('deleted_at', null);
-        if (!['admin', 'super_user'].includes(prof.role_id)) {
+        if (prof.role_id !== 'admin') {
           photoQuery = photoQuery.eq('group_id', prof.group_id);
         }
 
@@ -133,7 +133,7 @@ export default function GalleryPage() {
 
       // Refresh photos
       let photoQuery = supabase.from('gallery_items').select('*').is('deleted_at', null);
-      if (!['admin', 'super_user'].includes(profile.role_id)) {
+      if (profile.role_id !== 'admin') {
         photoQuery = photoQuery.eq('group_id', profile.group_id);
       }
       const { data: photoList } = await photoQuery.order('created_at', { ascending: false });

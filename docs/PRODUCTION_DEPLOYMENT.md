@@ -189,9 +189,9 @@ Enforced in four independent layers. Hiding a UI element is *not* one of them.
 
 | Layer | Mechanism |
 |---|---|
-| Supabase RLS | `pg_policies` on every content table, scoping by `group_id` via `get_current_user_group()` |
-| Postgres functions | `is_admin_or_super_user()`, `is_secretariat_of_group()`, `has_servant_permission()` |
-| PHP API | `JwtAuthMiddleware` → `RbacMiddleware::requireRoles()` → `GroupScopeMiddleware::enforceGroupScope()` |
+| Supabase RLS | `pg_policies` on content tables, scoping group operations by `group_id` and explicit operational permissions |
+| Postgres functions | `is_system_admin()`; `is_admin_or_super_user()` remains only as a compatibility name and resolves to the current system admin |
+| PHP API | `JwtAuthMiddleware` → `RbacMiddleware::requireSystemAdmin()` / `requireRoles()` → `GroupScopeMiddleware::enforceGroupScope()` |
 | Storage | Files written under `…/group_N/…`; `deleteFile()` refuses to resolve outside the storage root |
 
 **Verified empirically (2026-09-30)** by impersonating each group via
@@ -206,14 +206,51 @@ Enforced in four independent layers. Hiding a UI element is *not* one of them.
 
 ### Roles
 
-- **admin** — all groups; **may** edit Absence Message.
-- **super_user** — all groups; **may not** edit Absence Message. (Deliberate
-  asymmetry — do not "fix" it.)
+- **admin** — the single active system administrator; system-wide access and the only role that can transfer the post or assign the separate general-secretariat permissions.
+- **supervisor** — group-scoped operational role; cannot manage system roles, backup/restore/reset, or other groups without an explicit same-group permission.
+- **general_secretariat** — a separate, audited assignment with an operational allowlist (curriculum, marathon, exam grading, and books); it does not inherit `admin` or system-security powers.
+- **secretariat** — existing group-specific assignment; unchanged by the general-secretariat feature.
 - **servant** — own group, permission-gated via `has_servant_permission()`.
-- **secretariat** — own group only, via `is_secretariat_of_group()`.
+- **trainee** — own learner-facing access.
+- **super_user** — legacy role: the role migration maps existing profiles to `supervisor`; the compatibility helper `is_admin_or_super_user()` resolves only to the current system administrator.
 
 Moving someone to another group immediately strips the old group's access: the
-group id is read from their live claims on every request, never cached.
+live group is read from the authenticated profile/claims on each request, never
+trusted from a user-editable field.
+
+### Role migration runtime release gate
+
+`supabase/migrations/20261023180000_system_admin_and_general_secretariat.sql` has
+static SQL-contract coverage and parser checks. Those checks do **not** prove
+PostgreSQL function compilation, transaction behavior, RLS, grants, or concurrency.
+Before applying it to any live project, run it against a disposable PostgreSQL
+instance and record these outcomes:
+
+1. Seed profiles with one active admin, an inactive undeleted admin, a `super_user`,
+   and group-scoped staff; apply the migration and verify the active-admin index
+   predicate is exactly `role_id = 'admin' AND is_active = true AND deleted_at IS NULL`.
+2. Verify one active admin remains, legacy profiles become `supervisor`, and the
+   inactive legacy admin no longer blocks transfer; force a mid-migration failure
+   and confirm the transaction rolls back completely.
+3. Call `transfer_system_admin` as the current admin, as a supervisor, as a stale
+   admin token, and without an authenticated actor. Run two competing transfer
+   transactions concurrently; assert one committed winner, one active admin at all
+   times, and an audit row for the committed transfer.
+4. Probe RLS with admin, supervisor, group secretariat, general secretariat with
+   and without each allowlisted permission, servant, trainee, `anon`, and
+   `service_role`. Include cross-group reads/writes and denied sensitive role,
+   security-policy, backup, restore, and reset operations.
+5. Run `system_reset_guarded_restore_database` on a fixture archive containing
+   privileged legacy profiles; verify it preserves the current active admin and
+   demotes archived admin/legacy-superuser rows rather than creating a second
+   administrator.
+6. Verify general-secretariat membership/permission changes are audited, cannot
+   be written directly by ordinary roles, and are covered by the system-reset write
+   barrier.
+
+Until those probes pass, a green local suite is evidence of **local code checks**,
+not production authorization readiness. Do not apply the migration or deploy a UI
+that depends on its schema before this gate is closed.
 
 ---
 
@@ -228,8 +265,14 @@ unzip -q php.zip -d phprun
 ```
 
 ```bash
-# 21 checks: autoload, fail-closed config, JWT forgery, traversal, group scope, CORS
+# 116 checks: fail-closed config, JWT/RBAC, export, storage, backup/restore safety
 php scripts/verify_production_security.php
+
+# 85 role/endpoint/group-isolation checks using signed test JWTs
+php scripts/verify_php_role_matrix.php
+
+# 22 static role-migration contracts; does NOT replace PostgreSQL runtime probes
+php backend-api/tests/verify_system_role_management_contract.php
 
 # 16 checks over real HTTP: health, CORS, unauth 401s, forged tokens, traversal
 php scripts/verify_api_http.php 8391

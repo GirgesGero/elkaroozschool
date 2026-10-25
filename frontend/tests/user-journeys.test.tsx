@@ -303,7 +303,7 @@ describe('User Journey & Scenario 3: Smart Navigation & Role-Gated Drawer', () =
     expect(screen.getByText('الصوتيات')).toBeInTheDocument();
   });
 
-  it('shows administration tools only to admin and super_user roles', () => {
+  it('shows administration tools only to the system administrator', () => {
     const onClose = vi.fn();
 
     // Render with canAdmin = true
@@ -356,22 +356,22 @@ describe('User Journey & Scenario 4: Group Hub & Group Filtering Selector', () =
 });
 
 describe('User Journey & Scenario 5: Feed Post Card & Author Identity', () => {
-  it('correctly badges the author role including super_user and admin', () => {
-    const authorSuper = createMockProfile({
+  it('correctly badges the supervisor and administrator roles', () => {
+    const authorSupervisor = createMockProfile({
       id: 'super-1',
       full_name: 'أستاذ سامي عزيز',
-      role_id: 'super_user',
+      role_id: 'supervisor',
     });
 
     const mockPost = {
       id: 'post-1',
-      author_id: authorSuper.id,
+      author_id: authorSupervisor.id,
       content: 'نحيطكم علماً بأن مسابقة سفر الرؤيا ستبدأ يوم الجمعة القادم.',
       post_type: 'ANNOUNCEMENT',
       group_id: 1,
       images: [],
       created_at: '2026-10-10T12:00:00Z',
-      author: authorSuper,
+      author: authorSupervisor,
       post_comments: [],
     };
 
@@ -392,6 +392,6 @@ describe('User Journey & Scenario 5: Feed Post Card & Author Identity', () => {
 
     // Clicking author opens author profile
     fireEvent.click(screen.getByText('أستاذ سامي عزيز'));
-    expect(handleOpenProfile).toHaveBeenCalledWith('super-1', 'super_user');
+    expect(handleOpenProfile).toHaveBeenCalledWith('super-1', 'supervisor');
   });
 });
