@@ -27,6 +27,7 @@ import {
   Clock,
   ShieldAlert,
 } from 'lucide-react';
+import ChurchBanner from '@/components/ChurchBanner';
 
 function LoginFormContent() {
   const router = useRouter();
@@ -245,7 +246,10 @@ function LoginFormContent() {
       </header>
 
       {/* Main Facebook-Style 2-Column Container */}
-      <main className="relative z-10 max-w-6xl w-full mx-auto my-auto px-4 py-8 sm:py-12">
+      <main className="relative z-10 max-w-6xl w-full mx-auto my-auto px-4 py-6 sm:py-10">
+        {/* Ecclesiastical Hierarchy Banner (مطرانية شبرا الخيمة • البابا تواضروس • الأنبا مرقس) */}
+        <ChurchBanner size="md" className="mb-8" />
+
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
           
           {/* Right Side in RTL: Hero & Recent One-Click Accounts (col-span-7) */}

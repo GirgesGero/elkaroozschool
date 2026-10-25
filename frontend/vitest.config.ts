@@ -24,6 +24,7 @@ export default defineConfig({
     // tests/**/*.test.ts, which cannot run a .tsx file at all -- a component suite could
     // have been written, never executed, and reported as no failures.
     include: ['tests/**/*.test.ts', 'tests/**/*.test.tsx'],
+    pool: 'forks',
 
     setupFiles: ['./tests/setup.ts'],
   },

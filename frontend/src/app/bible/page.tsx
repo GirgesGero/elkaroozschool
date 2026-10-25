@@ -11,6 +11,7 @@ import GlobalSearchModal from '@/components/GlobalSearchModal';
 import UnifiedProfileModal from '@/components/UnifiedProfileModal';
 import TenSectionSelector from '@/components/Bible/TenSectionSelector';
 import BibleSearchModal from '@/components/Bible/BibleSearchModal';
+import ChurchBanner from '@/components/ChurchBanner';
 import {
   getBibleCategories,
   getBibleStats,
@@ -541,6 +542,9 @@ function BiblePageContent() {
 
       {/* Main Container */}
       <main className="max-w-6xl w-full mx-auto px-4 py-6 flex-1 flex flex-col gap-6 pb-28 md:pb-12">
+        {/* Ecclesiastical Hierarchy Banner (مطرانية شبرا الخيمة • البابا تواضروس • الأنبا مرقس) */}
+        <ChurchBanner size="md" className="border-2 border-gold/40 shadow-xl" />
+
         {/* Top Header & Navigation Mode Switcher */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-3xl bg-nav/95 border-2 border-gold/40 shadow-xl backdrop-blur-xl">
           <div className="space-y-1">
