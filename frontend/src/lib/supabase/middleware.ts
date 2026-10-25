@@ -8,6 +8,7 @@ function isPublicPath(pathname: string): boolean {
     pathname.startsWith('/login') ||
     pathname.startsWith('/bible') ||
     pathname.startsWith('/about') ||
+    pathname.startsWith('/presentation') ||
     pathname.startsWith('/icons') ||
     pathname.startsWith('/api/health') ||
     // The encyclopedia dataset is static .gz served straight from public/.
