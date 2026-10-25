@@ -1,3 +1,5 @@
+BEGIN;
+
 -- 20261024100000_attendance_thursday_freeze.sql
 -- Enforce Friday-to-Wednesday cycle and Thursday mandatory lock on attendance records
 
@@ -55,3 +57,5 @@ CREATE TRIGGER trg_attendance_thursday_freeze
     BEFORE INSERT OR UPDATE ON public.attendance_records
     FOR EACH ROW
     EXECUTE FUNCTION public.check_attendance_thursday_lock();
+
+COMMIT;
