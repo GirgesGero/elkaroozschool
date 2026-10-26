@@ -6,7 +6,7 @@
 
 ## 1. حدود الفحص والبيئة (تم التحقق والتصنيف: STAGING)
 
-- **تطابق الهوية والهدف:** طابق host الذي أعاده `get_project_url` (`kgqgnqjkrghvktymbimz.supabase.co`) مع إعداد `frontend/.env.local` ومع حزم JavaScript المنشورة فعليًا على Vercel (`https://elkaroozschool-seven.vercel.app`).
+- **تطابق الهوية والهدف:** طابق host الذي أعاده `get_project_url` (`kgqgnqjkrghvktymbimz.supabase.co`) مع إعداد `frontend/.env.local` ومع حزم JavaScript المنشورة فعليًا على Vercel (`https://elkaroozschool1.vercel.app`).
 - **تصنيف البيئة (STAGING):** أثبت التدقيق الميداني لقاعدة البيانات أن جميع المستخدمين الـ50 هم حسابات اختبار نمطية (`trainee_g2_*`, `servant_g3_*`, `admin_user`, إلخ) وأن سجلات التدقيق والبيانات لا تحوي أي نشاط مستخدمين حقيقي بعد 28 سبتمبر 2026. تم توثيق التصنيف رسميًا في `docs/ENVIRONMENT_CLASSIFICATION.md`.
 - **حالة الـ Migrations:** السجل الحي يحوي **69 إصدارًا فريدًا**؛ يقابله محليًا **31 ملف migration**: 28 تاريخيًا، و migration إصلاح Phase 0 (`20261004141649_phase0_post_image_and_reactor_visibility.sql`) المسجلة في الـ ledger، واثنان proposals محليان غير مطبقين (`create_media_assets` و `harden_marathon_and_audit_rpcs`).
 - **نطاق النشر:** Vercel frontend منشور ويعمل بنجاح (HTTP 200 على `/login`). بوابة PHP على `is-best.net` محجوبة بتحدي الحماية المجاني `aes.js` وليست بيئة Hostinger الإنتاجية بعد؛ الكود البرمجي للـ PHP API مكتمل ومختبر محليًا بنسبة 100%.

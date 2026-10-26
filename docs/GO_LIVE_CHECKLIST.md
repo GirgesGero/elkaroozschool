@@ -538,8 +538,8 @@ DNS: elkaroozschool.is-best.net → 185.27.134.59   (الاسم شغّال)
 |---|---|---|
 | `elkaroozschool.is-best.net` HTTPS | `rc=56` schannel: server closed abruptly | ❌ لا يستجيب |
 | `elkaroozschool.is-best.net` HTTP | `rc=52` Empty reply from server | ❌ لا يستجيب |
-| `elkaroozschool-seven.vercel.app/` | `307` redirect | ⚠️ |
-| `elkaroozschool-seven.vercel.app/login` | `200` | ✅ الصفحة تُخدَم |
+| `elkaroozschool1.vercel.app/` | `307` redirect | ⚠️ |
+| `elkaroozschool1.vercel.app/login` | `200` | ✅ الصفحة تُخدَم |
 | Supabase auth (anon key) | `400 validation_failed` — **ليس** `401` | ✅ **المفتاح صالح و Auth متاح** |
 | قاعدة البيانات | `50/50` جدول بـ RLS، `rls_off = 0` | ✅ |
 | `profiles` المحذوف softly | `0` صف | لا أثر حالي — لا يوجد حساب محذوف |

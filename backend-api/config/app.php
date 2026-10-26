@@ -5,7 +5,6 @@
 // only when APP_ENV is not production, otherwise a developer's machine becomes
 // a trusted CORS origin in a live system.
 $corsOrigins = [
-    'https://elkaroozschool-seven.vercel.app',
     'https://elkaroozschool1.vercel.app',
     'https://elkarooz-school.com',
     'https://www.elkarooz-school.com',

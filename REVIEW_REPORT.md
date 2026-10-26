@@ -34,7 +34,7 @@ $absolute = $backupRoot . '/' . ltrim(str_replace(['..', "\0"], '', $storagePath
 
 ## خطأ 2 — ⚠️ متوسط: CORS لا يشمل الرابط الفعلي للنشر على Vercel
 **الملف:** `backend-api/config/app.php` **السطر:** 7  
-الرابط المسجل هو `https://elkaroozschool-seven.vercel.app` بينما الرابط الفعلي المستخدم (حسب سياق المحادثة) هو `https://elkaroozschool1.vercel.app`. أي طلب من الموقع الفعلي إلى PHP API سيُرفض بخطأ CORS.
+تم اعتماد رابط Vercel الحالي `https://elkaroozschool1.vercel.app` في إعداد CORS واختبارات الإنتاج. يجب نشر تحديث إعداد CORS على خادم PHP حتى يُسمح للواجهة بطلبات API.
 
 **الإصلاح:** إضافة `'https://elkaroozschool1.vercel.app'` إلى مصفوفة `$corsOrigins`.
 

@@ -300,7 +300,7 @@ render لـ React tree والـ11 حالة الناقصة-error-handling مُغ�
 | 6.5 | **اختبار حرّاس web-root على Apache حقيقي** | `config/.htaccess` etc. ترد 403 فعليًا - لا تحقق بنيوي فقط |
 | 6.6 | تسجيل دخول حقيقي على الخادم المنشور | استجابة `200` + `role` صحيح |
 | 6.7 | `POST /restore/execute` من production | round-trip ناجح عبر HTTP، لا عبر SQL مباشر |
-| 6.8 | ضبط CORS بين `elkaroozschool-seven.vercel.app` والـPHP | طلب حقيقي ينجح |
+| 6.8 | ضبط CORS بين `elkaroozschool1.vercel.app` والـPHP | طلب حقيقي ينجح |
 | 6.9 | إعادة بناء Vercel بمتغيرات البيئة | vars على **كل** البيئات، لا Production فقط |
 
 > ### نتيجة فحص 6.2 (2026-10-02) — الرفع تم، لكن الدومين ده مش الاستضافة

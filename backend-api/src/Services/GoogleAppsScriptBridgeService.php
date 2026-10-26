@@ -16,8 +16,10 @@ class GoogleAppsScriptBridgeService
 
     public function __construct(?string $url = null, ?string $token = null, int $timeoutSeconds = 25)
     {
-        $this->scriptUrl = $url ?: getenv('GOOGLE_APPS_SCRIPT_URL');
-        $this->accessToken = $token ?: getenv('GOOGLE_APPS_SCRIPT_TOKEN');
+        $scriptUrl = $url ?: getenv('GOOGLE_APPS_SCRIPT_URL');
+        $accessToken = $token ?: getenv('GOOGLE_APPS_SCRIPT_TOKEN');
+        $this->scriptUrl = is_string($scriptUrl) && $scriptUrl !== '' ? $scriptUrl : null;
+        $this->accessToken = is_string($accessToken) && $accessToken !== '' ? $accessToken : null;
         $this->timeoutSeconds = $timeoutSeconds;
     }
 

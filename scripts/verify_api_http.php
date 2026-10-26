@@ -145,8 +145,8 @@ $leaks = preg_grep(
 printf("[%s] health payload leaks no secrets\n", empty($leaks) ? 'PASS' : 'FAIL');
 
 // ---- 2. CORS: production origin allowed, foreign origin refused --------------
-req('cors_allowed', '/health', ['origin' => 'https://elkaroozschool-seven.vercel.app']);
-expect('cors_allowed', 200, null, 'Access-Control-Allow-Origin: https://elkaroozschool-seven.vercel.app');
+req('cors_allowed', '/health', ['origin' => 'https://elkaroozschool1.vercel.app']);
+expect('cors_allowed', 200, null, 'Access-Control-Allow-Origin: https://elkaroozschool1.vercel.app');
 
 req('cors_foreign', '/health', ['origin' => 'https://evil.example.com']);
 $foreignLeak = str_contains($results['cors_foreign']['headers'], 'https://evil.example.com');

@@ -2,7 +2,7 @@
 
 **Audit date:** 2026-09-30
 **Status:** CONDITIONAL GO — see [Blocking items](#blocking-items-must-be-done-before-launch)
-**Live frontend:** `https://elkaroozschool-seven.vercel.app`
+**Live frontend:** `https://elkaroozschool1.vercel.app`
 **Live API:** `https://elkaroozschool.is-best.net`
 **Supabase:** `https://kgqgnqjkrghvktymbimz.supabase.co`
 
@@ -13,7 +13,7 @@
 ```
 ┌─────────────────────────────────┐      ┌──────────────────────────┐
 │  Vercel (Next.js 14.2.35)       │      │  Hostinger               │
-│  elkaroozschool-seven.vercel.app│      │  elkaroozschool.is-best  │
+│  elkaroozschool1.vercel.app│      │  elkaroozschool.is-best  │
 │                                 │      │  .net (PHP 8.1+)         │
 │  • 22 routes                    │      │                          │
 │  • middleware.ts → auth guard   │      │  public_html/            │
@@ -149,7 +149,7 @@ Push to `main` and Vercel deploys automatically.
 ## 5. Verifying a deployment
 
 ```bash
-BASE=https://elkaroozschool-seven.vercel.app
+BASE=https://elkaroozschool1.vercel.app
 
 # public pages
 curl -s -o /dev/null -w '%{http_code}\n' $BASE/login          # 200

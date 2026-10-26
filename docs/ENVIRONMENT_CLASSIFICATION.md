@@ -20,7 +20,7 @@ Evidence:
   5. مراجع الوسائط (Media Metadata): أعداد محدودة ومطابقة لمجموعات بيانات الاختبار (5 كتب، 5 أبحاث، 8 مناهج، 5 مقاطع صوتية، 5 عناصر معرض، 10 صور منشورات).
 
 Frontend Deployment:
-  - URL: https://elkaroozschool-seven.vercel.app
+  - URL: https://elkaroozschool1.vercel.app
   - Status: يعمل بنجاح (HTTP 200 على /login وكافة المسارات)
   - Compiled Target: https://kgqgnqjkrghvktymbimz.supabase.co
 
@@ -54,7 +54,7 @@ Reason:
 ## تفاصيل الأدلة الفنية المقاسة (Measured Technical Evidence)
 
 ### 1. فحص حزم Vercel المنشورة
-- تم سحب حزم الـ JavaScript المنشورة فعليًا من النطاق المباشر `https://elkaroozschool-seven.vercel.app/login`.
+- تم سحب حزم الـ JavaScript المنشورة فعليًا من النطاق المباشر `https://elkaroozschool1.vercel.app/login`.
 - وُجد أن رابط Supabase المترجم داخل الحزم الحية هو حصريًا: `https://kgqgnqjkrghvktymbimz.supabase.co`.
 - لا يوجد أي تضارب بين إعدادات الـ Local والـ Deployed Frontend والـ Supabase MCP.
 

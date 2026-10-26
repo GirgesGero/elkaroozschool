@@ -236,7 +236,7 @@ check('saveUploadedFile verifies containment after mkdir',
 
 // --------------------------------------------------- 6. CORS is prod-scoped
 $appSrc = file_get_contents($root . '/backend-api/config/app.php');
-check('CORS includes the deployed Vercel origin', str_contains($appSrc, 'elkaroozschool-seven.vercel.app'));
+check('CORS includes the deployed Vercel origin', str_contains($appSrc, 'elkaroozschool1.vercel.app'));
 check('localhost CORS gated behind non-production', str_contains($appSrc, "array_unshift(\$corsOrigins, 'http://localhost:3000')"));
 
 // ------------------------------------- 7. backup/restore/export gap closure
