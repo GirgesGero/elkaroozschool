@@ -9,6 +9,7 @@ $rbacPath = $root . '/backend-api/src/Middleware/RbacMiddleware.php';
 $authPath = $root . '/backend-api/src/Controllers/AuthController.php';
 $uiPath = $root . '/frontend/src/components/SystemRoleManagementPanel.tsx';
 $settingsPath = $root . '/frontend/src/app/settings/page.tsx';
+$coAdminMigrationPath = $root . '/supabase/migrations/20261027150000_co_system_administrators.sql';
 
 $pass = 0;
 $fail = 0;
@@ -19,19 +20,19 @@ function checkContract(string $name, bool $ok): void {
 }
 
 $migration = is_file($migrationPath) ? file_get_contents($migrationPath) : '';
+$coMigration = is_file($coAdminMigrationPath) ? file_get_contents($coAdminMigrationPath) : '';
 $rbac = is_file($rbacPath) ? file_get_contents($rbacPath) : '';
 $auth = is_file($authPath) ? file_get_contents($authPath) : '';
 $ui = is_file($uiPath) ? file_get_contents($uiPath) : '';
 $settings = is_file($settingsPath) ? file_get_contents($settingsPath) : '';
 
 checkContract('migration exists and is transactional', str_contains($migration, 'BEGIN;') && str_contains($migration, 'COMMIT;'));
+checkContract('co-admin migration exists and is transactional', str_contains($coMigration, 'BEGIN;') && str_contains($coMigration, 'COMMIT;'));
 checkContract('legacy super_user role is migrated to supervisor', str_contains($migration, "'super_user'") && str_contains($migration, "'supervisor'"));
-checkContract('one active system admin is constrained', str_contains($migration, 'uq_single_admin') && str_contains($migration, "role_id = 'admin'"));
-$adminIndexDrop = strpos($migration, 'DROP INDEX IF EXISTS public.uq_single_admin;');
-$adminIndexCreate = strpos($migration, 'CREATE UNIQUE INDEX uq_single_admin');
-checkContract('active-admin index replaces the legacy same-name definition',
-    $adminIndexDrop !== false && $adminIndexCreate !== false && $adminIndexDrop < $adminIndexCreate
-    && str_contains($migration, "WHERE role_id = 'admin' AND is_active = true AND deleted_at IS NULL;"));
+checkContract('co-admin migration drops uq_single_admin to allow multiple administrators', str_contains($coMigration, 'DROP INDEX IF EXISTS public.uq_single_admin;'));
+checkContract('grant_system_admin RPC authenticates and grants co-admin role', str_contains($coMigration, 'grant_system_admin') && str_contains($coMigration, 'auth_time') && str_contains($coMigration, 'SYSTEM_ADMIN_GRANT'));
+checkContract('revoke_system_admin RPC protects against removing the last active admin', str_contains($coMigration, 'revoke_system_admin') && str_contains($coMigration, 'Cannot revoke the only active system administrator') && str_contains($coMigration, 'SYSTEM_ADMIN_REVOKE'));
+checkContract('guard trigger protects against deleting or demoting the last active admin', str_contains($coMigration, 'Cannot delete the last remaining active system administrator') && str_contains($coMigration, 'Cannot demote the last remaining active system administrator'));
 checkContract('transfer RPC locks and authenticates current admin', str_contains($migration, 'transfer_system_admin') && str_contains($migration, 'FOR UPDATE') && str_contains($migration, 'auth.uid()'));
 checkContract('transfer RPC requires fresh authentication', str_contains($migration, 'auth_time'));
 checkContract('transfer operation writes audit log', str_contains($migration, 'SYSTEM_ADMIN_TRANSFER') && str_contains($migration, 'audit_logs'));
@@ -49,7 +50,7 @@ checkContract('admin recovery is restricted to trusted database operators and au
 checkContract('appointment writes are included in reset freeze barrier', str_contains($migration, "ARRAY['general_secretariat_members','general_secretariat_permissions']") && str_contains($migration, 'system_reset_write_barrier'));
 checkContract('PHP session response reads effective operational permissions', str_contains($auth, 'general_secretariat_permissions') && str_contains($auth, 'supervisor'));
 checkContract('settings wires the role panel for the current admin only', str_contains($settings, 'SystemRoleManagementPanel') && str_contains($settings, 'isSystemAdmin && profile'));
-checkContract('role panel exposes transfer and general-secretariat operations', str_contains($ui, 'transfer_system_admin') && str_contains($ui, 'admin_set_general_secretariat') && str_contains($ui, 'السكرتارية العامة') && str_contains($ui, 'permissions'));
+checkContract('role panel exposes co-admin and general-secretariat operations', str_contains($ui, 'grant_system_admin') && str_contains($ui, 'admin_set_general_secretariat') && str_contains($ui, 'السكرتارية العامة') && str_contains($ui, 'permissions'));
 
 printf("System role contract: %d passed, %d failed\n", $pass, $fail);
 exit($fail === 0 ? 0 : 1);
