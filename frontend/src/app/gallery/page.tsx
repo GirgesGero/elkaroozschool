@@ -91,20 +91,20 @@ export default function GalleryPage() {
 
         // Fetch albums for group (or all if admin)
         let albQuery = supabase.from('gallery_albums').select('*').is('deleted_at', null);
-        if (prof.role_id !== 'admin') {
+        if (prof.role_id !== 'admin' && prof.group_id) {
           albQuery = albQuery.eq('group_id', prof.group_id);
         }
 
         const { data: albList } = await albQuery.order('created_at', { ascending: false });
         if (albList) setAlbums(albList);
 
-        // Fetch photos for group
+        // Fetch photos for group (bounded to 120 items for performance)
         let photoQuery = supabase.from('gallery_items').select('*').is('deleted_at', null);
-        if (prof.role_id !== 'admin') {
+        if (prof.role_id !== 'admin' && prof.group_id) {
           photoQuery = photoQuery.eq('group_id', prof.group_id);
         }
 
-        const { data: photoList } = await photoQuery.order('created_at', { ascending: false });
+        const { data: photoList } = await photoQuery.order('created_at', { ascending: false }).limit(120);
         if (photoList) setPhotos(photoList);
       }
       setLoading(false);
@@ -133,10 +133,10 @@ export default function GalleryPage() {
 
       // Refresh photos
       let photoQuery = supabase.from('gallery_items').select('*').is('deleted_at', null);
-      if (profile.role_id !== 'admin') {
+      if (profile.role_id !== 'admin' && profile.group_id) {
         photoQuery = photoQuery.eq('group_id', profile.group_id);
       }
-      const { data: photoList } = await photoQuery.order('created_at', { ascending: false });
+      const { data: photoList } = await photoQuery.order('created_at', { ascending: false }).limit(120);
       if (photoList) setPhotos(photoList);
     } else {
       setNotice(`فشل الرفع: ${error.message}`);

@@ -95,7 +95,11 @@ export default function NotificationsPage() {
     if (!profile) return;
     const supabase = createClient();
     setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
-    await supabase.from('notifications').update({ is_read: true }).eq('recipient_id', profile.id);
+    await supabase
+      .from('notifications')
+      .update({ is_read: true })
+      .eq('recipient_id', profile.id)
+      .eq('is_read', false);
   };
 
   const filteredList = notifications.filter((n) => {

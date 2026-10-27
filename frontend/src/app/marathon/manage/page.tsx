@@ -154,20 +154,29 @@ export default function MarathonManagePage() {
     async function loadMarathonDetails() {
       const supabase = createClient();
 
-      // 1. Fetch sections
-      const { data: sections } = await supabase
-        .from('marathon_sections')
-        .select('*')
-        .eq('marathon_id', selectedMarathonId)
-        .eq('status', 'PUBLISHED')
-        .order('order_index', { ascending: true });
-
-      // 2. Fetch questions with options
-      const { data: questions } = await supabase
-        .from('marathon_questions')
-        .select('id, marathon_id, section_id, question_text, question_type, score_weight, order_index, status, marathon_answers(id, answer_text, is_correct, order_index)')
-        .eq('marathon_id', selectedMarathonId)
-        .order('order_index', { ascending: true });
+      // Parallel fetch sections, questions, and submissions
+      const [
+        { data: sections },
+        { data: questions },
+        { data: subs },
+      ] = await Promise.all([
+        supabase
+          .from('marathon_sections')
+          .select('*')
+          .eq('marathon_id', selectedMarathonId)
+          .eq('status', 'PUBLISHED')
+          .order('order_index', { ascending: true }),
+        supabase
+          .from('marathon_questions')
+          .select('id, marathon_id, section_id, question_text, question_type, score_weight, order_index, status, marathon_answers(id, answer_text, is_correct, order_index)')
+          .eq('marathon_id', selectedMarathonId)
+          .order('order_index', { ascending: true }),
+        supabase
+          .from('marathon_trainee_submissions')
+          .select('*, profiles(full_name, username)')
+          .eq('marathon_id', selectedMarathonId)
+          .order('total_score', { ascending: false }),
+      ]);
 
       const mappedQ = (questions || []).map((q: any) => ({
         ...q,
@@ -183,13 +192,6 @@ export default function MarathonManagePage() {
         sections: sections || [],
         questions: mappedQ,
       });
-
-      // 3. Fetch submissions
-      const { data: subs } = await supabase
-        .from('marathon_trainee_submissions')
-        .select('*, profiles(full_name, username)')
-        .eq('marathon_id', selectedMarathonId)
-        .order('total_score', { ascending: false });
 
       if (subs) {
         const mappedSubs: SubmissionRow[] = subs.map((s: any) => ({

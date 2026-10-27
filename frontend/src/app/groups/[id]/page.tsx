@@ -125,33 +125,46 @@ export default function GroupDetailsPage({ params }: PageProps) {
     setLoading(true);
     const supabase = createClient();
 
-    // 1. Group Summary RPC
-    const { data: sumData } = await supabase.rpc('get_group_operational_summary', { p_group_id: gId });
+    // Parallel fetch group operational data (eliminates 7-step waterfall)
+    const [
+      { data: sumData },
+      { data: servData },
+      { data: secData },
+      { data: traineeList },
+      { data: sessList },
+      { data: currList },
+      { data: marList },
+    ] = await Promise.all([
+      supabase.rpc('get_group_operational_summary', { p_group_id: gId }),
+      supabase.rpc('get_group_servants_detailed', { p_group_id: gId }),
+      supabase.rpc('get_group_secretariat_detailed', { p_group_id: gId }),
+      supabase
+        .from('profiles')
+        .select('*')
+        .eq('group_id', gId)
+        .eq('role_id', 'trainee')
+        .order('full_name', { ascending: true }),
+      supabase
+        .from('attendance_sessions')
+        .select('*')
+        .eq('group_id', gId)
+        .order('session_date', { ascending: false }),
+      supabase
+        .from('curriculums')
+        .select('*')
+        .eq('group_id', gId)
+        .is('deleted_at', null),
+      supabase
+        .from('marathons')
+        .select('*, marathon_questions(count)')
+        .eq('group_id', gId)
+        .is('deleted_at', null),
+    ]);
+
     if (sumData) setSummary(sumData);
-
-    // 2. Servants Detailed RPC
-    const { data: servData } = await supabase.rpc('get_group_servants_detailed', { p_group_id: gId });
     if (servData) setServants(servData);
-
-    // 3. Secretariat Detailed RPC
-    const { data: secData } = await supabase.rpc('get_group_secretariat_detailed', { p_group_id: gId });
     if (secData) setSecretariat(secData);
-
-    // 4. Trainees List
-    const { data: traineeList } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('group_id', gId)
-      .eq('role_id', 'trainee')
-      .order('full_name', { ascending: true });
     if (traineeList) setTrainees(traineeList as Profile[]);
-
-    // 5. Attendance Sessions
-    const { data: sessList } = await supabase
-      .from('attendance_sessions')
-      .select('*')
-      .eq('group_id', gId)
-      .order('session_date', { ascending: false });
 
     if (sessList && sessList.length > 0) {
       setSessions(sessList);
@@ -159,26 +172,7 @@ export default function GroupDetailsPage({ params }: PageProps) {
       loadSessionRecords(sessList[0].id);
     }
 
-    // 6. Curriculums
-    //
-    // `lectures(*)` cannot be embedded here: curriculums and lectures have no
-    // foreign key between them (PostgREST answered PGRST200). They only share
-    // term_id/group_id, which is not a relationship it can follow, and joining
-    // on term_id would attach the same lecture to every curriculum in a term.
-    // Lectures are already loaded separately for this group further down.
-    const { data: currList } = await supabase
-      .from('curriculums')
-      .select('*')
-      .eq('group_id', gId)
-      .is('deleted_at', null);
     if (currList) setCurriculums(currList);
-
-    // 7. Marathons
-    const { data: marList } = await supabase
-      .from('marathons')
-      .select('*, marathon_questions(count)')
-      .eq('group_id', gId)
-      .is('deleted_at', null);
     if (marList) setMarathons(marList);
 
     setLoading(false);

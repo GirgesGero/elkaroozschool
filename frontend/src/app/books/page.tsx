@@ -121,25 +121,27 @@ export default function BooksAndResearchPage() {
   const loadLibraryContent = async (userId: string) => {
     const supabase = createClient();
 
-    // 1. Fetch Books
-    const { data: booksData } = await supabase
-      .from('books')
-      .select('*, categories(name_ar)')
-      .is('deleted_at', null)
-      .order('created_at', { ascending: false });
-
-    // 2. Fetch Researches
-    const { data: resData } = await supabase
-      .from('researches')
-      .select('*, categories(name_ar)')
-      .is('deleted_at', null)
-      .order('created_at', { ascending: false });
-
-    // 3. Fetch User Favorites
-    const { data: favs } = await supabase
-      .from('user_favorites')
-      .select('*')
-      .eq('user_id', userId);
+    // Parallel fetch Books, Researches, and User Favorites (eliminates waterfall)
+    const [
+      { data: booksData },
+      { data: resData },
+      { data: favs },
+    ] = await Promise.all([
+      supabase
+        .from('books')
+        .select('*, categories(name_ar)')
+        .is('deleted_at', null)
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('researches')
+        .select('*, categories(name_ar)')
+        .is('deleted_at', null)
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('user_favorites')
+        .select('*')
+        .eq('user_id', userId),
+    ]);
 
     const favSet = new Set((favs || []).map((f) => `${f.item_type}_${f.item_id}`));
 

@@ -86,13 +86,13 @@ export default function Mp3Page() {
         const prof = userProfile as Profile;
         setProfile(prof);
 
-        // Fetch tracks for group
+        // Fetch tracks for group (bounded for performance)
         let trackQuery = supabase.from('mp3_tracks').select('*').is('deleted_at', null);
-        if (prof.role_id !== 'admin') {
+        if (prof.role_id !== 'admin' && prof.group_id) {
           trackQuery = trackQuery.eq('group_id', prof.group_id);
         }
 
-        const { data: trackList } = await trackQuery.order('created_at', { ascending: false });
+        const { data: trackList } = await trackQuery.order('created_at', { ascending: false }).limit(100);
         if (trackList) setTracks(trackList);
       }
       setLoading(false);
@@ -162,10 +162,10 @@ export default function Mp3Page() {
 
       // Refresh
       let trackQuery = supabase.from('mp3_tracks').select('*').is('deleted_at', null);
-      if (profile.role_id !== 'admin') {
+      if (profile.role_id !== 'admin' && profile.group_id) {
         trackQuery = trackQuery.eq('group_id', profile.group_id);
       }
-      const { data: trackList } = await trackQuery.order('created_at', { ascending: false });
+      const { data: trackList } = await trackQuery.order('created_at', { ascending: false }).limit(100);
       if (trackList) setTracks(trackList);
     } else {
       setNotice(`فشل الإضافة: ${error.message}`);

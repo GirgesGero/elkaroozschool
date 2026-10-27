@@ -87,7 +87,7 @@ console.log('\n=== no page may log an audit event as a substitute for doing the 
  * only then reported success. Each is whitelisted by name so the check stays meaningful
  * instead of firing on every correct page.
  */
-const AUDIT_AFTER_REAL_WRITE = ['handleDeleteBackup'];
+const AUDIT_AFTER_REAL_WRITE = ['handleDeleteBackup', 'handleExportTrainees'];
 
 const files = walk(SRC);
 let offenders = [];
@@ -106,6 +106,7 @@ for (const file of files) {
     before.lastIndexOf('const handleRestore'),
     before.lastIndexOf('const handleUpload'),
     before.lastIndexOf('const handleImport'),
+    before.lastIndexOf('const handleExport'),
   );
   const handlerName = handlerStart === -1
     ? null
@@ -131,7 +132,9 @@ const importsPage = readFileSync(join(SRC, 'app', 'admin', 'imports', 'page.tsx'
 check('export does not fake an xlsx filename',
   !/\?\s*['"]csv['"]\s*:\s*['"]csv['"]/.test(importsPage),
   "format === 'csv' ? 'csv' : 'csv' downloads a CSV for every choice");
-check('excel export is not offered', !/handleExportTrainees\(['"]excel['"]\)/.test(importsPage));
+check('excel export is backed by XLSX writer',
+  /XLSX\.utils\.book_new/.test(importsPage),
+  'Excel export must generate real XLSX workbook via XLSX library');
 
 console.log('\n=== the API gateway must be the only PHP entry point ===\n');
 

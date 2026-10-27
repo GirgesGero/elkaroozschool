@@ -130,10 +130,11 @@ export default function SettingsPage() {
     }
   };
 
-  const getGroupName = (gId: number) => {
+  const getGroupName = (gId?: number | null) => {
     if (gId === 1) return 'الفرقة الأولى';
     if (gId === 2) return 'الفرقة الثانية';
-    return 'الفرقة الثالثة';
+    if (gId === 3) return 'الفرقة الثالثة';
+    return 'عام / كافة الفرق';
   };
 
   const reauthenticateForReset = async () => {
