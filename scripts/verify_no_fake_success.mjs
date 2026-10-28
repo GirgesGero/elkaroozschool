@@ -132,9 +132,9 @@ const importsPage = readFileSync(join(SRC, 'app', 'admin', 'imports', 'page.tsx'
 check('export does not fake an xlsx filename',
   !/\?\s*['"]csv['"]\s*:\s*['"]csv['"]/.test(importsPage),
   "format === 'csv' ? 'csv' : 'csv' downloads a CSV for every choice");
-check('excel export is backed by XLSX writer',
-  /XLSX\.utils\.book_new/.test(importsPage),
-  'Excel export must generate real XLSX workbook via XLSX library');
+check('excel export is backed by ExcelJS writer',
+  /ExcelJS\.Workbook/.test(importsPage),
+  'Excel export must generate real XLSX workbook via ExcelJS library');
 
 console.log('\n=== the API gateway must be the only PHP entry point ===\n');
 

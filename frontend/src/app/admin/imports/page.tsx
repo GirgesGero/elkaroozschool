@@ -25,7 +25,6 @@ import {
   History,
 } from 'lucide-react';
 import type { Profile } from '@/types/database';
-import * as XLSX from 'xlsx';
 import { phpApi } from '@/lib/api/php';
 
 interface ImportRecord {
@@ -223,19 +222,29 @@ export default function AdminImportsPage() {
       let exportFilename: string;
 
       if (format === 'excel') {
-        const rows = data.map((p) => ({
-          'اسم المستخدم': p.username,
-          'الاسم بالكامل': p.full_name,
-          'رقم الهاتف': p.phone || '',
-          'اسم الأب / المرشد': p.father_name || '',
-          'تاريخ الميلاد': p.birth_date || '',
-          'الحالة': p.is_active ? 'نشط' : 'موقوف',
-        }));
-        const ws = XLSX.utils.json_to_sheet(rows);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, 'المتدربون');
-        const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-        exportBlob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const ExcelJS = (await import('exceljs')).default;
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet('المتدربون');
+        worksheet.columns = [
+          { header: 'اسم المستخدم', key: 'username', width: 20 },
+          { header: 'الاسم بالكامل', key: 'full_name', width: 30 },
+          { header: 'رقم الهاتف', key: 'phone', width: 18 },
+          { header: 'اسم الأب / المرشد', key: 'father_name', width: 25 },
+          { header: 'تاريخ الميلاد', key: 'birth_date', width: 15 },
+          { header: 'الحالة', key: 'status', width: 12 },
+        ];
+        data.forEach((p) => {
+          worksheet.addRow({
+            username: p.username,
+            full_name: p.full_name,
+            phone: p.phone || '',
+            father_name: p.father_name || '',
+            birth_date: p.birth_date || '',
+            status: p.is_active ? 'نشط' : 'موقوف',
+          });
+        });
+        const buffer = await workbook.xlsx.writeBuffer();
+        exportBlob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
         exportFilename = `trainees_export_${Date.now()}.xlsx`;
       } else {
         const headers = ['username', 'full_name', 'phone', 'father_name', 'birth_date', 'status'];
@@ -250,7 +259,7 @@ export default function AdminImportsPage() {
             p.is_active ? 'نشط' : 'موقوف'
           ].join(','));
         });
-        exportBlob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+        exportBlob = new Blob(['\uFEFF' + csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
         exportFilename = `trainees_export_${Date.now()}.csv`;
       }
 
