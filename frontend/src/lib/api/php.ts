@@ -96,14 +96,35 @@ export async function phpApi<T = unknown>(path: string, options: RequestOptions 
       ...(formData ? { body: formData } : body !== undefined ? { body: JSON.stringify(body) } : {}),
     });
   } catch (err) {
-    const aborted = err instanceof DOMException && err.name === 'AbortError';
-    throw new PhpApiError(
-      aborted
-        ? 'انتهت مهلة الاتصال بالخادم. العملية قد تكون ما زالت تعمل في الخلفية.'
-        : 'تعذّر الاتصال بخادم الـAPI. تحقق من الاتصال وحاول مرة أخرى.',
-      aborted ? 'PHP_API_TIMEOUT' : 'PHP_API_UNREACHABLE',
-      0,
-    );
+    if (typeof window !== 'undefined' && path.startsWith('/system-reset/')) {
+      try {
+        response = await fetch(`/api${path}`, {
+          method,
+          headers,
+          signal: controller.signal,
+          cache: 'no-store',
+          ...(formData ? { body: formData } : body !== undefined ? { body: JSON.stringify(body) } : {}),
+        });
+      } catch {
+        const aborted = err instanceof DOMException && err.name === 'AbortError';
+        throw new PhpApiError(
+          aborted
+            ? 'انتهت مهلة الاتصال بالخادم. العملية قد تكون ما زالت تعمل في الخلفية.'
+            : 'تعذّر الاتصال بخادم الـAPI. تحقق من الاتصال وحاول مرة أخرى.',
+          aborted ? 'PHP_API_TIMEOUT' : 'PHP_API_UNREACHABLE',
+          0,
+        );
+      }
+    } else {
+      const aborted = err instanceof DOMException && err.name === 'AbortError';
+      throw new PhpApiError(
+        aborted
+          ? 'انتهت مهلة الاتصال بالخادم. العملية قد تكون ما زالت تعمل في الخلفية.'
+          : 'تعذّر الاتصال بخادم الـAPI. تحقق من الاتصال وحاول مرة أخرى.',
+        aborted ? 'PHP_API_TIMEOUT' : 'PHP_API_UNREACHABLE',
+        0,
+      );
+    }
   } finally {
     clearTimeout(timer);
   }
@@ -112,12 +133,31 @@ export async function phpApi<T = unknown>(path: string, options: RequestOptions 
   try {
     payload = await response.json();
   } catch {
-    // A non-JSON body means we are not talking to the PHP API (proxy error page, etc).
-    throw new PhpApiError(
-      `استجابة غير متوقعة من الخادم (HTTP ${response.status}).`,
-      'PHP_API_BAD_RESPONSE',
-      response.status,
-    );
+    if (typeof window !== 'undefined' && path.startsWith('/system-reset/')) {
+      try {
+        const fallbackRes = await fetch(`/api${path}`, {
+          method,
+          headers,
+          cache: 'no-store',
+          ...(formData ? { body: formData } : body !== undefined ? { body: JSON.stringify(body) } : {}),
+        });
+        payload = await fallbackRes.json();
+        response = fallbackRes;
+      } catch {
+        throw new PhpApiError(
+          `استجابة غير متوقعة من الخادم (HTTP ${response.status}).`,
+          'PHP_API_BAD_RESPONSE',
+          response.status,
+        );
+      }
+    } else {
+      // A non-JSON body means we are not talking to the PHP API (proxy error page, etc).
+      throw new PhpApiError(
+        `استجابة غير متوقعة من الخادم (HTTP ${response.status}).`,
+        'PHP_API_BAD_RESPONSE',
+        response.status,
+      );
+    }
   }
 
   if (!response.ok || payload?.status !== 'success') {
