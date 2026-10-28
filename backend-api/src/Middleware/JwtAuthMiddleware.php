@@ -5,6 +5,7 @@ use App\Utils\AppRoot;
 
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
+use Firebase\JWT\JWK;
 use App\Utils\Response;
 use App\Services\ResetAccessGate;
 
@@ -43,23 +44,9 @@ class JwtAuthMiddleware {
         $config = require AppRoot::path('config/supabase.php');
 
         try {
-                    // Note: If using HS256 secret verification
-                    $decoded = JWT::decode($jwt, new Key($config['jwt_secret'], 'HS256'));
+            $claims = self::decodeAndVerifyClaims($jwt, $config);
 
-                    // (array)$decoded is a SHALLOW cast: nested claims such as
-                    // user_metadata stay stdClass objects, and reading
-                    // $claims['user_metadata']['full_name'] then raises
-                    // "Cannot use object of type stdClass as array" -- a fatal that
-                    // `??` does NOT suppress. That killed every route which logs the
-                    // actor name (backup/import/export/upload/delete).
-                    // Round-tripping through JSON yields a deeply nested array,
-                    // which is what all five call sites expect.
-                    $claims = json_decode(json_encode($decoded), true);
-                    if (!is_array($claims)) {
-                        $claims = [];
-                    }
-
-                    // Resolve mutable authorization state from the database on
+            // Resolve mutable authorization state from the database on
                     // every API request. A still-valid JWT may contain the old
                     // admin claim immediately after a transfer; never trust that
                     // stale claim for PHP endpoints backed by service-role calls.
@@ -130,13 +117,139 @@ class JwtAuthMiddleware {
                         'email' => $claims['email'] ?? null,
                         'claims' => $claims
                     ];
-                } catch (\Exception $e) {
-            // NEVER fall back to unverified decoding. Supabase signs access
-            // tokens with RS256/ES256, not the HS256 secret used above, so
-            // this branch used to accept ANY self-crafted token and hand the
-            // caller an arbitrary role/group. Fail closed instead.
+        } catch (\Throwable $e) {
+            // Fail closed on any invalid token, missing key, or signature mismatch.
             Response::error('رمز المصادقة غير صالح أو منتهي الصلاحية', 'INVALID_TOKEN', 401);
             exit;
         }
+    }
+
+    /**
+     * Decodes and verifies JWT claims supporting both HS256 (symmetric secret) and
+     * ES256 / RS256 (asymmetric keys via Supabase JWKS).
+     */
+    public static function decodeAndVerifyClaims(string $jwt, array $config): array {
+        $parts = explode('.', $jwt);
+        if (count($parts) !== 3) {
+            throw new \InvalidArgumentException('Malformed JWT structure');
+        }
+
+        $headerJson = base64_decode(strtr($parts[0], '-_', '+/'), true);
+        if ($headerJson === false) {
+            throw new \InvalidArgumentException('Invalid JWT header base64');
+        }
+
+        $header = json_decode($headerJson, true);
+        if (!is_array($header) || empty($header['alg'])) {
+            throw new \InvalidArgumentException('Missing JWT algorithm');
+        }
+
+        $alg = (string)$header['alg'];
+        $decoded = null;
+
+        if ($alg === 'HS256') {
+            $secret = (string)($config['jwt_secret'] ?? '');
+            if ($secret === '') {
+                throw new \RuntimeException('JWT secret is not configured');
+            }
+            $decoded = JWT::decode($jwt, new Key($secret, 'HS256'));
+        } elseif ($alg === 'ES256' || $alg === 'RS256') {
+            $kid = (string)($header['kid'] ?? '');
+            if ($kid === '') {
+                throw new \InvalidArgumentException('Missing kid in asymmetric JWT header');
+            }
+            $supabaseUrl = (string)($config['url'] ?? '');
+            $keys = self::resolveJwksKeys($supabaseUrl, $kid);
+            if (!isset($keys[$kid])) {
+                throw new \RuntimeException('Key ID not found in Supabase JWKS: ' . $kid);
+            }
+            $decoded = JWT::decode($jwt, $keys[$kid]);
+        } else {
+            throw new \InvalidArgumentException('Unsupported JWT algorithm: ' . $alg);
+        }
+
+        $claims = json_decode(json_encode($decoded), true);
+        if (!is_array($claims)) {
+            $claims = [];
+        }
+        return $claims;
+    }
+
+    /**
+     * Fetches and caches Supabase JWKS public keys with disk caching.
+     */
+    private static function resolveJwksKeys(string $supabaseUrl, string $requiredKid): array {
+        $cacheDir = AppRoot::path('storage/cache/jwks');
+        if (!is_dir($cacheDir)) {
+            @mkdir($cacheDir, 0750, true);
+        }
+        $cacheFile = $cacheDir . DIRECTORY_SEPARATOR . 'supabase_jwks.json';
+
+        $cachedData = null;
+        if (is_file($cacheFile)) {
+            $content = @file_get_contents($cacheFile);
+            if ($content !== false && $content !== '') {
+                $cachedData = json_decode($content, true);
+            }
+        }
+
+        $cacheValid = is_array($cachedData)
+            && isset($cachedData['keys'])
+            && (filemtime($cacheFile) > (time() - 86400));
+
+        if ($cacheValid) {
+            try {
+                $keys = JWK::parseKeySet($cachedData);
+                if (isset($keys[$requiredKid])) {
+                    return $keys;
+                }
+            } catch (\Throwable $e) {
+                // Cache invalid or parse failed; will refresh below
+            }
+        }
+
+        // Fetch fresh JWKS from Supabase
+        $jwksUrl = rtrim($supabaseUrl, '/') . '/auth/v1/.well-known/jwks.json';
+        $freshData = null;
+
+        if (function_exists('curl_init')) {
+            $ch = curl_init($jwksUrl);
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_TIMEOUT => 5,
+                CURLOPT_CONNECTTIMEOUT => 3,
+                CURLOPT_FOLLOWLOCATION => true,
+                CURLOPT_SSL_VERIFYPEER => true,
+                CURLOPT_HTTPHEADER => ['Accept: application/json'],
+            ]);
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+            if ($httpCode === 200 && is_string($response) && $response !== '') {
+                $freshData = json_decode($response, true);
+            }
+        } else {
+            $ctx = stream_context_create([
+                'http' => [
+                    'timeout' => 5,
+                    'header' => "Accept: application/json\r\n",
+                ],
+            ]);
+            $response = @file_get_contents($jwksUrl, false, $ctx);
+            if (is_string($response) && $response !== '') {
+                $freshData = json_decode($response, true);
+            }
+        }
+
+        if (is_array($freshData) && !empty($freshData['keys'])) {
+            @file_put_contents($cacheFile, json_encode($freshData));
+            return JWK::parseKeySet($freshData);
+        }
+
+        if (is_array($cachedData) && !empty($cachedData['keys'])) {
+            return JWK::parseKeySet($cachedData);
+        }
+
+        throw new \RuntimeException('Unable to fetch Supabase JWKS keys');
     }
 }
