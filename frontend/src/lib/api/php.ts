@@ -97,11 +97,13 @@ export async function phpApi<T = unknown>(path: string, options: RequestOptions 
     });
   } catch (err) {
     if (typeof window !== 'undefined' && path.startsWith('/system-reset/')) {
+      const fallbackController = new AbortController();
+      const fallbackTimer = setTimeout(() => fallbackController.abort(), timeoutMs);
       try {
         response = await fetch(`/api${path}`, {
           method,
           headers,
-          signal: controller.signal,
+          signal: fallbackController.signal,
           cache: 'no-store',
           ...(formData ? { body: formData } : body !== undefined ? { body: JSON.stringify(body) } : {}),
         });
@@ -114,6 +116,8 @@ export async function phpApi<T = unknown>(path: string, options: RequestOptions 
           aborted ? 'PHP_API_TIMEOUT' : 'PHP_API_UNREACHABLE',
           0,
         );
+      } finally {
+        clearTimeout(fallbackTimer);
       }
     } else {
       const aborted = err instanceof DOMException && err.name === 'AbortError';

@@ -120,22 +120,36 @@ export default function MarathonManagePage() {
         return;
       }
 
-      const { data: userProfile } = await supabase
+      const { data: userProfile, error: profileError } = await supabase
         .from('profiles')
-        .select('*')
+        .select('id,full_name,username,role_id,group_id,is_active,phone,avatar_url,created_at')
         .eq('id', user.id)
         .single();
+      if (profileError) throw profileError;
 
       if (userProfile) {
         const prof = userProfile as Profile;
         setProfile(prof);
+
+        const permissionResult = prof.role_id === 'admin'
+          ? { data: true, error: null }
+          : await supabase.rpc('has_servant_permission', { perm_id: 'MANAGE_MARATHON' });
+        if (permissionResult.error) throw permissionResult.error;
+        const canManage = prof.role_id === 'admin' || Boolean(permissionResult.data);
+        if (!canManage) {
+          router.replace('/marathon');
+          return;
+        }
 
         // Fetch marathons (scoped to group if user is assigned to one, otherwise all)
         let mQuery = supabase.from('marathons').select('*');
         if (prof.group_id) {
           mQuery = mQuery.eq('group_id', prof.group_id);
         }
-        const { data: mList } = await mQuery.order('created_at', { ascending: false });
+        const { data: mList, error: marathonError } = await mQuery
+          .order('created_at', { ascending: false })
+          .limit(100);
+        if (marathonError) throw marathonError;
 
         if (mList && mList.length > 0) {
           setMarathons(mList);
@@ -160,22 +174,25 @@ export default function MarathonManagePage() {
         { data: questions },
         { data: subs },
       ] = await Promise.all([
-        supabase
-          .from('marathon_sections')
-          .select('*')
-          .eq('marathon_id', selectedMarathonId)
-          .eq('status', 'PUBLISHED')
-          .order('order_index', { ascending: true }),
+          supabase
+            .from('marathon_sections')
+            .select('id,marathon_id,title,description,order_index,status')
+            .eq('marathon_id', selectedMarathonId)
+            .eq('status', 'PUBLISHED')
+            .order('order_index', { ascending: true })
+            .limit(100),
         supabase
           .from('marathon_questions')
           .select('id, marathon_id, section_id, question_text, question_type, score_weight, order_index, status, marathon_answers(id, answer_text, is_correct, order_index)')
           .eq('marathon_id', selectedMarathonId)
-          .order('order_index', { ascending: true }),
+          .order('order_index', { ascending: true })
+          .limit(500),
         supabase
           .from('marathon_trainee_submissions')
-          .select('*, profiles(full_name, username)')
+          .select('id,marathon_id,trainee_id,total_score,appreciation_grade,is_submitted,submitted_at,profiles(full_name,username)')
           .eq('marathon_id', selectedMarathonId)
-          .order('total_score', { ascending: false }),
+          .order('total_score', { ascending: false })
+          .limit(500),
       ]);
 
       const mappedQ = (questions || []).map((q: any) => ({

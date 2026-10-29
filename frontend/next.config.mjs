@@ -27,7 +27,11 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: '**',
+        hostname: 'kgqgnqjkrghvktymbimz.supabase.co',
+      },
+      {
+        protocol: 'https',
+        hostname: 'elkaroozschool.is-best.net',
       },
     ],
   },

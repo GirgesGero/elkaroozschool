@@ -59,6 +59,7 @@ export default function Mp3Page() {
   const [newTitle, setNewTitle] = useState('');
   const [newAudioUrl, setNewAudioUrl] = useState('');
   const [newLecturerName, setNewLecturerName] = useState('');
+  const [selectedGroupId, setSelectedGroupId] = useState<number>(1);
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -85,6 +86,7 @@ export default function Mp3Page() {
       if (userProfile) {
         const prof = userProfile as Profile;
         setProfile(prof);
+        if (prof.group_id) setSelectedGroupId(prof.group_id);
 
         // Fetch tracks for group (bounded for performance)
         let trackQuery = supabase.from('mp3_tracks').select('*').is('deleted_at', null);
@@ -92,8 +94,12 @@ export default function Mp3Page() {
           trackQuery = trackQuery.eq('group_id', prof.group_id);
         }
 
-        const { data: trackList } = await trackQuery.order('created_at', { ascending: false }).limit(100);
-        if (trackList) setTracks(trackList);
+        const { data: tracks, error: tracksError } = await trackQuery
+          .select('id,group_id,title,lecturer_id,audio_url,duration_seconds,file_size_bytes,created_at')
+          .order('created_at', { ascending: false })
+          .limit(100);
+        if (tracksError) throw tracksError;
+        if (tracks) setTracks(tracks);
       }
       setLoading(false);
     }
@@ -101,22 +107,29 @@ export default function Mp3Page() {
     init();
   }, [router]);
 
+  const playAudio = (audio: HTMLAudioElement) => {
+    void audio.play()
+      .then(() => setIsPlaying(true))
+      .catch(() => {
+        setIsPlaying(false);
+        setNotice('تعذر تشغيل التسجيل. تحقق من الرابط أو اضغط التشغيل مرة أخرى.');
+      });
+  };
+
   const handlePlayTrack = (track: Mp3Track) => {
     if (currentTrack?.id === track.id) {
       if (isPlaying) {
         audioRef.current?.pause();
         setIsPlaying(false);
-      } else {
-        audioRef.current?.play();
-        setIsPlaying(true);
+      } else if (audioRef.current) {
+        playAudio(audioRef.current);
       }
     } else {
       setCurrentTrack(track);
-      setIsPlaying(true);
       setCurrentTime(0);
       if (audioRef.current) {
         audioRef.current.src = track.audio_url;
-        audioRef.current.play();
+        playAudio(audioRef.current);
       }
     }
   };
@@ -145,32 +158,47 @@ export default function Mp3Page() {
 
   const handleSaveTrack = async () => {
     if (!newTitle.trim() || !newAudioUrl.trim() || !profile) return;
+    const targetGroupId = profile.group_id || selectedGroupId;
+    if (!targetGroupId) {
+      setNotice('حدد الفرقة قبل الإضافة.');
+      return;
+    }
     setSaving(true);
     const supabase = createClient();
 
     const { error } = await supabase.from('mp3_tracks').insert({
-      group_id: profile.group_id,
+      group_id: targetGroupId,
       title: newTitle.trim(),
       audio_url: newAudioUrl.trim(),
     });
 
-    if (!error) {
-      setShowAddModal(false);
-      setNewTitle('');
-      setNewAudioUrl('');
-      setNotice('تمت إضافة التسجيل الصوتي بنجاح.');
+    if (error) {
+      setNotice(`فشل الإضافة: ${error.message}`);
+      setSaving(false);
+      return;
+    }
 
-      // Refresh
+    setShowAddModal(false);
+    setNewTitle('');
+    setNewAudioUrl('');
+    setNotice('تمت إضافة التسجيل الصوتي بنجاح.');
+
+    try {
       let trackQuery = supabase.from('mp3_tracks').select('*').is('deleted_at', null);
       if (profile.role_id !== 'admin' && profile.group_id) {
         trackQuery = trackQuery.eq('group_id', profile.group_id);
       }
-      const { data: trackList } = await trackQuery.order('created_at', { ascending: false }).limit(100);
-      if (trackList) setTracks(trackList);
-    } else {
-      setNotice(`فشل الإضافة: ${error.message}`);
+      const { data: tracks, error: refreshError } = await trackQuery
+        .select('id,group_id,title,lecturer_id,audio_url,duration_seconds,file_size_bytes,created_at')
+        .order('created_at', { ascending: false })
+        .limit(100);
+      if (refreshError) throw refreshError;
+      if (tracks) setTracks(tracks);
+    } catch (refreshError) {
+      setNotice(`تمت الإضافة، لكن تعذر تحديث القائمة: ${refreshError instanceof Error ? refreshError.message : 'خطأ غير معروف'}`);
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   };
 
   return (
@@ -308,6 +336,20 @@ export default function Mp3Page() {
                     placeholder="مثال: تسجيل محاضرة مقدمة العهد الجديد"
                     className="w-full bg-nav border border-line rounded-xl p-2.5 text-content"
                   />
+                </div>
+
+                <div>
+                  <label className="block text-content-secondary font-semibold mb-1">الفرقة</label>
+                  <select
+                    value={profile?.group_id || selectedGroupId}
+                    disabled={Boolean(profile?.group_id)}
+                    onChange={(e) => setSelectedGroupId(Number(e.target.value))}
+                    className="w-full bg-nav border border-line rounded-xl p-2.5 text-content"
+                  >
+                    <option value={1}>الفرقة الأولى</option>
+                    <option value={2}>الفرقة الثانية</option>
+                    <option value={3}>الفرقة الثالثة</option>
+                  </select>
                 </div>
 
                 <div>

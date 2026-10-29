@@ -23,7 +23,11 @@
 
 $root   = dirname(__DIR__);
 $beRoot = $root . '/backend-api';
-$finalFile = getenv('LOCALAPPDATA') . '/ElKarooz-API-public_html.zip';
+$localAppData = getenv('LOCALAPPDATA') ?: ($root . '/.build');
+if (!is_dir($localAppData)) {
+    mkdir($localAppData, 0755, true);
+}
+$finalFile = $localAppData . '/ElKarooz-API-public_html.zip';
 // The build always writes to a temporary name and renames it into place only after
 // ZipArchive::close() has flushed, so a failed or interrupted run can never leave a
 // half-written archive sitting at the path a deployer would pick up.

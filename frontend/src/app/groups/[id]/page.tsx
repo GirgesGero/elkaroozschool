@@ -61,8 +61,15 @@ interface PageProps {
 export default function GroupDetailsPage({ params }: PageProps) {
   const routeParams = useParams();
   const rawId = routeParams?.id || params?.id;
-  const groupId = Number(rawId) || 1;
+  const parsedGroupId = typeof rawId === 'string' && /^\d+$/.test(rawId) ? Number(rawId) : NaN;
+  const groupId = Number.isInteger(parsedGroupId) && parsedGroupId > 0 ? parsedGroupId : 0;
   const router = useRouter();
+
+  useEffect(() => {
+    if (groupId === 0) {
+      router.replace('/groups');
+    }
+  }, [groupId, router]);
 
   const [profile, setProfile] = useState<Profile | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'servants' | 'secretariat' | 'trainees' | 'attendance' | 'curriculum' | 'marathon' | 'reports'>('overview');

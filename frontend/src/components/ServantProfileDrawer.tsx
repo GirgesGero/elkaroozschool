@@ -138,35 +138,26 @@ export default function ServantProfileDrawer({
     const supabase = createClient();
 
     try {
-      // Delete existing
-      await supabase.from('servant_permissions').delete().eq('profile_id', servantId);
-
-      // Insert new permissions
-      if (permissions.length > 0) {
-        const insertRows = permissions.map((p) => ({
-          profile_id: servantId,
-          permission_id: p,
-          granted_by: currentUserProfile?.id,
-        }));
-        const { error: insErr } = await supabase.from('servant_permissions').insert(insertRows);
-        if (insErr) throw insErr;
-      }
-
-      // Update basic info if edited
       if (isEditing) {
-        const { error: profErr } = await supabase
-          .from('profiles')
-          .update({
-            full_name: editFullName.trim(),
-            phone: editPhone.trim() || null,
-            group_id: editGroupId,
-          })
-          .eq('id', servantId);
+        const targetGroup = editGroupId ?? servant?.group_id;
+        if (!targetGroup || !servant) throw new Error('بيانات الفرقة غير مكتملة.');
+        const { data: saveResult, error: saveError } = await supabase.rpc('update_servant_profile_and_permissions', {
+          p_profile_id: servantId,
+          p_full_name: editFullName.trim(),
+          p_phone: editPhone.trim() || null,
+          p_group_id: targetGroup,
+          p_permission_ids: permissions,
+        });
+        if (saveError || !saveResult?.updated) throw saveError || new Error('لم يتم حفظ بيانات الخادم.');
 
-        if (profErr) throw profErr;
-
-        setServant((prev) => (prev ? { ...prev, full_name: editFullName.trim(), phone: editPhone.trim() || null, group_id: editGroupId as any } : null));
+        setServant((prev) => (prev ? { ...prev, full_name: editFullName.trim(), phone: editPhone.trim() || null, group_id: targetGroup as any } : null));
         setIsEditing(false);
+      } else {
+        const { error: replaceError } = await supabase.rpc('replace_servant_permissions', {
+          p_profile_id: servantId,
+          p_permission_ids: permissions,
+        });
+        if (replaceError) throw replaceError;
       }
 
       setNotice({ type: 'success', text: 'تم حفظ صلاحيات وبيانات الخادم بنجاح!' });

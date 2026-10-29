@@ -136,7 +136,9 @@ export default function MarathonPlayerPage() {
   const currentQ = questions[currentQIndex];
   const currentAnswer = currentQ ? answersMap.get(currentQ.id) : null;
   const isQuestionAnswered = !!currentAnswer && !currentAnswer.is_reopened;
-  const progressPercentage = questions.length > 0 ? Math.round((answersMap.size / questions.length) * 100) : 0;
+  const progressPercentage = questions.length > 0
+    ? Math.round((Array.from(answersMap.values()).filter((answer) => !answer?.is_reopened).length / questions.length) * 100)
+    : 0;
 
   const handleSubmitAnswer = async () => {
     if (!selectedOptionId || !currentQ) return;

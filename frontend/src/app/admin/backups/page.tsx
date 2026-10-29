@@ -46,6 +46,7 @@ export default function AdminBackupsPage() {
 
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
@@ -73,6 +74,7 @@ export default function AdminBackupsPage() {
 
   const fetchBackups = async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
@@ -106,9 +108,11 @@ export default function AdminBackupsPage() {
 
       if (!error && data) {
         setBackups(data);
+      } else if (error) {
+        setLoadError(explainDbError(error));
       }
     } catch (err) {
-      console.error(err);
+      setLoadError(err instanceof PhpApiError ? err.message : explainDbError(err));
     } finally {
       setLoading(false);
     }
@@ -176,27 +180,21 @@ export default function AdminBackupsPage() {
   const handleDeleteBackup = async () => {
     if (!selectedBackupForDelete) return;
     try {
-      const { error } = await supabase
-        .from('backup_records')
-        .update({ deleted_at: new Date().toISOString() })
-        .eq('id', selectedBackupForDelete.id);
-
-      if (error) throw error;
-
-      await supabase.rpc('log_operational_event', {
-        p_operation: 'BACKUP_DELETE',
-        p_entity_type: 'backup_records',
-        p_entity_id: selectedBackupForDelete.filename,
-        p_status: 'SUCCESS',
-        p_details: { filename: selectedBackupForDelete.filename },
-        p_checksum: selectedBackupForDelete.checksum_sha256
+      const result = await phpApi<{ file_removed_from_disk?: boolean }>('/backup/delete', {
+        session,
+        body: { backup_id: selectedBackupForDelete.id },
       });
 
-      setOperationMsg({ type: 'success', text: 'تم حذف النسخة الاحتياطية بنجاح' });
+      setOperationMsg({
+        type: 'success',
+        text: result.file_removed_from_disk === false
+          ? 'تم تحديث سجل النسخة، لكن لم يُعثر على الملف الفعلي.'
+          : 'تم حذف النسخة الاحتياطية والملف الفعلي بنجاح.',
+      });
       setSelectedBackupForDelete(null);
-      fetchBackups();
+      await fetchBackups();
     } catch (err) {
-      setOperationMsg({ type: 'error', text: explainDbError(err) });
+      setOperationMsg({ type: 'error', text: err instanceof PhpApiError ? err.message : explainDbError(err) });
     }
   };
 
@@ -463,7 +461,12 @@ export default function AdminBackupsPage() {
             </button>
           </div>
 
-          {backups.length === 0 ? (
+          {loadError ? (
+            <div className="rounded-2xl border border-danger/40 bg-danger/10 p-5 text-danger flex items-center justify-between gap-3">
+              <span>{loadError}</span>
+              <button onClick={fetchBackups} className="px-3 py-2 rounded-xl border border-danger/40">إعادة المحاولة</button>
+            </div>
+          ) : backups.length === 0 ? (
             <div className="text-center py-12 text-content-muted">
               <FileArchive className="w-12 h-12 mx-auto mb-3 opacity-30" />
               <p>لا توجد نسخ احتياطية مسجلة حالياً.</p>

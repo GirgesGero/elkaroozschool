@@ -129,14 +129,16 @@ export default function BooksAndResearchPage() {
     ] = await Promise.all([
       supabase
         .from('books')
-        .select('*, categories(name_ar)')
+        .select('id,title,author,file_url,cover_url,file_size_bytes,category_id,created_at,categories(name_ar)')
         .is('deleted_at', null)
-        .order('created_at', { ascending: false }),
+        .order('created_at', { ascending: false })
+        .limit(100),
       supabase
         .from('researches')
-        .select('*, categories(name_ar)')
+        .select('id,title,author,file_url,cover_url,file_size_bytes,category_id,created_at,categories(name_ar)')
         .is('deleted_at', null)
-        .order('created_at', { ascending: false }),
+        .order('created_at', { ascending: false })
+        .limit(100),
       supabase
         .from('user_favorites')
         .select('*')

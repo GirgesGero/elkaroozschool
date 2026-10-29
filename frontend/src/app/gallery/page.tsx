@@ -62,10 +62,11 @@ export default function GalleryPage() {
   const [newPhotoUrl, setNewPhotoUrl] = useState('');
   const [newPhotoTitle, setNewPhotoTitle] = useState('');
   const [newPhotoAlbumId, setNewPhotoAlbumId] = useState('');
+  const [groupId, setGroupId] = useState<number>(1);
   const [uploading, setUploading] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
 
-  const canManage = profile && ['admin', 'servant', 'secretariat'].includes(profile.role_id);
+  const canManage = profile?.role_id === 'admin' || profile?.role_id === 'servant' || profile?.role_id === 'secretariat';
 
   useEffect(() => {
     async function init() {
@@ -79,48 +80,116 @@ export default function GalleryPage() {
         return;
       }
 
-      const { data: userProfile } = await supabase
+      const { data: userProfile, error: profileError } = await supabase
         .from('profiles')
-        .select('*')
+        .select('id,full_name,username,role_id,group_id,is_active,phone,avatar_url,created_at')
         .eq('id', user.id)
         .single();
+      if (profileError) throw profileError;
 
       if (userProfile) {
         const prof = userProfile as Profile;
         setProfile(prof);
+        if (prof.role_id === 'admin' && prof.group_id) setGroupId(prof.group_id);
 
         // Fetch albums for group (or all if admin)
-        let albQuery = supabase.from('gallery_albums').select('*').is('deleted_at', null);
+        let albQuery = supabase
+          .from('gallery_albums')
+          .select('id,group_id,category_id,title,description,cover_url,event_date,created_at')
+          .is('deleted_at', null);
         if (prof.role_id !== 'admin' && prof.group_id) {
           albQuery = albQuery.eq('group_id', prof.group_id);
         }
 
-        const { data: albList } = await albQuery.order('created_at', { ascending: false });
-        if (albList) setAlbums(albList);
+        const { data: albumList, error: albumError } = await albQuery
+          .order('created_at', { ascending: false })
+          .limit(100);
+        if (albumError) throw albumError;
+        let albumRows: Array<{
+          id: string;
+          category_id: string | null;
+          group_id: number | null;
+          title: string;
+          description: string | null;
+          cover_url: string | null;
+          event_date: string | null;
+          created_at: string;
+        }> = albumList || [];
 
         // Fetch photos for group (bounded to 120 items for performance)
-        let photoQuery = supabase.from('gallery_items').select('*').is('deleted_at', null);
+        let photoQuery = supabase
+          .from('gallery_items')
+          .select('id,album_id,image_url,title,created_at')
+          .is('deleted_at', null);
         if (prof.role_id !== 'admin' && prof.group_id) {
-          photoQuery = photoQuery.eq('group_id', prof.group_id);
+          const { data: scopedAlbumIds } = await supabase
+            .from('gallery_albums')
+            .select('id')
+            .eq('group_id', prof.group_id)
+            .is('deleted_at', null)
+            .limit(1000);
+          const allowedAlbumIds = (scopedAlbumIds || []).map((album) => album.id);
+          photoQuery = allowedAlbumIds.length > 0
+            ? photoQuery.in('album_id', allowedAlbumIds)
+            : photoQuery.eq('album_id', '00000000-0000-0000-0000-000000000000');
         }
 
-        const { data: photoList } = await photoQuery.order('created_at', { ascending: false }).limit(120);
-        if (photoList) setPhotos(photoList);
+        const { data: photoList, error: photoError } = await photoQuery
+          .select('id,album_id,image_url,title,created_at')
+          .order('created_at', { ascending: false })
+          .limit(120);
+        if (photoError) throw photoError;
+        if (photoList) {
+          const albumIds = [...new Set(photoList.map((photo) => photo.album_id).filter(Boolean))];
+          const counts = new Map<string, number>();
+          photoList.forEach((photo) => counts.set(photo.album_id, (counts.get(photo.album_id) || 0) + 1));
+          if (albumIds.length > 0) {
+            const { data: linkedAlbums } = await supabase
+              .from('gallery_albums')
+              .select('id,group_id,title,description,cover_url,event_date,created_at')
+              .in('id', albumIds)
+              .is('deleted_at', null);
+            const linkedAlbumRows = (linkedAlbums || []).map((album) => ({ ...album, category_id: null }));
+            albumRows = [...albumRows, ...linkedAlbumRows.filter((album: typeof albumRows[number]) => !albumRows.some((existing) => existing.id === album.id))];
+          }
+          setPhotos(photoList.map((photo) => ({ ...photo, group_id: prof.group_id || 0 })));
+        const scopedAlbums = prof.role_id === 'admin'
+          ? albumRows.filter((album) => !album.group_id || album.group_id === groupId)
+          : albumRows;
+        setAlbums(scopedAlbums.map((album) => ({ ...album, group_id: album.group_id || prof.group_id || 0, items_count: counts.get(album.id) || 0 })));
+        } else {
+          setAlbums(albumRows.map((album) => ({ ...album, group_id: album.group_id || prof.group_id || 0 })));
+        }
       }
       setLoading(false);
     }
 
     init();
-  }, [router]);
+  }, [router, groupId]);
 
   const handleUploadPhoto = async () => {
-    if (!newPhotoUrl.trim() || !profile) return;
+    if (!newPhotoUrl.trim() || !newPhotoAlbumId || !profile) {
+      setNotice('اختر ألبوماً وأدخل رابط الصورة قبل الحفظ.');
+      return;
+    }
+    if (profile.role_id === 'admin') {
+      const selectedAlbum = albums.find((album) => album.id === newPhotoAlbumId);
+      if (!selectedAlbum || (selectedAlbum.group_id && selectedAlbum.group_id !== groupId)) {
+        setNotice('الألبوم المختار لا ينتمي إلى الفرقة المحددة.');
+        return;
+      }
+    }
+    const targetGroupId = profile.group_id || groupId;
+    if (!targetGroupId) {
+      setNotice('حدد الفرقة قبل الإضافة.');
+      return;
+    }
     setUploading(true);
     const supabase = createClient();
 
     const { error } = await supabase.from('gallery_items').insert({
-      album_id: newPhotoAlbumId || (albums[0]?.id as string),
-      group_id: profile.group_id,
+      album_id: newPhotoAlbumId,
+      group_id: targetGroupId,
       image_url: newPhotoUrl.trim(),
       title: newPhotoTitle.trim() || null,
     });
@@ -129,15 +198,29 @@ export default function GalleryPage() {
       setShowUploadModal(false);
       setNewPhotoUrl('');
       setNewPhotoTitle('');
+      setNewPhotoAlbumId('');
       setNotice('تمت إضافة الصورة إلى المعرض بنجاح.');
 
       // Refresh photos
-      let photoQuery = supabase.from('gallery_items').select('*').is('deleted_at', null);
+      let photoQuery = supabase.from('gallery_items').select('id,album_id,image_url,title,created_at').is('deleted_at', null);
       if (profile.role_id !== 'admin' && profile.group_id) {
-        photoQuery = photoQuery.eq('group_id', profile.group_id);
+        const { data: scopedAlbumIds } = await supabase
+          .from('gallery_albums')
+          .select('id')
+          .eq('group_id', profile.group_id)
+          .is('deleted_at', null)
+          .limit(1000);
+        const allowedAlbumIds = (scopedAlbumIds || []).map((album) => album.id);
+        photoQuery = allowedAlbumIds.length > 0
+          ? photoQuery.in('album_id', allowedAlbumIds)
+          : photoQuery.eq('album_id', '00000000-0000-0000-0000-000000000000');
       }
-      const { data: photoList } = await photoQuery.order('created_at', { ascending: false }).limit(120);
-      if (photoList) setPhotos(photoList);
+      const { data: photoList, error: refreshError } = await photoQuery
+        .select('id,album_id,image_url,title,created_at')
+        .order('created_at', { ascending: false })
+        .limit(120);
+      if (refreshError) throw refreshError;
+      if (photoList) setPhotos(photoList.map((photo) => ({ ...photo, group_id: targetGroupId })));
     } else {
       setNotice(`فشل الرفع: ${error.message}`);
     }
@@ -291,6 +374,37 @@ export default function GalleryPage() {
               <h3 className="text-base font-bold text-content mb-4">إضافة صورة جديدة للمعرض</h3>
 
               <div className="space-y-3.5 text-xs">
+                <div>
+                  <label className="block text-content-secondary font-semibold mb-1">الألبوم</label>
+                  <select
+                    value={newPhotoAlbumId}
+                    onChange={(e) => {
+                      const albumId = e.target.value;
+                      setNewPhotoAlbumId(albumId);
+                      const selectedAlbum = albums.find((album) => album.id === albumId);
+                      if (selectedAlbum?.group_id) setGroupId(selectedAlbum.group_id);
+                    }}
+                    className="w-full bg-nav border border-line rounded-xl p-2.5 text-content"
+                  >
+                    <option value="">اختر ألبوماً</option>
+                    {albums.map((album) => <option key={album.id} value={album.id}>{album.title}</option>)}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-content-secondary font-semibold mb-1">الفرقة</label>
+                  <select
+                    value={profile?.group_id || groupId}
+                    disabled={Boolean(profile?.group_id)}
+                    onChange={(e) => setGroupId(Number(e.target.value))}
+                    className="w-full bg-nav border border-line rounded-xl p-2.5 text-content"
+                  >
+                    <option value={1}>الفرقة الأولى</option>
+                    <option value={2}>الفرقة الثانية</option>
+                    <option value={3}>الفرقة الثالثة</option>
+                  </select>
+                </div>
+
                 <div>
                   <label className="block text-content-secondary font-semibold mb-1">عنوان الصورة</label>
                   <input

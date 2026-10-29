@@ -26,9 +26,9 @@ import type { Profile } from '@/types/database';
 interface NotificationRecord {
   id: string;
   recipient_id: string;
-  type: string;
+  category: string;
   title: string;
-  message: string;
+  body: string;
   is_read: boolean;
   action_url?: string | null;
   created_at: string;
@@ -54,24 +54,23 @@ export default function NotificationsPage() {
         return;
       }
 
-      const { data: userProfile } = await supabase
+      const { data: userProfile, error: profileError } = await supabase
         .from('profiles')
-        .select('*')
+        .select('id,full_name,username,role_id,group_id,is_active,phone,avatar_url,created_at')
         .eq('id', user.id)
         .single();
+      if (profileError) throw profileError;
 
-      if (userProfile) setProfile(userProfile);
+      if (userProfile) setProfile(userProfile as Profile);
 
-      const { data, error } = await supabase
-        .from('notifications')
-        .select('*')
-        .eq('recipient_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(50);
-
-      if (!error && data) {
-        setNotifications(data);
-      }
+      const { data: data, error: notificationsError } = await supabase
+          .from('notifications')
+          .select('id,recipient_id,category,title,body,is_read,action_url,created_at')
+          .eq('recipient_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(50);
+        if (notificationsError) throw notificationsError;
+      setNotifications(data || []);
     } catch (err) {
       console.error('Notifications fetch error:', err);
     } finally {
@@ -84,28 +83,37 @@ export default function NotificationsPage() {
   }, [router]);
 
   const handleMarkAsRead = async (id: string) => {
+    if (!profile) return;
     const supabase = createClient();
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
-    );
-    await supabase.from('notifications').update({ is_read: true }).eq('id', id);
+    const previous = notifications.find((n) => n.id === id)?.is_read;
+    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, is_read: true } : n)));
+    const { error } = await supabase
+      .from('notifications')
+      .update({ is_read: true })
+      .eq('id', id)
+      .eq('recipient_id', profile.id);
+    if (error) {
+      setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, is_read: previous ?? false } : n)));
+    }
   };
 
   const handleMarkAllAsRead = async () => {
     if (!profile) return;
     const supabase = createClient();
+    const previous = notifications;
     setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
-    await supabase
+    const { error } = await supabase
       .from('notifications')
       .update({ is_read: true })
       .eq('recipient_id', profile.id)
       .eq('is_read', false);
+    if (error) setNotifications(previous);
   };
 
   const filteredList = notifications.filter((n) => {
     if (activeFilter === 'UNREAD') return !n.is_read;
-    if (activeFilter === 'PASTORAL') return n.type === 'PASTORAL' || n.type === 'BIRTHDAY';
-    if (activeFilter === 'SYSTEM') return n.type !== 'PASTORAL' && n.type !== 'BIRTHDAY';
+    if (activeFilter === 'PASTORAL') return n.category === 'PASTORAL' || n.category === 'BIRTHDAY';
+    if (activeFilter === 'SYSTEM') return n.category !== 'PASTORAL' && n.category !== 'BIRTHDAY';
     return true;
   });
 
@@ -241,7 +249,7 @@ export default function NotificationsPage() {
                 key={notif.id}
                 onClick={() => {
                   if (!notif.is_read) handleMarkAsRead(notif.id);
-                  if (notif.action_url) router.push(notif.action_url);
+                  if (notif.action_url?.startsWith('/') && !notif.action_url.startsWith('//')) router.push(notif.action_url);
                 }}
                 className={`p-4 rounded-3xl border transition-all cursor-pointer flex items-start gap-3.5 ${
                   notif.is_read
@@ -256,7 +264,7 @@ export default function NotificationsPage() {
                       : 'bg-gold/15 border-gold/30 shadow-inner'
                   }`}
                 >
-                  {getNotificationIcon(notif.type)}
+                  {getNotificationIcon(notif.category)}
                 </div>
 
                 <div className="flex-1">
@@ -275,7 +283,7 @@ export default function NotificationsPage() {
                     </span>
                   </div>
 
-                  <p className="text-xs text-content-secondary mt-1 leading-relaxed">{notif.message}</p>
+                  <p className="text-xs text-content-secondary mt-1 leading-relaxed">{notif.body}</p>
 
                   {notif.action_url && (
                     <div className="mt-2.5 flex items-center gap-1 text-[11px] font-bold text-gold">

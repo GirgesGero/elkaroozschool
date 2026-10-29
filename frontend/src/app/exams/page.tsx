@@ -165,7 +165,7 @@ export default function ExamsPage() {
       .upsert(
         {
           exam_id: exam.id,
-          group_id: profile!.group_id,
+          group_id: exam.group_id,
           trainee_id: traineeId,
           numeric_score: score,
           appreciation_grade: 'ضعيف', // Calculated server-side by trigger

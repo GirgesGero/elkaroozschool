@@ -37,8 +37,10 @@ export default function PostComposer({ currentUser, onPostCreated }: PostCompose
     currentUser?.role_id === 'admin' ||
     currentUser?.role_id === 'servant' ||
     currentUser?.role_id === 'secretariat';
-
   if (!canPost || !currentUser) return null;
+
+  const isGroupScoped = currentUser.role_id !== 'admin';
+  const effectiveTargetGroup = isGroupScoped ? currentUser.group_id : targetGroup;
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -51,7 +53,7 @@ export default function PostComposer({ currentUser, onPostCreated }: PostCompose
       const formData = new FormData();
       formData.append('file', file);
       formData.append('folder_type', 'feed');
-      formData.append('group_id', String(currentUser?.group_id || targetGroup || 1));
+      formData.append('group_id', String(effectiveTargetGroup || 1));
       const res = await phpApi<{ file_url: string; asset_id: string }>('/storage/upload', {
         formData,
         session,
@@ -89,7 +91,7 @@ export default function PostComposer({ currentUser, onPostCreated }: PostCompose
       const { error } = await supabase.from('feed_posts').insert({
         author_id: currentUser.id,
         content: content.trim(),
-        group_id: targetGroup,
+        group_id: effectiveTargetGroup,
         images: images.length > 0 ? images : null,
       });
 
@@ -214,7 +216,8 @@ export default function PostComposer({ currentUser, onPostCreated }: PostCompose
 
             {/* Target Group Selector */}
             <select
-              value={targetGroup === null ? 'all' : targetGroup}
+              disabled={isGroupScoped}
+              value={isGroupScoped ? (currentUser.group_id ?? 'all') : (targetGroup === null ? 'all' : targetGroup)}
               onChange={(e) => setTargetGroup(e.target.value === 'all' ? null : Number(e.target.value))}
               className="bg-nav border border-line rounded-xl px-2.5 py-1.5 text-xs font-bold text-content-secondary focus:outline-none"
             >

@@ -384,7 +384,12 @@ class BackupController {
             $storageConfig = require AppRoot::path('config/storage.php');
             $backupRoot = rtrim($storageConfig['root_path'], '/\\') . '/backups';
             $storagePath = (string) ($record['storage_path'] ?? '');
-            $absolute = $backupRoot . '/' . ltrim(str_replace(['..', "\0"], '', $storagePath), '/\\');
+            $relativeStoragePath = ltrim(str_replace(['..', "\0"], '', $storagePath), '/\\');
+            $backupPrefix = 'backups/';
+            if (str_starts_with($relativeStoragePath, $backupPrefix)) {
+                $relativeStoragePath = substr($relativeStoragePath, strlen($backupPrefix));
+            }
+            $absolute = $backupRoot . '/' . $relativeStoragePath;
             $fileDeleted = false;
 
             // Containment must hold after realpath resolution, and the path must be

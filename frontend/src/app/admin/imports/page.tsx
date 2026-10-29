@@ -203,6 +203,11 @@ export default function AdminImportsPage() {
     }
   };
 
+  const csvEscape = (value: unknown): string => {
+    const text = value == null ? '' : String(value);
+    return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+  };
+
   const handleExportTrainees = async (format: 'csv' | 'excel') => {
     try {
       const { data, error } = await supabase
@@ -248,16 +253,16 @@ export default function AdminImportsPage() {
         exportFilename = `trainees_export_${Date.now()}.xlsx`;
       } else {
         const headers = ['username', 'full_name', 'phone', 'father_name', 'birth_date', 'status'];
-        const csvRows = [headers.join(',')];
+        const csvRows = [headers.map(csvEscape).join(',')];
         data.forEach((p) => {
           csvRows.push([
             p.username,
-            `"${p.full_name}"`,
+            p.full_name,
             p.phone || '',
-            `"${p.father_name || ''}"`,
+            p.father_name || '',
             p.birth_date || '',
             p.is_active ? 'نشط' : 'موقوف'
-          ].join(','));
+          ].map(csvEscape).join(','));
         });
         exportBlob = new Blob(['\uFEFF' + csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
         exportFilename = `trainees_export_${Date.now()}.csv`;
@@ -271,6 +276,7 @@ export default function AdminImportsPage() {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(url), 0);
 
       // Save a copy to Google Drive / Storage in the background if session exists
       try {
@@ -285,6 +291,8 @@ export default function AdminImportsPage() {
         }
       } catch (cloudErr) {
         console.warn('Google Drive backup copy skipped/failed:', cloudErr);
+        setStatusMsg({ type: 'error', text: 'تم تنزيل الملف، لكن فشل حفظ النسخة على التخزين البعيد.' });
+        return;
       }
 
       // Audit export

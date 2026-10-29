@@ -86,9 +86,10 @@ export default function AttendancePage() {
 
     const { data: sessList } = await supabase
       .from('attendance_sessions')
-      .select('*')
+      .select('id,group_id,session_date,status')
       .eq('group_id', targetGroupId)
-      .order('session_date', { ascending: false });
+      .order('session_date', { ascending: false })
+      .limit(100);
 
     if (sessList && sessList.length > 0) {
       setSessions(sessList);
@@ -108,17 +109,19 @@ export default function AttendancePage() {
 
     const { data: trainees } = await supabase
       .from('profiles')
-      .select('id, full_name, username, phone')
+      .select('id,full_name,username,phone')
       .eq('group_id', gId)
       .eq('role_id', 'trainee')
       .eq('is_active', true)
-      .order('full_name', { ascending: true });
+      .order('full_name', { ascending: true })
+      .limit(500);
 
     const { data: records } = await supabase
       .from('attendance_records')
       .select('trainee_id, status')
       .eq('session_id', sId)
-      .is('deleted_at', null);
+      .is('deleted_at', null)
+      .limit(500);
 
     const recordMap = new Map();
     if (records) {

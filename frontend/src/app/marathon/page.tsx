@@ -57,20 +57,21 @@ export default function MarathonListPage() {
         return;
       }
 
-      const { data: userProfile } = await supabase
+      const { data: userProfile, error: profileError } = await supabase
         .from('profiles')
-        .select('*')
+        .select('id,full_name,username,role_id,group_id,is_active,phone,avatar_url,created_at')
         .eq('id', user.id)
         .single();
+      if (profileError) throw profileError;
 
       if (userProfile) {
         const prof = userProfile as Profile;
         setProfile(prof);
 
         let hasManage = prof.role_id === 'admin';
-        if (!hasManage) {
-          const { data: perm } = await supabase.rpc('has_servant_permission', { perm_id: 'MANAGE_MARATHON' });
-          hasManage = Boolean(perm);
+        if (!hasManage && prof.role_id === 'servant') {
+          const { data: perm, error: permissionError } = await supabase.rpc('has_servant_permission', { perm_id: 'MANAGE_MARATHON' });
+          hasManage = Boolean(perm && !permissionError);
         }
         setCanManage(hasManage);
 
@@ -84,16 +85,20 @@ export default function MarathonListPage() {
           mQuery = mQuery.eq('group_id', prof.group_id);
         }
 
-        const { data: mList } = await mQuery.order('created_at', { ascending: false });
+        const { data: mList, error: marathonError } = await mQuery
+          .order('created_at', { ascending: false })
+          .limit(100);
+        if (marathonError) throw marathonError;
 
         if (mList) {
           // Fetch trainee progress for each marathon
           const enhanced = await Promise.all(
             mList.map(async (m: any) => {
-              const { data: state } = await supabase.rpc('get_trainee_marathon_state', {
+              const { data: state, error: stateError } = await supabase.rpc('get_trainee_marathon_state', {
                 p_marathon_id: m.id,
                 p_trainee_id: prof.id,
               });
+              if (stateError) throw stateError;
 
               return {
                 ...m,
