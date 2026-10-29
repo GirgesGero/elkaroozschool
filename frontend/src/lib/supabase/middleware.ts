@@ -10,7 +10,7 @@ function isPublicPath(pathname: string): boolean {
     pathname.startsWith('/about') ||
     pathname.startsWith('/presentation') ||
     pathname.startsWith('/icons') ||
-    pathname.startsWith('/api/health') ||
+    pathname.startsWith('/api/') ||
     // The encyclopedia dataset is static .gz served straight from public/.
     // It is public data, so it must stay reachable without a session.
     pathname.startsWith('/storage/bible-dataset') ||
