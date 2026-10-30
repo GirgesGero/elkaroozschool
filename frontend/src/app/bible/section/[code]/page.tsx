@@ -37,7 +37,7 @@ function SectionBrowserContent() {
   const articleRequestRef = useRef(0);
   const sectionRequestRef = useRef(0);
   const loadedKeyRef = useRef<string | null>(null);
-  const initialQueryRef = useRef(searchParams.toString());
+  const lastHandledQueryRef = useRef<string | null>(null);
 
   const loadSectionArticles = useCallback(async (sectionId: number, page: number = 1) => {
     const requestId = ++articleRequestRef.current;
@@ -88,8 +88,8 @@ function SectionBrowserContent() {
       setSections(categorySections);
 
       // Check URL searchParams for section deep-link
-      const sectionParam = new URLSearchParams(initialQueryRef.current).get('section');
-      const pageParam = parseInt(new URLSearchParams(initialQueryRef.current).get('page') || '1', 10) || 1;
+      const sectionParam = searchParams.get('section');
+      const pageParam = parseInt(searchParams.get('page') || '1', 10) || 1;
 
       if (sectionParam) {
         const matchedFromParam =
@@ -173,7 +173,8 @@ function SectionBrowserContent() {
       );
       if (targetSec && targetSec.id !== selectedSection?.id) {
         const nextQuery = new URLSearchParams(searchParams.toString()).toString();
-        if (nextQuery === initialQueryRef.current) return;
+        if (lastHandledQueryRef.current === nextQuery) return;
+        lastHandledQueryRef.current = nextQuery;
         setSelectedSection(targetSec);
         const p = parseInt(searchParams.get('page') || '1', 10) || 1;
         setCurrentPage(p);
