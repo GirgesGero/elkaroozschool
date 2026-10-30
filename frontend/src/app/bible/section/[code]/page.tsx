@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, Suspense } from 'react';
+import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { 
   getBibleCategories,
@@ -34,20 +34,25 @@ function SectionBrowserContent() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
+  const loadingRequestRef = useRef(0);
 
   const loadSectionArticles = useCallback(async (sectionId: number, page: number = 1) => {
+    const requestId = ++loadingRequestRef.current;
     setLoadingArticles(true);
     try {
       const response = await getBibleSectionArticles(sectionId, page, 24);
+      if (requestId !== loadingRequestRef.current) return;
       setArticles(response.items || []);
       setTotalArticles(response.total || 0);
       setCurrentPage(response.page || 1);
       setTotalPages(response.total_pages || 1);
     } catch (error) {
+      if (requestId !== loadingRequestRef.current) return;
       console.error('Failed to load section articles:', error);
       setArticles([]);
+      setTotalArticles(0);
     } finally {
-      setLoadingArticles(false);
+      if (requestId === loadingRequestRef.current) setLoadingArticles(false);
     }
   }, []);
 
@@ -135,11 +140,15 @@ function SectionBrowserContent() {
       }
     }
 
-    if (changed) {
-      const q = urlParams.toString();
-      const newUrl = q
-        ? `/bible/section/${categoryCode}?${q}`
-        : `/bible/section/${categoryCode}`;
+    if (!changed) return;
+    const q = urlParams.toString();
+    const newUrl = q
+      ? `/bible/section/${categoryCode}?${q}`
+      : `/bible/section/${categoryCode}`;
+    const currentUrl = typeof window !== 'undefined'
+      ? `${window.location.pathname}${window.location.search}`
+      : '';
+    if (currentUrl !== newUrl) {
       router.replace(newUrl, { scroll: false });
     }
   }, [selectedSection, currentPage, categoryCode, router, searchParams]);
@@ -168,8 +177,10 @@ function SectionBrowserContent() {
   }, [searchParams, sections, selectedSection, currentPage, loadSectionArticles]);
 
   const handleSelectSection = (sec: BibleSection) => {
+    if (selectedSection?.id === sec.id && currentPage === 1) return;
     setSelectedSection(sec);
     setCurrentPage(1);
+    setArticles([]);
     loadSectionArticles(sec.id, 1);
   };
 
