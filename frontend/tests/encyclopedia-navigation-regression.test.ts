@@ -15,6 +15,11 @@ describe('encyclopedia section navigation regression contract', () => {
     expect(source).toContain('if (requestId !== loadingRequestRef.current) return;');
   });
 
+  it('deduplicates article loads for the same section and page key', () => {
+    expect(source).toContain('loadedKeyRef.current');
+    expect(source).toContain('const targetKey = `${targetSec.id}:${p}`');
+  });
+
   it('clears stale cards when a new section is selected', () => {
     expect(source).toContain('setArticles([]);');
     expect(source).toContain('loadSectionArticles(sec.id, 1);');

@@ -35,6 +35,7 @@ function SectionBrowserContent() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
   const loadingRequestRef = useRef(0);
+  const loadedKeyRef = useRef<string | null>(null);
 
   const loadSectionArticles = useCallback(async (sectionId: number, page: number = 1) => {
     const requestId = ++loadingRequestRef.current;
@@ -101,7 +102,11 @@ function SectionBrowserContent() {
       if (initialSection) {
         setSelectedSection(initialSection);
         setCurrentPage(pageParam);
-        loadSectionArticles(initialSection.id, pageParam);
+        const initialKey = `${initialSection.id}:${pageParam}`;
+        if (loadedKeyRef.current !== initialKey) {
+          loadedKeyRef.current = initialKey;
+          loadSectionArticles(initialSection.id, pageParam);
+        }
       }
     } catch (error) {
       console.error('Failed to load sections:', error);
@@ -164,7 +169,11 @@ function SectionBrowserContent() {
         setSelectedSection(targetSec);
         const p = parseInt(searchParams.get('page') || '1', 10) || 1;
         setCurrentPage(p);
-        loadSectionArticles(targetSec.id, p);
+        const targetKey = `${targetSec.id}:${p}`;
+        if (loadedKeyRef.current !== targetKey) {
+          loadedKeyRef.current = targetKey;
+          loadSectionArticles(targetSec.id, p);
+        }
         return;
       }
     }
@@ -172,7 +181,11 @@ function SectionBrowserContent() {
     const pParam = parseInt(searchParams.get('page') || '1', 10) || 1;
     if (pParam !== currentPage && selectedSection) {
       setCurrentPage(pParam);
-      loadSectionArticles(selectedSection.id, pParam);
+      const pageKey = `${selectedSection.id}:${pParam}`;
+      if (loadedKeyRef.current !== pageKey) {
+        loadedKeyRef.current = pageKey;
+        loadSectionArticles(selectedSection.id, pParam);
+      }
     }
   }, [searchParams, sections, selectedSection, currentPage, loadSectionArticles]);
 
@@ -181,6 +194,7 @@ function SectionBrowserContent() {
     setSelectedSection(sec);
     setCurrentPage(1);
     setArticles([]);
+    loadedKeyRef.current = `${sec.id}:1`;
     loadSectionArticles(sec.id, 1);
   };
 
