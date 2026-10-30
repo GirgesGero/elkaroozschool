@@ -58,9 +58,11 @@ function SectionBrowserContent() {
   }, []);
 
   const loadSections = useCallback(async () => {
+    const requestId = ++loadingRequestRef.current;
     setLoadingSections(true);
     try {
       const allSections = await getBibleSections();
+      if (requestId !== loadingRequestRef.current) return;
       const directMatch = allSections.find(
         (s) => s.code === categoryCode || String(s.id) === categoryCode
       );
@@ -80,6 +82,7 @@ function SectionBrowserContent() {
         }
       }
 
+      if (requestId !== loadingRequestRef.current) return;
       setSections(categorySections);
 
       // Check URL searchParams for section deep-link
@@ -109,9 +112,10 @@ function SectionBrowserContent() {
         }
       }
     } catch (error) {
+      if (requestId !== loadingRequestRef.current) return;
       console.error('Failed to load sections:', error);
     } finally {
-      setLoadingSections(false);
+      if (requestId === loadingRequestRef.current) setLoadingSections(false);
     }
   }, [categoryCode, loadSectionArticles, searchParams]);
 
