@@ -11,8 +11,8 @@ describe('encyclopedia section navigation regression contract', () => {
   });
 
   it('ignores stale article responses after switching sections quickly', () => {
-    expect(source).toContain('loadingRequestRef.current');
-    expect(source).toContain('if (requestId !== loadingRequestRef.current) return;');
+    expect(source).toContain('articleRequestRef.current');
+    expect(source).toContain('if (requestId !== articleRequestRef.current) return;');
   });
 
   it('deduplicates article loads for the same section and page key', () => {

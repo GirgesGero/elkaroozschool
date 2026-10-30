@@ -34,35 +34,36 @@ function SectionBrowserContent() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
-  const loadingRequestRef = useRef(0);
+  const articleRequestRef = useRef(0);
+  const sectionRequestRef = useRef(0);
   const loadedKeyRef = useRef<string | null>(null);
 
   const loadSectionArticles = useCallback(async (sectionId: number, page: number = 1) => {
-    const requestId = ++loadingRequestRef.current;
+    const requestId = ++articleRequestRef.current;
     setLoadingArticles(true);
     try {
       const response = await getBibleSectionArticles(sectionId, page, 24);
-      if (requestId !== loadingRequestRef.current) return;
+      if (requestId !== articleRequestRef.current) return;
       setArticles(response.items || []);
       setTotalArticles(response.total || 0);
       setCurrentPage(response.page || 1);
       setTotalPages(response.total_pages || 1);
     } catch (error) {
-      if (requestId !== loadingRequestRef.current) return;
+      if (requestId !== articleRequestRef.current) return;
       console.error('Failed to load section articles:', error);
       setArticles([]);
       setTotalArticles(0);
     } finally {
-      if (requestId === loadingRequestRef.current) setLoadingArticles(false);
+      if (requestId === articleRequestRef.current) setLoadingArticles(false);
     }
   }, []);
 
   const loadSections = useCallback(async () => {
-    const requestId = ++loadingRequestRef.current;
+    const requestId = ++sectionRequestRef.current;
     setLoadingSections(true);
     try {
       const allSections = await getBibleSections();
-      if (requestId !== loadingRequestRef.current) return;
+      if (requestId !== sectionRequestRef.current) return;
       const directMatch = allSections.find(
         (s) => s.code === categoryCode || String(s.id) === categoryCode
       );
@@ -82,7 +83,7 @@ function SectionBrowserContent() {
         }
       }
 
-      if (requestId !== loadingRequestRef.current) return;
+      if (requestId !== sectionRequestRef.current) return;
       setSections(categorySections);
 
       // Check URL searchParams for section deep-link
@@ -112,10 +113,10 @@ function SectionBrowserContent() {
         }
       }
     } catch (error) {
-      if (requestId !== loadingRequestRef.current) return;
+      if (requestId !== sectionRequestRef.current) return;
       console.error('Failed to load sections:', error);
     } finally {
-      if (requestId === loadingRequestRef.current) setLoadingSections(false);
+      if (requestId === sectionRequestRef.current) setLoadingSections(false);
     }
   }, [categoryCode, loadSectionArticles, searchParams]);
 
