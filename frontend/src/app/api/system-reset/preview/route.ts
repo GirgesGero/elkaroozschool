@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 function backendUrl(path: string): string {
-  const configured = process.env.PHP_API_URL;
+  const configured = process.env.PHP_API_URL || process.env.NEXT_PUBLIC_PHP_API_URL;
   if (!configured || !configured.trim()) throw new Error('RESET_BACKEND_URL_MISSING');
   const base = configured.trim().replace(/\/+$/, '');
   return `${base.endsWith('/api') ? base : `${base}/api`}${path}`;

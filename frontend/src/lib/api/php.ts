@@ -65,6 +65,7 @@ interface RequestOptions {
 export async function phpApi<T = unknown>(path: string, options: RequestOptions = {}): Promise<T> {
   const { session, body, formData, method = 'POST', timeoutMs = 120_000 } = options;
 
+  const safeTimeoutMs = Math.min(Math.max(timeoutMs, 1_000), 300_000);
   const headers: Record<string, string> = { Accept: 'application/json' };
 
   // Forward the real user's JWT. Never substitute a service-role token: the backend
@@ -84,7 +85,7 @@ export async function phpApi<T = unknown>(path: string, options: RequestOptions 
   const url = phpApiBaseUrl();
 
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const timer = setTimeout(() => controller.abort(), safeTimeoutMs);
 
   let response: Response;
   try {
@@ -98,7 +99,7 @@ export async function phpApi<T = unknown>(path: string, options: RequestOptions 
   } catch (err) {
     if (typeof window !== 'undefined' && path.startsWith('/system-reset/')) {
       const fallbackController = new AbortController();
-      const fallbackTimer = setTimeout(() => fallbackController.abort(), timeoutMs);
+      const fallbackTimer = setTimeout(() => fallbackController.abort(), safeTimeoutMs);
       try {
         response = await fetch(`/api${path}`, {
           method,
