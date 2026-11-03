@@ -388,16 +388,15 @@ final class SystemResetController
             }
         } while ($count === $pageSize);
 
-        $gasConfigured = (new GoogleAppsScriptBridgeService())->isConfigured();
         $serviceAccount = getenv('GOOGLE_SERVICE_ACCOUNT_JSON') ?: getenv('GOOGLE_SERVICE_ACCOUNT_JSON_PATH');
         $serviceAccountReady = is_string($serviceAccount) && $serviceAccount !== ''
             && (str_starts_with(trim($serviceAccount), '{') || is_file($serviceAccount));
         $rootId = (string) (getenv('GOOGLE_DRIVE_ROOT_ID') ?: '');
-        $hasDriveState = $assets !== [] || $rootId !== '' || $gasConfigured;
+        $hasDriveState = $assets !== [] || $rootId !== '';
         if (!$hasDriveState) {
             return ['audited' => true, 'registered_files' => 0, 'unregistered_files' => 0, 'unregistered_names' => [], 'blockers' => []];
         }
-        if ($gasConfigured || !$serviceAccountReady || $rootId === '') {
+        if (!$serviceAccountReady || $rootId === '') {
             return ['audited' => false, 'registered_files' => count($assets), 'unregistered_files' => 0, 'unregistered_names' => [],
                 'blockers' => [['code' => 'DRIVE_PROVIDER_NOT_AUDITABLE']]];
         }

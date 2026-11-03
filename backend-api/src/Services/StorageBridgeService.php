@@ -214,6 +214,13 @@ class StorageBridgeService {
 
         if (!empty($dupRes['data']) && is_array($dupRes['data']) && count($dupRes['data']) > 0) {
             $existing = $dupRes['data'][0];
+            if (is_file($localPath)) {
+                $existingRel = ltrim((string)($existing['drive_file_id'] ?? ''), '/\\');
+                $currentRel = ltrim($relativePath, '/\\');
+                if (($existing['storage_provider'] ?? '') !== 'HOSTINGER_LOCAL' || $existingRel !== $currentRel) {
+                    @unlink($localPath);
+                }
+            }
             return [
                 'asset_id' => $existing['id'],
                 'filename' => $existing['file_name'],
@@ -232,7 +239,7 @@ class StorageBridgeService {
 
         // 2. UPLOAD TO GOOGLE DRIVE (or stage locally if drive is unconfigured in current environment)
         $storageProvider = 'HOSTINGER_LOCAL';
-        $driveFileId = 'local_' . bin2hex(random_bytes(16));
+        $driveFileId = ltrim($relativePath, '/');
         $driveFolderId = $this->rootFolderId;
 
         $driveService = $this->getDriveService();
@@ -434,6 +441,12 @@ class StorageBridgeService {
             return false;
         }
 
+        $topSegment = strtolower(explode('/', ltrim($relativePath, '/'), 2)[0]);
+        $protectedRoots = ['system_reset', 'backups', 'bible', 'bible-dataset', 'cache', 'logs', 'temp'];
+        if ($topSegment === '' || in_array($topSegment, $protectedRoots, true)) {
+            return false;
+        }
+
         $root = realpath($this->rootDir);
         if ($root === false) {
             return false;
@@ -446,6 +459,23 @@ class StorageBridgeService {
             return false;
         }
 
-        return unlink($fullPath);
+        $deleted = unlink($fullPath);
+        if ($deleted) {
+            try {
+                $cleanRel = ltrim($relativePath, '/');
+                $this->getSupabase()->query(
+                    'media_assets?drive_file_id=in.(' . rawurlencode($cleanRel) . ',' . rawurlencode('/' . $cleanRel) . ')&deleted_at=is.null',
+                    'PATCH',
+                    [
+                        'status' => 'DELETED',
+                        'deleted_at' => gmdate('Y-m-d\TH:i:s\Z'),
+                    ]
+                );
+            } catch (\Throwable) {
+                // Best-effort DB sync; do not fail local file deletion if Supabase is unreachable
+            }
+        }
+
+        return $deleted;
     }
 }

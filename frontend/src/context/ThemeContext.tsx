@@ -58,6 +58,20 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     root.classList.add(`accent-${a}`);
   };
 
+  useEffect(() => {
+    if (!mounted || theme !== 'system' || typeof window === 'undefined' || !window.matchMedia) {
+      return;
+    }
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleChange = () => {
+      applyThemeClasses('system', accent);
+    };
+    mediaQuery.addEventListener('change', handleChange);
+    return () => {
+      mediaQuery.removeEventListener('change', handleChange);
+    };
+  }, [mounted, theme, accent]);
+
   const setTheme = (newTheme: AppTheme) => {
     setThemeState(newTheme);
     localStorage.setItem('elkarooz-theme', newTheme);

@@ -30,6 +30,8 @@ final class SystemResetStorageService
         'bible-dataset',
         'cache',
         'system_reset',
+        'logs',
+        'temp',
     ];
 
     private string $root;

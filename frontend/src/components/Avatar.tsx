@@ -3,6 +3,35 @@
 import Image from 'next/image';
 import { useState } from 'react';
 
+const OPTIMIZED_IMAGE_HOSTS = new Set([
+  'kgqgnqjkrghvktymbimz.supabase.co',
+  'elkaroozschool.is-best.net',
+]);
+
+export function isNextImageOptimizable(src: string): boolean {
+  if (!src) return false;
+  const trimmed = src.trim();
+  if (trimmed.startsWith('/') && !trimmed.startsWith('//')) return true;
+  try {
+    const parsed = new URL(trimmed);
+    return parsed.protocol === 'https:' && OPTIMIZED_IMAGE_HOSTS.has(parsed.hostname);
+  } catch {
+    return false;
+  }
+}
+
+export function isRenderableImageUrl(src: string): boolean {
+  if (!src) return false;
+  const trimmed = src.trim();
+  if (trimmed.startsWith('/') && !trimmed.startsWith('//')) return true;
+  try {
+    const parsed = new URL(trimmed);
+    return parsed.protocol === 'https:' || parsed.protocol === 'http:';
+  } catch {
+    return false;
+  }
+}
+
 /**
  * An avatar that renders whatever the database actually holds.
  *
@@ -56,13 +85,14 @@ export default function Avatar({
     );
   }
 
-  const isDataUrl = src!.startsWith('data:');
+  const trimmedSrc = src!.trim();
+  const isDataUrl = trimmedSrc.startsWith('data:');
 
   if (isDataUrl) {
     // eslint-disable-next-line @next/next/no-img-element
     return (
       <img
-        src={src!}
+        src={trimmedSrc}
         alt={name || 'صورة شخصية'}
         width={size}
         height={size}
@@ -73,12 +103,25 @@ export default function Avatar({
     );
   }
 
+  if (!isRenderableImageUrl(trimmedSrc)) {
+    return (
+      <span
+        className={shell}
+        style={{ width: size, height: size, fontSize: Math.max(12, size * 0.42) }}
+        aria-hidden="true"
+      >
+        {initial}
+      </span>
+    );
+  }
+
   return (
     <Image
-      src={src!}
+      src={trimmedSrc}
       alt={name || 'صورة شخصية'}
       width={size}
       height={size}
+      unoptimized={!isNextImageOptimizable(trimmedSrc)}
       onError={() => setFailed(true)}
       className={`${rounded} object-cover shrink-0 ${className}`}
     />

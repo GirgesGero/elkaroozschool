@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
@@ -15,7 +15,6 @@ import {
   Download,
   AlertTriangle,
   CheckCircle2,
-  XCircle,
   RefreshCw,
   ShieldAlert,
   ArrowRight,
@@ -37,9 +36,47 @@ interface ImportRecord {
   created_at: string;
 }
 
+/**
+ * RFC-4180 compliant CSV line parser that respects double-quoted fields containing commas
+ * and escaped double quotes (`""`).
+ */
+function parseCsvLine(line: string): string[] {
+  const result: string[] = [];
+  let current = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (inQuotes) {
+      if (ch === '"') {
+        if (i + 1 < line.length && line[i + 1] === '"') {
+          current += '"';
+          i++;
+        } else {
+          inQuotes = false;
+        }
+      } else {
+        current += ch;
+      }
+    } else {
+      if (ch === '"') {
+        inQuotes = true;
+      } else if (ch === ',') {
+        result.push(current.trim());
+        current = '';
+      } else {
+        current += ch;
+      }
+    }
+  }
+
+  result.push(current.trim());
+  return result;
+}
+
 export default function AdminImportsPage() {
   const router = useRouter();
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -62,11 +99,7 @@ export default function AdminImportsPage() {
   const [processing, setProcessing] = useState(false);
   const [statusMsg, setStatusMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -104,28 +137,36 @@ export default function AdminImportsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [router, supabase]);
+
+  useEffect(() => {
+    void fetchData();
+  }, [fetchData]);
 
   const handleParseCsv = (content: string) => {
     setCsvText(content);
     setStatusMsg(null);
     try {
-      const lines = content.trim().split('\n').map((l) => l.trim()).filter(Boolean);
+      const cleanContent = content.replace(/^\uFEFF/, '');
+      const lines = cleanContent
+        .split(/\r?\n/)
+        .map((l) => l.trim())
+        .filter(Boolean);
       if (lines.length < 2) {
         setParsedRows([]);
         setPreviewStats(null);
         return;
       }
 
-      const headers = lines[0].split(',').map((h) => h.trim().replace(/^["']|["']$/g, ''));
+      const headers = parseCsvLine(lines[0]).map((h) => h.replace(/^["']|["']$/g, '').trim());
       const rows: any[] = [];
       const errors: { row: number; error: string }[] = [];
 
       for (let i = 1; i < lines.length; i++) {
-        const values = lines[i].split(',').map((v) => v.trim().replace(/^["']|["']$/g, ''));
+        const values = parseCsvLine(lines[i]);
         const rowObj: any = {};
         headers.forEach((h, idx) => {
-          rowObj[h] = values[idx] || '';
+          rowObj[h] = values[idx] ?? '';
         });
 
         // Validation
@@ -149,6 +190,20 @@ export default function AdminImportsPage() {
     } catch (err: any) {
       setStatusMsg({ type: 'error', text: 'فشل معالجة صيغة CSV: ' + err.message });
     }
+  };
+
+  const handleCsvFileUpload = (file: File | null) => {
+    if (!file) return;
+    setFilename(file.name);
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = typeof ev.target?.result === 'string' ? ev.target.result : '';
+      handleParseCsv(text);
+    };
+    reader.onerror = () => {
+      setStatusMsg({ type: 'error', text: 'تعذر قراءة ملف الـ CSV المحدد.' });
+    };
+    reader.readAsText(file, 'UTF-8');
   };
 
   const handleExecuteImport = async (isDryRun: boolean) => {
@@ -185,7 +240,7 @@ export default function AdminImportsPage() {
           setParsedRows([]);
           setCsvText('');
           setPreviewStats(null);
-          fetchData();
+          void fetchData();
         }
       } else {
         setStatusMsg({
@@ -327,7 +382,7 @@ export default function AdminImportsPage() {
           <ShieldAlert className="w-16 h-16 text-danger mx-auto mb-4" />
           <h2 className="text-xl font-bold text-content mb-2">غير مصرح بالوصول</h2>
           <p className="text-content-muted mb-6 text-sm">
-            لوحة الاستيراد الجماعي محصورة على مسؤولي النظام (Admin / Super User).
+            لوحة الاستيراد الجماعي محصورة على مسؤولي النظام (Admin).
           </p>
           <Link
             href="/"
@@ -451,21 +506,36 @@ export default function AdminImportsPage() {
 
         {/* Bulk Import Form Card */}
         <div className="bg-nav border border-line rounded-2xl p-6 shadow-xl space-y-6">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <Upload className="w-5 h-5 text-success" />
               <h2 className="text-lg font-bold text-content">استيراد حسابات الطلاب (CSV / Excel)</h2>
             </div>
-            <button
-              type="button"
-              onClick={() => {
-                const sample = `username,full_name,phone,father_name,group_name,birth_date,password\nmina_gerges,مينا جرجس صليب,01234567890,أبونا جرجس,الفرقة الأولى,2005-01-15,Trainee123!\nkareem_morcos,كريم مرقص حنا,01122334455,أبونا مرقص,الفرقة الأولى,2004-06-20,Trainee123!`;
-                handleParseCsv(sample);
-              }}
-              className="text-xs text-warning hover:underline"
-            >
-              تحميل نموذج تجريبي (Sample CSV)
-            </button>
+            <div className="flex items-center gap-3">
+              <label className="cursor-pointer inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-nav border border-line hover:border-success text-xs font-bold text-content transition">
+                <Upload className="w-3.5 h-3.5 text-success" />
+                <span>اختيار ملف CSV من الجهاز</span>
+                <input
+                  type="file"
+                  accept=".csv,text/csv"
+                  className="hidden"
+                  onChange={(e) => {
+                    handleCsvFileUpload(e.target.files?.[0] ?? null);
+                    e.target.value = '';
+                  }}
+                />
+              </label>
+              <button
+                type="button"
+                onClick={() => {
+                  const sample = `username,full_name,phone,father_name,group_name,birth_date,password\nmina_gerges,مينا جرجس صليب,01234567890,أبونا جرجس,الفرقة الأولى,2005-01-15,Trainee123!\nkareem_morcos,كريم مرقص حنا,01122334455,أبونا مرقص,الفرقة الأولى,2004-06-20,Trainee123!`;
+                  handleParseCsv(sample);
+                }}
+                className="text-xs text-warning hover:underline"
+              >
+                تحميل نموذج تجريبي (Sample CSV)
+              </button>
+            </div>
           </div>
 
           <div className="space-y-4">
@@ -556,7 +626,7 @@ export default function AdminImportsPage() {
               <h2 className="text-lg font-bold text-content">سجل عمليات الاستيراد السابقة ({importHistory.length})</h2>
             </div>
             <button
-              onClick={fetchData}
+              onClick={() => void fetchData()}
               className="p-2 bg-nav hover:bg-input rounded-lg text-content-secondary transition"
               title="تحديث السجل"
             >

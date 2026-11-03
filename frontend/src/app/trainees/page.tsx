@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { explainDbError } from '@/lib/errors/db';
 import SmartHeader from '@/components/SmartHeader';
@@ -15,29 +14,11 @@ import CreateTraineeModal from '@/components/CreateTraineeModal';
 import TraineeCard from '@/components/TraineeCard';
 import {
   AlertCircle,
-  ArrowRight,
-  ChevronLeft,
-  ExternalLink,
-  MapPin,
-  Phone,
-  Power,
   Search,
-  ShieldAlert,
-  User,
-  UserCheck,
-  UserX,
-  Users,
-  Eye,
-  Filter,
-  Layers,
-  Clock,
-  TrendingUp,
   Loader2,
   UserPlus,
-  Sparkles,
 } from 'lucide-react';
 import type { Profile } from '@/types/database';
-import Avatar from '../../components/Avatar';
 
 export default function TraineesDirectoryPage() {
   const router = useRouter();
@@ -61,12 +42,17 @@ export default function TraineesDirectoryPage() {
   const isAdminOrSuper = profile?.role_id === 'admin';
   const isSecretariat = profile?.role_id === 'secretariat';
   const canAddTrainee = isAdminOrSuper || isSecretariat;
+  const canToggleStatus = ['admin', 'supervisor', 'secretariat'].includes(profile?.role_id || '');
 
   const loadTrainees = async (currentUser: Profile, targetGroup: number) => {
     const requestId = ++loadRequestRef.current;
     setLoading(true);
     const supabase = createClient();
-    let query = supabase.from('profiles').select('id,full_name,username,group_id,is_active,phone,avatar_url,created_at').eq('role_id', 'trainee');
+    let query = supabase
+      .from('profiles')
+      .select('id,full_name,username,group_id,is_active,phone,avatar_url,confession_father,created_at')
+      .eq('role_id', 'trainee')
+      .is('deleted_at', null);
 
     if (currentUser.role_id !== 'admin' && currentUser.group_id) {
       query = query.eq('group_id', currentUser.group_id);
@@ -76,7 +62,6 @@ export default function TraineesDirectoryPage() {
 
     try {
       const { data: traineeList, error: traineeError } = await query
-        .select('id,full_name,username,group_id,is_active,phone,avatar_url,created_at')
         .order('full_name', { ascending: true })
         .limit(500);
       if (traineeError) throw traineeError;
@@ -93,41 +78,50 @@ export default function TraineesDirectoryPage() {
 
   useEffect(() => {
     async function init() {
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      try {
+        const supabase = createClient();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
 
-      if (!user) {
-        router.push('/login');
-        return;
-      }
+        if (!user) {
+          router.push('/login');
+          return;
+        }
 
-      const { data: userProfile } = await supabase
-        .from('profiles')
-        .select('id,full_name,username,role_id,group_id,is_active,phone,avatar_url,created_at')
-        .eq('id', user.id)
-        .single();
+        const { data: userProfile, error: profileError } = await supabase
+          .from('profiles')
+          .select('id,full_name,username,role_id,group_id,is_active,phone,avatar_url,confession_father,created_at')
+          .eq('id', user.id)
+          .single();
+        if (profileError) throw profileError;
 
-      if (userProfile) {
-        const prof = userProfile as Profile;
-        setProfile(prof);
-        const defaultGroup = prof.role_id === 'admin' ? 0 : (prof.group_id || 0);
-        setSelectedGroupId(defaultGroup);
-        loadTrainees(prof, defaultGroup);
+        if (userProfile) {
+          const prof = userProfile as Profile;
+          setProfile(prof);
+          const defaultGroup = prof.role_id === 'admin' ? 0 : (prof.group_id || 0);
+          setSelectedGroupId(defaultGroup);
+          await loadTrainees(prof, defaultGroup);
+        } else {
+          setLoading(false);
+        }
+      } catch (err) {
+        setNotice(explainDbError(err));
+        setLoading(false);
       }
     }
 
-    init();
+    void init();
   }, [router]);
 
   const handleGroupChange = (newGroupId: number) => {
     setSelectedGroupId(newGroupId);
-    if (profile) loadTrainees(profile, newGroupId);
+    if (profile) void loadTrainees(profile, newGroupId);
   };
 
   const handleToggleSuspension = async (trainee: Profile, e: React.MouseEvent) => {
     e.stopPropagation();
+    if (!canToggleStatus) return;
     setUpdating(true);
     setNotice(null);
     const supabase = createClient();
@@ -286,7 +280,7 @@ export default function TraineesDirectoryPage() {
                 key={t.id}
                 trainee={t}
                 onClick={openDrawer}
-                onToggleStatus={handleToggleSuspension}
+                onToggleStatus={canToggleStatus ? handleToggleSuspension : undefined}
                 isUpdatingStatus={updating}
               />
             ))}
@@ -304,7 +298,9 @@ export default function TraineesDirectoryPage() {
         isOpen={isDrawerOpen}
         onClose={() => setIsDrawerOpen(false)}
         currentUserProfile={profile}
-        onProfileUpdated={() => loadTrainees(profile!, selectedGroupId)}
+        onProfileUpdated={() => {
+          if (profile) void loadTrainees(profile, selectedGroupId);
+        }}
       />
 
       {/* Create Trainee Modal */}
@@ -314,7 +310,7 @@ export default function TraineesDirectoryPage() {
         currentUser={profile}
         defaultGroupId={selectedGroupId > 0 ? selectedGroupId : (profile?.group_id || 1)}
         onTraineeCreated={() => {
-          if (profile) loadTrainees(profile, selectedGroupId);
+          if (profile) void loadTrainees(profile, selectedGroupId);
         }}
       />
 

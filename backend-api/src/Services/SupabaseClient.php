@@ -42,6 +42,8 @@ class SupabaseClient {
 
         curl_setopt($ch, CURLOPT_URL, $this->url . '/rest/v1/' . ltrim($endpoint, '/'));
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 60);
         curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
 

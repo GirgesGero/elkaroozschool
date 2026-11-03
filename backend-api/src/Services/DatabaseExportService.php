@@ -160,11 +160,12 @@ final class DatabaseExportService
             // an extra harmless request rather than a truncated backup.
             $exportedTotal = null;
             while (true) {
-                $page = $this->client->rpc('export_table', [
+                $rawPage = $this->client->rpc('export_table', [
                     'p_table' => $table,
                     'p_limit' => self::PAGE_LIMIT,
                     'p_offset' => $offset,
                 ]);
+                $page = $this->unwrapRpcResponse($rawPage, 'export_table');
 
                 if ($exportedTotal === null && isset($page['total_rows'])) {
                     $exportedTotal = (int) $page['total_rows'];
@@ -274,8 +275,9 @@ final class DatabaseExportService
      */
     private function listTables(): array
     {
-        $result = $this->client->rpc('export_manifest');
-        $tables = $result['tables'] ?? [];
+        $rawResult = $this->client->rpc('export_manifest');
+        $result = $this->unwrapRpcResponse($rawResult, 'export_manifest');
+        $tables = $result['tables'] ?? (array_is_list($result) ? $result : []);
         if (!is_array($tables)) {
             return [];
         }
@@ -289,5 +291,25 @@ final class DatabaseExportService
             }
         }
         return $out;
+    }
+
+    /**
+     * Unwraps the ['status' => int, 'data' => mixed] envelope returned by SupabaseClient::rpc(),
+     * while remaining compatible with unit/contract test doubles that return payload arrays directly.
+     */
+    private function unwrapRpcResponse(array $res, string $rpcName): array
+    {
+        if (array_key_exists('status', $res) && array_key_exists('data', $res)) {
+            $status = (int) $res['status'];
+            if ($status < 200 || $status >= 300) {
+                throw new \RuntimeException(sprintf(
+                    'RPC %s failed with HTTP status %d',
+                    $rpcName,
+                    $status
+                ));
+            }
+            return is_array($res['data']) ? $res['data'] : [];
+        }
+        return $res;
     }
 }

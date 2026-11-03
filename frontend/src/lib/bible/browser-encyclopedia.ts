@@ -444,6 +444,7 @@ function getTitleIndex(): Promise<Record<string, number[]>> {
     // about shape: a malformed index must not poison Object.keys() below.
     resolvedTitleIndex =
       idx && typeof idx === 'object' && !Array.isArray(idx) ? idx : {};
+    cachedTitleTerms = Object.keys(resolvedTitleIndex);
     return resolvedTitleIndex;
   }, {});
 }
@@ -491,6 +492,7 @@ function memoOnce<K extends string>(
  * Both are cleared together and both are re-populated by `getTitleIndex`.
  */
 let resolvedTitleIndex: Record<string, number[]> | null = null;
+let cachedTitleTerms: string[] | null = null;
 
 function loadedTitleIndex(): Record<string, number[]> | null {
   return resolvedTitleIndex;
@@ -720,9 +722,10 @@ function expandTitlePrefix(token: string): [string, number[]][] {
   const out: [string, number[]][] = [];
   const idx = loadedTitleIndex();
   if (!idx) return out;
+  const terms = cachedTitleTerms ?? (cachedTitleTerms = Object.keys(idx));
 
   // Pass 1: prefix. Highest confidence, cheapest to rank.
-  for (const term of Object.keys(idx)) {
+  for (const term of terms) {
     if (!term.startsWith(token)) continue;
     const ids = idx[term];
     if (ids?.length) out.push([term, ids]);
@@ -735,7 +738,7 @@ function expandTitlePrefix(token: string): [string, number[]][] {
   // the whole vocabulary and returns noise.
   if (token.length < PREFIX_INFIX_MIN_LENGTH) return out;
 
-  for (const term of Object.keys(idx)) {
+  for (const term of terms) {
     if (!term.includes(token)) continue;
     const ids = idx[term];
     if (ids?.length) out.push([term, ids]);
@@ -1042,9 +1045,13 @@ export function clearBibleMemoryCache(): void {
   chunkCache.clear();
   shardCache.clear();
   sectionIndexCache.clear();
+  delete memoPromises.articleMap;
+  delete memoPromises.slugMap;
+  delete memoPromises.titleIndex;
   // The prefix index is derived from the title index, so dropping one without
   // the other would let expansion read a stale vocabulary.
   resolvedTitleIndex = null;
+  cachedTitleTerms = null;
 }
 
 /** Exposed for the capacity indicator in the UI. */

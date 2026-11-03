@@ -50,6 +50,18 @@ final class AtomicRestoreService {
     private string $safetyDir = '';
     /** @var array<string,string> absolute original path => snapshot path */
     private array $snapshot = [];
+    /** @var list<string> absolute paths of newly created files during restoreFiles() */
+    private array $createdFiles = [];
+
+    private const EXCLUDED_STORAGE_ROOTS = [
+        'backups',
+        'bible',
+        'bible-dataset',
+        'cache',
+        'system_reset',
+        'logs',
+        'temp',
+    ];
 
     /** @var array restore options, kept for the apply step */
     private array $options = [];
@@ -157,7 +169,14 @@ final class AtomicRestoreService {
 
         $this->safetyDir = FsHelper::createPrivateStagingDir('elkarooz_safety_');
         $dest = $this->safetyDir . DIRECTORY_SEPARATOR . 'storage_snapshot';
-        self::copyTree($root, $dest);
+        self::ensureDir($dest);
+        foreach (new \FilesystemIterator($root, \FilesystemIterator::SKIP_DOTS) as $entry) {
+            $name = $entry->getFilename();
+            if (in_array($name, self::EXCLUDED_STORAGE_ROOTS, true)) {
+                continue;
+            }
+            self::copyTree($entry->getPathname(), $dest . DIRECTORY_SEPARATOR . $name);
+        }
 
         return [
             'staged_at'   => gmdate('Y-m-d\TH:i:s\Z'),
@@ -173,6 +192,11 @@ final class AtomicRestoreService {
     private function snapshotStorage(array $incomingRelPaths): void {
         $root = BackupArchiveInspector::storageRoot();
         foreach ($incomingRelPaths as $rel) {
+            $normalizedRel = str_replace('\\', '/', ltrim($rel, '/\\'));
+            $topSegment = explode('/', $normalizedRel, 2)[0];
+            if (in_array($topSegment, self::EXCLUDED_STORAGE_ROOTS, true)) {
+                continue;
+            }
             $target = $root . DIRECTORY_SEPARATOR . ltrim($rel, '/\\');
             if (!file_exists($target)) {
                 continue; // nothing to preserve; the restore simply creates it
@@ -219,6 +243,11 @@ final class AtomicRestoreService {
             if ($rel === '') {
                 continue;
             }
+            $normalizedRel = str_replace('\\', '/', $rel);
+            $topSegment = explode('/', $normalizedRel, 2)[0];
+            if (in_array($topSegment, self::EXCLUDED_STORAGE_ROOTS, true)) {
+                continue;
+            }
             $dest = $root . DIRECTORY_SEPARATOR . $rel;
 
             // Containment re-check on the FINAL resolved parent. This is the check
@@ -231,6 +260,9 @@ final class AtomicRestoreService {
 
             if ($item->isDir()) {
                 continue;
+            }
+            if (!file_exists($dest)) {
+                $this->createdFiles[] = $dest;
             }
             if (!@copy($item->getPathname(), $dest)) {
                 throw new \RuntimeException('فشل نسخ الملف أثناء الاستعادة: ' . $rel);
@@ -303,13 +335,19 @@ final class AtomicRestoreService {
                     require_once $supaFile;
                 }
             }
-            if (class_exists(DatabaseExportService::class) && (class_exists(SupabaseClient::class) || $this->supabaseClient !== null)) {
-                $client = $this->supabaseClient ?? new SupabaseClient();
-                (new DatabaseExportService($client))->exportToDirectory($dest);
-                $this->dbSnapshotDir = $dest;
+            if (!class_exists(DatabaseExportService::class) || (!class_exists(SupabaseClient::class) && $this->supabaseClient === null)) {
+                throw new \RuntimeException('خدمة تصدير قاعدة البيانات غير متاحة لأخذ لقطة الأمان');
             }
+            $client = $this->supabaseClient ?? new SupabaseClient();
+            (new DatabaseExportService($client))->exportToDirectory($dest);
+            $this->dbSnapshotDir = $dest;
         } catch (\Throwable $e) {
-            error_log('[AtomicRestoreService] Pre-restore database snapshot notice: ' . $e->getMessage());
+            error_log('[AtomicRestoreService] Pre-restore database snapshot failed: ' . $e->getMessage());
+            throw new \RuntimeException(
+                'فشل إنشاء نسخة الأمان لقاعدة البيانات قبل الاستعادة؛ تم إيقاف العملية لحماية البيانات: ' . $e->getMessage(),
+                0,
+                $e
+            );
         }
     }
 
@@ -326,7 +364,13 @@ final class AtomicRestoreService {
         );
         foreach ($it as $f) {
             /** @var \SplFileInfo $f */
-            $out[] = ltrim(substr($f->getPathname(), strlen($filesDir)), '/\\');
+            $rel = ltrim(substr($f->getPathname(), strlen($filesDir)), '/\\');
+            $normalizedRel = str_replace('\\', '/', $rel);
+            $topSegment = explode('/', $normalizedRel, 2)[0];
+            if (in_array($topSegment, self::EXCLUDED_STORAGE_ROOTS, true)) {
+                continue;
+            }
+            $out[] = $rel;
         }
         return $out;
     }
@@ -335,6 +379,14 @@ final class AtomicRestoreService {
      * Undo whatever the apply step managed to change.
      */
     private function rollback(): void {
+        // 0. Remove newly created files written during restoreFiles()
+        foreach ($this->createdFiles as $created) {
+            if (is_file($created)) {
+                @unlink($created);
+            }
+        }
+        $this->createdFiles = [];
+
         // 1. Put back every file we moved aside.
         foreach ($this->snapshot as $original => $snapshotPath) {
             if (!file_exists($snapshotPath)) {

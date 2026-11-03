@@ -66,6 +66,7 @@ class BackupController {
             $filesDir = $tempStagingDir . '/files';
             mkdir($filesDir, 0755, true);
 
+            $excludedRoots = ['backups', 'bible', 'bible-dataset', 'cache', 'system_reset', 'logs', 'temp'];
             $copied = 0;
             $copiedBytes = 0;
             $iterator = new \RecursiveIteratorIterator(
@@ -75,10 +76,13 @@ class BackupController {
             foreach ($iterator as $item) {
                 /** @var \SplFileInfo $item */
                 $rel = ltrim(str_replace($storageRoot, '', $item->getPathname()), '/\\');
+                $normalizedRel = str_replace('\\', '/', $rel);
+                $topSegment = explode('/', $normalizedRel, 2)[0];
 
-                // Never fold the backup archive directory into the backup it is
-                // producing: that is self-referential and grows without bound.
-                if (str_starts_with(str_replace('\\', '/', $rel), 'backups/')) {
+                // Never fold excluded non-operational / system directories into the backup:
+                // backups/ is self-referential, bible/bible-dataset holds static encyclopedia
+                // shards, and system_reset/auth-cutoff.json holds active security lock state.
+                if (in_array($topSegment, $excludedRoots, true)) {
                     continue;
                 }
 

@@ -81,7 +81,9 @@ export default function NotificationCenter() {
           },
           (payload) => {
             const newNotif = payload.new as NotificationItem;
+            if (!newNotif?.id) return;
             setNotifications((prev) => {
+              if (prev.some((n) => n.id === newNotif.id)) return prev;
               const updated = [newNotif, ...prev];
               const unread = updated.filter((n) => !n.is_read).length;
               setUnreadCount(unread);

@@ -16,7 +16,7 @@ echo.
 echo  [1] Start Full Platform [Frontend on Port 3000]
 echo  [2] Start Frontend Only [Next.js 14 PWA]
 echo  [3] Start PHP Backend API Only [Port 8000]
-echo  [4] Run Full E2E Automated QA Suite [132 Tests]
+echo  [4] Run Full Automated QA Suite [Vitest]
 echo  [5] Run Production Build [npm run build]
 echo  [6] Environment Check [Node, npm, Git, PHP]
 echo  [7] Database Health Check [Supabase Connectivity]
@@ -144,8 +144,8 @@ cls
 echo ===============================================================================
 echo                      DATABASE CONNECTIVITY CHECK
 echo ===============================================================================
-cd /d "%ROOT_DIR%"
-python scripts\verify_phase8_bible.py
+cd /d "%FRONTEND_DIR%"
+node -e "const fs=require('fs');const env=fs.existsSync('.env.local')?fs.readFileSync('.env.local','utf8'):'';const m=env.match(/NEXT_PUBLIC_SUPABASE_URL=(.+)/);const k=env.match(/NEXT_PUBLIC_SUPABASE_ANON_KEY=(.+)/);if(!m||!k){console.error('[FAIL] Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY in frontend/.env.local');process.exit(1);}const url=m[1].trim()+'/rest/v1/roles?select=id&limit=1';fetch(url,{headers:{apikey:k[1].trim()}}).then(r=>{console.log(r.ok?'[PASS] Supabase REST endpoint reachable ('+r.status+')':'[FAIL] HTTP '+r.status);process.exit(r.ok?0:1);}).catch(e=>{console.error('[FAIL]',e.message);process.exit(1);});"
 echo.
 pause
 goto MENU

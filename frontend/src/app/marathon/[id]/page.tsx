@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import Image from 'next/image';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import {
@@ -12,10 +11,8 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
-  HelpCircle,
   Loader2,
   Lock,
-  Sparkles,
   Trophy,
   XCircle,
 } from 'lucide-react';
@@ -53,91 +50,104 @@ export default function MarathonPlayerPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
+    setSelectedOptionId(null);
+  }, [currentQIndex]);
+
+  useEffect(() => {
     async function loadMarathon() {
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      try {
+        const supabase = createClient();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
 
-      if (!user) {
-        router.push('/login');
-        return;
-      }
-
-      const { data: userProfile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-
-      if (userProfile) {
-        setProfile(userProfile as Profile);
-
-        // Fetch marathon info
-        const { data: mData } = await supabase
-          .from('marathons')
-          .select('title')
-          .eq('id', marathonId)
-          .single();
-
-        if (mData) setMarathonTitle(mData.title);
-
-        // The player never reads the answer key or the raw question tables.
-        // The RPC returns only published questions and option text; correctness
-        // stays server-side and historical submissions keep their old question IDs.
-        const { data: playerQuestions, error: questionError } = await supabase.rpc('get_marathon_questions_for_player', {
-          p_marathon_id: marathonId,
-        });
-        if (questionError) {
-          setErrorMsg('تعذر تحميل أسئلة الماراثون.');
+        if (!user) {
+          router.push('/login');
+          return;
         }
 
-        const mappedQ: QuestionItem[] = Array.isArray(playerQuestions) ? playerQuestions.map((q: any) => ({
-          id: q.id,
-          section_id: q.section_id,
-          question_text: q.question_text,
-          order_index: q.order_index,
-          section_title: q.section_title,
-          options: q.options || [],
-        })) : [];
-        setQuestions(mappedQ);
+        const { data: userProfile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
 
-        if (!questionError) {
-          // Fetch Trainee state & answers
-          const { data: state } = await supabase.rpc('get_trainee_marathon_state', {
+        if (userProfile) {
+          setProfile(userProfile as Profile);
+
+          // Fetch marathon info
+          const { data: mData } = await supabase
+            .from('marathons')
+            .select('title')
+            .eq('id', marathonId)
+            .single();
+
+          if (mData) setMarathonTitle(mData.title);
+
+          // The player never reads the answer key or the raw question tables.
+          // The RPC returns only published questions and option text; correctness
+          // stays server-side and historical submissions keep their old question IDs.
+          const { data: playerQuestions, error: questionError } = await supabase.rpc('get_marathon_questions_for_player', {
             p_marathon_id: marathonId,
-            p_trainee_id: user.id,
           });
+          if (questionError) {
+            setErrorMsg('تعذر تحميل أسئلة الماراثون.');
+          }
 
-          if (state) {
-            setIsCompleted(state.is_completed || false);
-            const ansMap = new Map();
-            if (state.answers) {
-              state.answers.forEach((a: any) => ansMap.set(a.question_id, a));
-            }
-            setAnswersMap(ansMap);
+          const mappedQ: QuestionItem[] = Array.isArray(playerQuestions) ? playerQuestions.map((q: any) => ({
+            id: q.id,
+            section_id: q.section_id,
+            question_text: q.question_text,
+            order_index: q.order_index,
+            section_title: q.section_title,
+            options: q.options || [],
+          })) : [];
+          setQuestions(mappedQ);
 
-            // Set current question index to next unanswered question
-            if (!state.is_completed) {
-              const firstUnanswered = mappedQ.findIndex((q) => !ansMap.has(q.id) || ansMap.get(q.id).is_reopened);
-              if (firstUnanswered !== -1) {
-                setCurrentQIndex(firstUnanswered);
+          if (!questionError) {
+            // Fetch Trainee state & answers
+            const { data: state } = await supabase.rpc('get_trainee_marathon_state', {
+              p_marathon_id: marathonId,
+              p_trainee_id: user.id,
+            });
+
+            if (state) {
+              setIsCompleted(state.is_completed || false);
+              const ansMap = new Map();
+              if (state.answers) {
+                state.answers.forEach((a: any) => ansMap.set(a.question_id, a));
+              }
+              setAnswersMap(ansMap);
+
+              // Set current question index to next unanswered question
+              if (!state.is_completed) {
+                const firstUnanswered = mappedQ.findIndex((q) => !ansMap.has(q.id) || ansMap.get(q.id).is_reopened);
+                if (firstUnanswered !== -1) {
+                  setCurrentQIndex(firstUnanswered);
+                }
               }
             }
           }
         }
+      } catch (err) {
+        setErrorMsg(err instanceof Error ? err.message : 'تعذر تحميل بيانات الماراثون.');
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }
 
-    loadMarathon();
+    void loadMarathon();
   }, [marathonId, router]);
 
   const currentQ = questions[currentQIndex];
   const currentAnswer = currentQ ? answersMap.get(currentQ.id) : null;
   const isQuestionAnswered = !!currentAnswer && !currentAnswer.is_reopened;
+  const answeredCount = questions.filter((q) => {
+    const a = answersMap.get(q.id);
+    return Boolean(a && !a.is_reopened);
+  }).length;
   const progressPercentage = questions.length > 0
-    ? Math.round((Array.from(answersMap.values()).filter((answer) => !answer?.is_reopened).length / questions.length) * 100)
+    ? Math.round((answeredCount / questions.length) * 100)
     : 0;
 
   const handleSubmitAnswer = async () => {
@@ -225,7 +235,7 @@ export default function MarathonPlayerPage() {
               <span>التقدم الإجمالي: {progressPercentage}%</span>
             </div>
             <span className="text-xs text-content-muted">
-              {answersMap.size} من {questions.length} أسئلة مجابة
+              {answeredCount} من {questions.length} أسئلة مجابة
             </span>
           </div>
 
@@ -245,7 +255,7 @@ export default function MarathonPlayerPage() {
               return (
                 <button
                   key={q.id}
-                  disabled={!isCompleted && !isAnswered && idx > answersMap.size}
+                  disabled={!isCompleted && !isAnswered && idx > answeredCount}
                   onClick={() => setCurrentQIndex(idx)}
                   className={`w-7 h-7 rounded-lg text-[11px] font-bold transition-all flex items-center justify-center ${
                     isCurrent
@@ -293,17 +303,21 @@ export default function MarathonPlayerPage() {
 
               {/* Options List (4 or 5 options) */}
               <div className="space-y-3 mb-6">
-                {currentQ.options.map((opt, optIdx) => {
-                  const isSelected = selectedOptionId === opt.id || (isQuestionAnswered && currentAnswer?.selected_answer_id === opt.id);
-                  const isCorrectOption = Boolean(opt.is_correct);
+                {currentQ.options.map((opt) => {
+                  const isSelectedInAnswer = isQuestionAnswered && currentAnswer?.selected_answer_id === opt.id;
+                  const isSelected = selectedOptionId === opt.id || isSelectedInAnswer;
+                  const hasCorrectFlag = typeof opt.is_correct === 'boolean';
+                  const isCorrectOption = hasCorrectFlag && opt.is_correct === true;
 
                   return (
                     <label
                       key={opt.id}
                       className={`w-full p-4 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
                         isQuestionAnswered
-                          ? isSelected
-                            ? 'bg-nav/80 border-line-subtle text-content'
+                          ? isSelectedInAnswer
+                            ? hasCorrectFlag && !opt.is_correct
+                              ? 'bg-danger/10 border-danger/60 text-content'
+                              : 'bg-canvas/40 border-warning/60 text-content'
                             : isCorrectOption
                             ? 'bg-canvas/30 border-success/80 text-success'
                             : 'bg-nav/50 border-line text-content-muted opacity-80 cursor-not-allowed'
@@ -326,17 +340,23 @@ export default function MarathonPlayerPage() {
                       </div>
 
                       {isCompleted && (
-                        <div>
-                          {isCorrectOption && (
+                        <div className="flex items-center gap-2">
+                          {hasCorrectFlag && opt.is_correct && (
                             <span className="text-xs text-success font-bold flex items-center gap-1">
                               <CheckCircle2 className="w-4 h-4" />
-                              <span>الإجابة الصحيحة</span>
+                              <span>{isSelectedInAnswer ? 'الإجابة الصحيحة (إجابتك المسجلة)' : 'الإجابة الصحيحة'}</span>
                             </span>
                           )}
-                          {isSelected && (
+                          {hasCorrectFlag && !opt.is_correct && isSelectedInAnswer && (
                             <span className="text-xs text-danger font-bold flex items-center gap-1">
                               <XCircle className="w-4 h-4" />
-                              <span>إجابتك مسجلة</span>
+                              <span>إجابتك المسجلة</span>
+                            </span>
+                          )}
+                          {!hasCorrectFlag && isSelectedInAnswer && (
+                            <span className="text-xs text-warning font-bold flex items-center gap-1 bg-canvas/60 px-2.5 py-1 rounded-lg border border-warning/40">
+                              <CheckCircle2 className="w-4 h-4" />
+                              <span>إجابتك المسجلة</span>
                             </span>
                           )}
                         </div>

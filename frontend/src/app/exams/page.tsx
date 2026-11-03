@@ -2,8 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
-import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import SmartHeader from '@/components/SmartHeader';
 import SmartBottomNav from '@/components/SmartBottomNav';
@@ -11,9 +9,6 @@ import GlobalSearchModal from '@/components/GlobalSearchModal';
 import UnifiedProfileModal from '@/components/UnifiedProfileModal';
 import {
   AlertCircle,
-  ArrowRight,
-  Award,
-  CheckCircle2,
   FileCheck,
   GraduationCap,
   Save,
@@ -53,99 +48,107 @@ export default function ExamsPage() {
 
   useEffect(() => {
     async function init() {
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      try {
+        const supabase = createClient();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
 
-      if (!user) {
-        router.push('/login');
-        return;
-      }
-
-      const { data: userProfile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-
-      if (userProfile) {
-        const prof = userProfile as Profile;
-        setProfile(prof);
-
-        // Check the database-resolved permission; RLS enforces the user's group scope.
-        let hasGradePerm = prof.role_id === 'admin';
-        if (!hasGradePerm) {
-          const { data: perm } = await supabase.rpc('has_servant_permission', { perm_id: 'GRADE_EXAMS' });
-          hasGradePerm = Boolean(perm);
+        if (!user) {
+          router.push('/login');
+          return;
         }
-        setCanGrade(hasGradePerm);
 
-        // Fetch Exam for user's group (or first active exam if admin / no group)
-        let examQuery = supabase.from('exams').select('*');
-        if (prof.role_id !== 'admin' && prof.group_id) {
-          examQuery = examQuery.eq('group_id', prof.group_id);
-        }
-        const { data: examsList } = await examQuery.limit(1).maybeSingle();
+        const { data: userProfile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
 
-        if (examsList) {
-          setExam(examsList);
+        if (userProfile) {
+          const prof = userProfile as Profile;
+          setProfile(prof);
 
-          if (prof.role_id === 'trainee') {
-            // Fetch personal grade
-            const { data: grade } = await supabase
-              .from('exam_grades')
-              .select('*')
-              .eq('exam_id', examsList.id)
-              .eq('trainee_id', prof.id)
-              .maybeSingle();
-            if (grade) setPersonalGrade(grade);
-          } else if (hasGradePerm) {
-            // Load all trainees and their grades for staff
-            let traineesQuery = supabase
-              .from('profiles')
-              .select('id, full_name, username')
-              .eq('role_id', 'trainee')
-              .eq('is_active', true);
+          // Check the database-resolved permission; RLS enforces the user's group scope.
+          let hasGradePerm = prof.role_id === 'admin';
+          if (!hasGradePerm) {
+            const { data: perm } = await supabase.rpc('has_servant_permission', { perm_id: 'GRADE_EXAMS' });
+            hasGradePerm = Boolean(perm);
+          }
+          setCanGrade(hasGradePerm);
 
-            if (prof.role_id !== 'admin' && prof.group_id) {
-              traineesQuery = traineesQuery.eq('group_id', prof.group_id);
-            }
+          // Fetch Exam for user's group (or first active exam if admin / no group)
+          let examQuery = supabase.from('exams').select('*').is('deleted_at', null);
+          if (prof.role_id !== 'admin' && prof.group_id) {
+            examQuery = examQuery.eq('group_id', prof.group_id);
+          }
+          const { data: activeExam } = await examQuery.limit(1).maybeSingle();
 
-            const { data: trainees } = await traineesQuery.order('full_name', { ascending: true });
+          if (activeExam) {
+            setExam(activeExam);
 
-            const { data: grades } = await supabase
-              .from('exam_grades')
-              .select('trainee_id, numeric_score, appreciation_grade')
-              .eq('exam_id', examsList.id);
+            if (prof.role_id === 'trainee') {
+              // Fetch personal grade
+              const { data: grade } = await supabase
+                .from('exam_grades')
+                .select('*')
+                .eq('exam_id', activeExam.id)
+                .eq('trainee_id', prof.id)
+                .maybeSingle();
+              if (grade) setPersonalGrade(grade);
+            } else if (hasGradePerm) {
+              // Load trainees belonging to the active exam's group (prevents mixing groups for admin)
+              let traineesQuery = supabase
+                .from('profiles')
+                .select('id, full_name, username')
+                .eq('role_id', 'trainee')
+                .eq('is_active', true)
+                .is('deleted_at', null);
 
-            const gradeMap = new Map();
-            if (grades) {
-              grades.forEach((g: any) =>
-                gradeMap.set(g.trainee_id, {
-                  score: g.numeric_score,
-                  appreciation: g.appreciation_grade,
-                })
-              );
-            }
+              if (activeExam.group_id) {
+                traineesQuery = traineesQuery.eq('group_id', activeExam.group_id);
+              } else if (prof.role_id !== 'admin' && prof.group_id) {
+                traineesQuery = traineesQuery.eq('group_id', prof.group_id);
+              }
 
-            if (trainees) {
-              const rows: TraineeGradeRow[] = trainees.map((t: any) => ({
-                trainee_id: t.id,
-                full_name: t.full_name,
-                username: t.username,
-                numeric_score: gradeMap.get(t.id)?.score ?? '',
-                appreciation_grade: gradeMap.get(t.id)?.appreciation ?? null,
-              }));
-              setTraineeGrades(rows);
+              const { data: trainees } = await traineesQuery.order('full_name', { ascending: true });
+
+              const { data: grades } = await supabase
+                .from('exam_grades')
+                .select('trainee_id, numeric_score, appreciation_grade')
+                .eq('exam_id', activeExam.id);
+
+              const gradeMap = new Map();
+              if (grades) {
+                grades.forEach((g: any) =>
+                  gradeMap.set(g.trainee_id, {
+                    score: g.numeric_score,
+                    appreciation: g.appreciation_grade,
+                  })
+                );
+              }
+
+              if (trainees) {
+                const rows: TraineeGradeRow[] = trainees.map((t: any) => ({
+                  trainee_id: t.id,
+                  full_name: t.full_name,
+                  username: t.username,
+                  numeric_score: gradeMap.get(t.id)?.score ?? '',
+                  appreciation_grade: gradeMap.get(t.id)?.appreciation ?? null,
+                }));
+                setTraineeGrades(rows);
+              }
             }
           }
         }
+      } catch (err) {
+        setNotice(err instanceof Error ? err.message : 'تعذر تحميل بيانات الامتحانات.');
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }
 
-    init();
+    void init();
   }, [router]);
 
   const handleScoreChange = (traineeId: string, scoreStr: string) => {
@@ -221,9 +224,9 @@ export default function ExamsPage() {
             <div className="flex items-center gap-2 text-warning mb-1 text-xs font-semibold">
               <GraduationCap className="w-4 h-4" />
               <span>
-                {profile?.group_id === 1 && 'الفرقة الأولى'}
-                {profile?.group_id === 2 && 'الفرقة الثانية'}
-                {profile?.group_id === 3 && 'الفرقة الثالثة'}
+                {(exam?.group_id || profile?.group_id) === 1 && 'الفرقة الأولى'}
+                {(exam?.group_id || profile?.group_id) === 2 && 'الفرقة الثانية'}
+                {(exam?.group_id || profile?.group_id) === 3 && 'الفرقة الثالثة'}
               </span>
             </div>
             <h1 className="text-xl font-bold text-content">التقييم الأكاديمي وامتحان التيرم</h1>
@@ -245,7 +248,7 @@ export default function ExamsPage() {
           <div className="bg-nav border border-line rounded-2xl p-6 shadow-md">
             <h3 className="font-bold text-lg text-content mb-4 flex items-center gap-2">
               <FileCheck className="w-5 h-5 text-gold" />
-              <span>نتيجة امتحان التيرم الأول</span>
+              <span>{exam?.title || 'نتيجة امتحان التيرم الأول'}</span>
             </h3>
 
             {!personalGrade ? (
@@ -285,7 +288,9 @@ export default function ExamsPage() {
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-bold text-base text-content flex items-center gap-2">
                 <Trophy className="w-5 h-5 text-warning" />
-                <span>رصد وتصحيح درجات الامتحان (الدرجة العظمى: {exam?.max_score || 100})</span>
+                <span>
+                  {exam?.title ? `${exam.title} — ` : ''}رصد وتصحيح درجات الامتحان (الدرجة العظمى: {exam?.max_score || 100})
+                </span>
               </h3>
             </div>
 

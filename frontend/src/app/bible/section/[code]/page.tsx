@@ -13,6 +13,9 @@ import { ArrowRight, BookOpen, ChevronLeft, Loader2, Search, Grid, List, Chevron
 import SmartHeader from '@/components/SmartHeader';
 import SmartBottomNav from '@/components/SmartBottomNav';
 import BibleSearchModal from '@/components/Bible/BibleSearchModal';
+import UnifiedProfileModal from '@/components/UnifiedProfileModal';
+import { createClient } from '@/lib/supabase/client';
+import type { Profile } from '@/types/database';
 
 function SectionBrowserContent() {
   const params = useParams();
@@ -20,6 +23,7 @@ function SectionBrowserContent() {
   const searchParams = useSearchParams();
   const categoryCode = params.code as string;
 
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [sections, setSections] = useState<BibleSection[]>([]);
   const [selectedSection, setSelectedSection] = useState<BibleSection | null>(null);
   const [articles, setArticles] = useState<BibleSectionArticleSummary[]>([]);
@@ -223,7 +227,7 @@ function SectionBrowserContent() {
   return (
     <div className="min-h-screen bg-canvas" dir="rtl">
       <SmartHeader 
-        profile={null}
+        profile={profile}
         onOpenSearch={() => setIsSearchOpen(true)}
         onOpenProfile={(id) => setSelectedProfileId(id)}
       />
@@ -446,7 +450,8 @@ function SectionBrowserContent() {
         sectionId={selectedSection?.id}
       />
 
-      <SmartBottomNav profile={null} onOpenProfile={(id) => setSelectedProfileId(id)} />
+      <UnifiedProfileModal profileId={selectedProfileId} currentUser={profile} onClose={() => setSelectedProfileId(null)} />
+      <SmartBottomNav profile={profile} onOpenProfile={(id) => setSelectedProfileId(id)} />
     </div>
   );
 }

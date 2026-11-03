@@ -20,6 +20,9 @@ class ImportController {
         }
 
         $file = $_FILES['file'];
+        if (($file['error'] ?? UPLOAD_ERR_OK) !== UPLOAD_ERR_OK) {
+            Response::error('فشل رفع الملف: خطأ في نقل البيانات', 'UPLOAD_FAILED', 400, ['php_error' => $file['error'] ?? null]);
+        }
         $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
         if (!in_array($ext, ['csv', 'xlsx'])) {
             Response::error('الصيغة غير مدعومة. يرجى رفع ملف CSV أو Excel', 'INVALID_FORMAT', 400);
@@ -65,9 +68,19 @@ class ImportController {
             ]);
         }
 
-        // 3. Save original file to storage archive
-        $storage = new StorageBridgeService();
-        $savedFile = $storage->saveUploadedFile($file, 'imports/trainees/history');
+        // 3. Determine dry-run mode before writing to permanent storage
+        $dryRun = filter_var($_POST['dry_run'] ?? 'false', FILTER_VALIDATE_BOOLEAN);
+
+        $savedFile = [
+            'relative_path' => '/imports/trainees/dry_run/' . Security::sanitizeFilename($file['name']),
+        ];
+        if (!$dryRun) {
+            $storage = new StorageBridgeService();
+            $savedFile = $storage->saveUploadedFile($file, 'imports/trainees/history', [
+                'user' => $user,
+                'resource_type' => 'IMPORT_FILE',
+            ]);
+        }
 
         // 4. Run the import through the atomic Postgres function.
         //
@@ -75,7 +88,6 @@ class ImportController {
         // new_accounts_count to the row count before creating a single account — it
         // never called the database at all. import_trainees_bulk_atomic is the real
         // all-or-nothing path and is now the only thing that decides the outcome.
-        $dryRun = filter_var($_POST['dry_run'] ?? 'false', FILTER_VALIDATE_BOOLEAN);
 
         // The RPC resolves the group by its Arabic name (groups.name_ar), NOT by a
         // numeric id, and reads father_name. Field names below are the function's own

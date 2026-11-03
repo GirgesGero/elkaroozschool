@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { isNextImageOptimizable } from './Avatar';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 
 interface MediaCollageProps {
   images: string[];
@@ -10,6 +12,10 @@ interface MediaCollageProps {
 
 export default function MediaCollage({ images }: MediaCollageProps) {
   const [activeLightboxIndex, setActiveLightboxIndex] = useState<number | null>(null);
+  const closeLightbox = () => {
+    setActiveLightboxIndex(null);
+  };
+  const lightboxRef = useFocusTrap(activeLightboxIndex !== null, closeLightbox);
 
   if (!images || images.length === 0) return null;
 
@@ -17,10 +23,6 @@ export default function MediaCollage({ images }: MediaCollageProps) {
 
   const openLightbox = (index: number) => {
     setActiveLightboxIndex(index);
-  };
-
-  const closeLightbox = () => {
-    setActiveLightboxIndex(null);
   };
 
   const prevImage = () => {
@@ -46,6 +48,7 @@ export default function MediaCollage({ images }: MediaCollageProps) {
               src={images[0]}
               alt="صورة المنشور"
               fill
+              unoptimized={!isNextImageOptimizable(images[0])}
               sizes="(max-width: 768px) 100vw, 650px"
               className="object-cover group-hover:scale-102 transition-transform duration-300"
             />
@@ -65,6 +68,7 @@ export default function MediaCollage({ images }: MediaCollageProps) {
                   src={img}
                   alt={`صورة ${idx + 1}`}
                   fill
+                  unoptimized={!isNextImageOptimizable(img)}
                   sizes="350px"
                   className="object-cover group-hover:scale-105 transition-transform duration-300"
                 />
@@ -84,6 +88,7 @@ export default function MediaCollage({ images }: MediaCollageProps) {
                 src={images[0]}
                 alt="صورة رئيسية"
                 fill
+                unoptimized={!isNextImageOptimizable(images[0])}
                 sizes="450px"
                 className="object-cover group-hover:scale-105 transition-transform duration-300"
               />
@@ -99,6 +104,7 @@ export default function MediaCollage({ images }: MediaCollageProps) {
                     src={img}
                     alt={`صورة ${idx + 2}`}
                     fill
+                    unoptimized={!isNextImageOptimizable(img)}
                     sizes="200px"
                     className="object-cover group-hover:scale-105 transition-transform duration-300"
                   />
@@ -121,6 +127,7 @@ export default function MediaCollage({ images }: MediaCollageProps) {
                   src={img}
                   alt={`صورة ${idx + 1}`}
                   fill
+                  unoptimized={!isNextImageOptimizable(img)}
                   sizes="300px"
                   className="object-cover group-hover:scale-105 transition-transform duration-300"
                 />
@@ -137,7 +144,7 @@ export default function MediaCollage({ images }: MediaCollageProps) {
 
       {/* Fullscreen Lightbox Modal */}
       {activeLightboxIndex !== null && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-xl animate-fade-in select-none">
+        <div ref={lightboxRef} role="dialog" aria-modal="true" aria-label="عرض الصور" className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-xl animate-fade-in select-none">
           {/* Close Button */}
           <button
             onClick={closeLightbox}
@@ -170,6 +177,7 @@ export default function MediaCollage({ images }: MediaCollageProps) {
               src={images[activeLightboxIndex]}
               alt={`صورة مكبرة ${activeLightboxIndex + 1}`}
               fill
+              unoptimized={!isNextImageOptimizable(images[activeLightboxIndex])}
               className="object-contain"
             />
           </div>

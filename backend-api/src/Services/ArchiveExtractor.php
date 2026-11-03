@@ -115,6 +115,15 @@ final class ArchiveExtractor {
                     );
                 }
 
+                $normalisedName = str_replace('\\', '/', $name);
+                if (str_ends_with($normalisedName, '/')) {
+                    $dirTarget = $root . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, rtrim($normalisedName, '/'));
+                    if ($dirTarget !== $root && !is_dir($dirTarget) && !mkdir($dirTarget, 0700, true) && !is_dir($dirTarget)) {
+                        return self::fail('تعذر إنشاء مجلد داخل النسخة الاحتياطية.');
+                    }
+                    continue;
+                }
+
                 $stream = $zip->getStream($name);
                 if ($stream === false) {
                     return self::fail('تعذر قراءة أحد ملفات النسخة الاحتياطية.');

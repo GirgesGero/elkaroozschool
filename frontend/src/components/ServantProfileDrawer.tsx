@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { explainDbError } from '@/lib/errors/db';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 import {
   X,
   User,
@@ -67,6 +68,7 @@ export default function ServantProfileDrawer({
   const [isEditing, setIsEditing] = useState(false);
 
   const isAdminOrSuper = currentUserProfile?.role_id === 'admin';
+  const containerRef = useFocusTrap(isOpen, onClose);
 
   useEffect(() => {
     if (!isOpen || !servantId) return;
@@ -213,7 +215,12 @@ export default function ServantProfileDrawer({
     const newActive = !servant.is_active;
 
     try {
-      const { error } = await supabase.from('profiles').update({ is_active: newActive }).eq('id', servantId);
+      const { error } = await supabase
+        .from('profiles')
+        .update({ is_active: newActive })
+        .eq('id', servantId)
+        .select('id')
+        .single();
       if (error) throw error;
 
       setNotice({
@@ -237,7 +244,7 @@ export default function ServantProfileDrawer({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden bg-black/80 backdrop-blur-md animate-fade-in flex justify-end">
+    <div ref={containerRef} role="dialog" aria-modal="true" aria-label="ملف وصلاحيات الخادم" className="fixed inset-0 z-50 overflow-hidden bg-black/80 backdrop-blur-md animate-fade-in flex justify-end">
       <div
         className="w-full max-w-xl bg-canvas border-r border-gold/30 h-full flex flex-col shadow-2xl shadow-black/80 overflow-hidden animate-slide-in-left relative"
         dir="rtl"

@@ -5,16 +5,28 @@ class ExcelParserService {
     public static function parseCsv(string $filePath): array {
         $rows = [];
         if (($handle = fopen($filePath, 'r')) !== false) {
-            $header = fgetcsv($handle, 1000, ',');
+            $header = fgetcsv($handle, 0, ',');
             if (!$header) {
                 fclose($handle);
                 return [];
             }
 
-            while (($data = fgetcsv($handle, 1000, ',')) !== false) {
-                if (count($data) === count($header)) {
-                    $rows[] = array_combine($header, $data);
+            if (isset($header[0]) && is_string($header[0])) {
+                $header[0] = (string) preg_replace('/^\xEF\xBB\xBF/', '', $header[0]);
+            }
+            $header = array_map(static fn($col) => is_string($col) ? trim($col) : $col, $header);
+            $headerCount = count($header);
+
+            while (($data = fgetcsv($handle, 0, ',')) !== false) {
+                if ($data === [null] || $data === []) {
+                    continue;
                 }
+                if (count($data) < $headerCount) {
+                    $data = array_pad($data, $headerCount, '');
+                } elseif (count($data) > $headerCount) {
+                    $data = array_slice($data, 0, $headerCount);
+                }
+                $rows[] = array_combine($header, $data);
             }
             fclose($handle);
         }

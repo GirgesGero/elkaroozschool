@@ -2,15 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
-import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import SmartHeader from '@/components/SmartHeader';
 import SmartBottomNav from '@/components/SmartBottomNav';
 import GlobalSearchModal from '@/components/GlobalSearchModal';
 import UnifiedProfileModal from '@/components/UnifiedProfileModal';
 import {
-  ArrowRight,
   AlertTriangle,
   RefreshCw,
   BookOpen,
@@ -20,16 +17,28 @@ import {
   GraduationCap,
   Headphones,
   Lock,
-  Sparkles,
   Unlock,
-  User,
-  Volume2,
 } from 'lucide-react';
 import type { Profile } from '@/types/database';
 import type { CurriculumDay, CurriculumEntry } from '@/types/curriculum';
 import Avatar from '@/components/Avatar';
 import { explainDbError } from '@/lib/errors/db';
 import { getCurriculumGroupLabel, getCurriculumQueryError } from '@/lib/curriculum/display';
+
+function isSafeHttpUrl(rawUrl: string | null | undefined): boolean {
+  if (!rawUrl || typeof rawUrl !== 'string') return false;
+  const trimmed = rawUrl.trim();
+  if (!trimmed) return false;
+  if (trimmed.startsWith('/') && !trimmed.startsWith('//') && !trimmed.includes('\\')) {
+    return true;
+  }
+  try {
+    const parsed = new URL(trimmed);
+    return parsed.protocol === 'https:' || parsed.protocol === 'http:';
+  } catch {
+    return false;
+  }
+}
 
 interface LectureItem {
   id: string;
@@ -257,15 +266,17 @@ export default function CurriculumPage() {
                       <span className="text-[11px] text-content-muted">{curr.file_type} • {Math.round(curr.file_size_bytes / 1024)} KB</span>
                     </div>
                   </div>
-                  <a
-                    href={curr.file_url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="p-2 rounded-lg bg-nav hover:bg-info text-content-secondary hover:text-content transition-colors"
-                    title="تحميل المنهج"
-                  >
-                    <Download className="w-4 h-4" />
-                  </a>
+                  {isSafeHttpUrl(curr.file_url) && (
+                    <a
+                      href={curr.file_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-2 rounded-lg bg-nav hover:bg-info text-content-secondary hover:text-content transition-colors"
+                      title="تحميل المنهج"
+                    >
+                      <Download className="w-4 h-4" />
+                    </a>
+                  )}
                 </div>
               ))}
             </div>
@@ -302,7 +313,7 @@ export default function CurriculumPage() {
                         <div><div className="mb-1.5 text-xs font-bold text-info">المحاضرة {index + 1}</div><h5 className="mb-2 text-sm font-bold text-content">{entry.title}</h5>{entry.description && <p className="mb-3 text-xs leading-6 text-content-secondary">{entry.description}</p>}
                           {lecturer && <div className="mb-3 flex items-center gap-2 rounded-lg border border-line/60 bg-nav/60 p-2 text-xs text-content-secondary"><Avatar src={lecturer.avatar_url} name={lecturer.full_name} size={28} rounded="rounded-full" /><div><span className="block text-[10px] text-content-muted">{lecturer.title}</span><span className="font-semibold">{lecturer.full_name}</span></div></div>}
                         </div>
-                        {audio ? <div className="flex items-center justify-between border-t border-line/80 pt-2"><span className="flex items-center gap-1.5 text-xs text-success"><Headphones className="h-4 w-4" />التسجيل متاح</span><a href={audio} target="_blank" rel="noreferrer" className="rounded-lg border border-success/50 bg-canvas/60 px-3 py-1 text-xs text-success">استماع</a></div> : <span className="text-[11px] text-content-muted">لا يوجد تسجيل مرفق</span>}
+                        {audio && isSafeHttpUrl(audio) ? <div className="flex items-center justify-between border-t border-line/80 pt-2"><span className="flex items-center gap-1.5 text-xs text-success"><Headphones className="h-4 w-4" />التسجيل متاح</span><a href={audio} target="_blank" rel="noopener noreferrer" className="rounded-lg border border-success/50 bg-canvas/60 px-3 py-1 text-xs text-success">استماع</a></div> : <span className="text-[11px] text-content-muted">لا يوجد تسجيل مرفق</span>}
                       </div>;
                     })}
                   </div>

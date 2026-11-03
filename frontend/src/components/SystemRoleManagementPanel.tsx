@@ -72,7 +72,7 @@ export default function SystemRoleManagementPanel({ adminId }: { adminId: string
       setPermissionDraft(grouped);
     }
     setLoading(false);
-  }, [adminId]);
+  }, []);
 
   useEffect(() => { void load(); }, [load]);
 
@@ -120,6 +120,16 @@ export default function SystemRoleManagementPanel({ adminId }: { adminId: string
         p_confirmation: grantConfirmation,
       });
       if (rpcError) throw rpcError;
+
+      const { data: verifyAdmin, error: verifyError } = await db
+        .from('profiles')
+        .select('id, role_id')
+        .eq('id', grantTarget)
+        .eq('role_id', 'admin')
+        .single();
+      if (verifyError || !verifyAdmin) {
+        throw new Error('لم يتم تطبيق ترقية الصلاحية في قاعدة البيانات.');
+      }
 
       const targetStaff = staff.find((s) => s.id === grantTarget);
       setNotice(`تم منح صلاحيات مسؤول النظام بنجاح للمستخدم (${targetStaff?.full_name || 'المسؤول الجديد'}). كلاكما الآن يمتلك نفس الصلاحيات والقدرة على الإدارة والتعديل.`);

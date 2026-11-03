@@ -76,6 +76,7 @@ export default function FeedPostCard({
   const handleToggleReaction = async (type: ReactionType) => {
     if (!currentUser) return;
     const supabase = createClient();
+    const prevSnapshot = { ...reactions };
     const currentType = reactions.userReaction;
 
     if (currentType === type) {
@@ -83,10 +84,17 @@ export default function FeedPostCard({
       setReactions((prev) => ({
         ...prev,
         [type === 'LIKE' ? 'likes' : type === 'LOVE' ? 'loves' : 'prays']:
-          prev[type === 'LIKE' ? 'likes' : type === 'LOVE' ? 'loves' : 'prays'] - 1,
+          Math.max(0, prev[type === 'LIKE' ? 'likes' : type === 'LOVE' ? 'loves' : 'prays'] - 1),
         userReaction: null,
       }));
-      await supabase.from('reactions').delete().match({ post_id: post.id, user_id: currentUser.id });
+      const { error } = await supabase
+        .from('reactions')
+        .delete()
+        .match({ post_id: post.id, user_id: currentUser.id });
+      if (error) {
+        console.error('Remove reaction error:', error);
+        setReactions(prevSnapshot);
+      }
     } else {
       // Add or switch reaction
       setReactions((prev) => {
@@ -101,11 +109,15 @@ export default function FeedPostCard({
         return next;
       });
 
-      await supabase.from('reactions').upsert({
+      const { error } = await supabase.from('reactions').upsert({
         post_id: post.id,
         user_id: currentUser.id,
         type: type,
       });
+      if (error) {
+        console.error('Upsert reaction error:', error);
+        setReactions(prevSnapshot);
+      }
     }
   };
 
@@ -146,10 +158,13 @@ export default function FeedPostCard({
     setIsDeleting(true);
     const supabase = createClient();
     try {
-      await supabase.from('feed_posts').delete().eq('id', post.id);
+      const { error } = await supabase.from('feed_posts').delete().eq('id', post.id);
+      if (error) throw error;
       if (onPostDeleted) onPostDeleted(post.id);
     } catch (err) {
       console.error('Delete error:', err);
+      setShareFeedback('تعذّر حذف المنشور، تحقق من الصلاحيات وحاول مرة أخرى.');
+      setTimeout(() => setShareFeedback(null), 4000);
     } finally {
       setIsDeleting(false);
       setShowMenu(false);

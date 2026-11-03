@@ -15,7 +15,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import type { Profile } from '@/types/database';
-import Avatar from '../components/Avatar';
+import Avatar, { isNextImageOptimizable, isRenderableImageUrl } from '../components/Avatar';
 
 interface PostComposerProps {
   currentUser: Profile | null;
@@ -30,6 +30,7 @@ export default function PostComposer({ currentUser, onPostCreated }: PostCompose
   const [showImageInput, setShowImageInput] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Check if current user can create posts (Staff or Admin)
@@ -46,6 +47,7 @@ export default function PostComposer({ currentUser, onPostCreated }: PostCompose
     const file = e.target.files?.[0];
     if (!file) return;
     setIsUploadingImage(true);
+    setErrorMsg(null);
     const supabase = createClient();
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -63,6 +65,11 @@ export default function PostComposer({ currentUser, onPostCreated }: PostCompose
       }
     } catch (err) {
       console.error('Feed image upload error:', err);
+      setErrorMsg(
+        err instanceof Error && err.message
+          ? `تعذّر رفع الصورة: ${err.message}`
+          : 'تعذّر رفع الصورة، يرجى المحاولة مرة أخرى.'
+      );
     } finally {
       setIsUploadingImage(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -70,8 +77,14 @@ export default function PostComposer({ currentUser, onPostCreated }: PostCompose
   };
 
   const handleAddImage = () => {
-    if (!imageUrl.trim()) return;
-    setImages((prev) => [...prev, imageUrl.trim()]);
+    const trimmed = imageUrl.trim();
+    if (!trimmed) return;
+    if (!isRenderableImageUrl(trimmed)) {
+      setErrorMsg('يرجى إدخال رابط صورة صالح يبدأ بـ https:// أو http://');
+      return;
+    }
+    setErrorMsg(null);
+    setImages((prev) => [...prev, trimmed]);
     setImageUrl('');
     setShowImageInput(false);
   };
@@ -85,6 +98,7 @@ export default function PostComposer({ currentUser, onPostCreated }: PostCompose
     if ((!content.trim() && images.length === 0) || isSubmitting) return;
 
     setIsSubmitting(true);
+    setErrorMsg(null);
     const supabase = createClient();
 
     try {
@@ -95,14 +109,19 @@ export default function PostComposer({ currentUser, onPostCreated }: PostCompose
         images: images.length > 0 ? images : null,
       });
 
-      if (!error) {
-        setContent('');
-        setImages([]);
-        setTargetGroup(null);
-        if (onPostCreated) onPostCreated();
-      }
+      if (error) throw error;
+
+      setContent('');
+      setImages([]);
+      setTargetGroup(null);
+      if (onPostCreated) onPostCreated();
     } catch (err) {
       console.error('Post creation error:', err);
+      setErrorMsg(
+        err instanceof Error && err.message
+          ? `تعذّر نشر المنشور: ${err.message}`
+          : 'تعذّر نشر المنشور، يرجى التحقق من الاتصال والمحاولة مرة أخرى.'
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -132,12 +151,28 @@ export default function PostComposer({ currentUser, onPostCreated }: PostCompose
           </div>
         </div>
 
+        {/* Error Notice */}
+        {errorMsg && (
+          <div className="my-2.5 pr-12">
+            <div className="rounded-xl border border-danger/40 bg-danger/10 px-3 py-2 text-xs font-bold text-danger">
+              {errorMsg}
+            </div>
+          </div>
+        )}
+
         {/* Staged Images Previews */}
         {images.length > 0 && (
           <div className="flex flex-wrap gap-2 my-3 pr-12">
             {images.map((img, idx) => (
               <div key={idx} className="relative w-20 h-20 rounded-2xl overflow-hidden border border-gold/40 group">
-                <Image src={img} alt="صورة مرفقة" fill sizes="80px" className="object-cover" />
+                <Image
+                  src={img}
+                  alt="صورة مرفقة"
+                  fill
+                  unoptimized={!isNextImageOptimizable(img)}
+                  sizes="80px"
+                  className="object-cover"
+                />
                 <button
                   type="button"
                   onClick={() => handleRemoveImage(idx)}

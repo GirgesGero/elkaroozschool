@@ -3,6 +3,8 @@ import {
   getSections,
   getCategories,
   getArticle,
+  searchBible,
+  clearBibleMemoryCache,
 } from '@/lib/bible/browser-encyclopedia';
 
 describe('Bible Section & Resolution Tests', () => {
@@ -112,6 +114,20 @@ describe('Bible Section & Resolution Tests', () => {
         const catIds = new Set(secs.map((s) => s.category_id));
         expect(catIds.size).toBe(1);
       }
+    });
+
+    it('clearBibleMemoryCache resets memoPromises so prefix search continues working after cache clear', async () => {
+      const firstSearch = await searchBible('المسي', { limit: 5 });
+      expect(firstSearch.total).toBeGreaterThan(0);
+
+      clearBibleMemoryCache();
+
+      const secondSearch = await searchBible('المسي', { limit: 5 });
+      expect(secondSearch.total).toBe(firstSearch.total);
+      expect(secondSearch.results.length).toBeGreaterThan(0);
+
+      const artAfterClear = await getArticle({ book: 'سفر الخروج', ch: 2 });
+      expect(artAfterClear?.id).toBe(47966);
     });
   });
 });

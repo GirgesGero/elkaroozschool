@@ -1,25 +1,33 @@
-# EL KAROOZ THEME SYSTEM & ACCENT ENGINE
-=========================================
+# نظام الثيمات ومحرك الهوية البصرية — EL KAROOZ THEME SYSTEM
 
-## 1. Theme Engine Overview
-
-The EL KAROOZ School Theme Engine supports **4 Display Modes** and **4 Identity Accents**:
-
-### Display Modes
-1. **`luxury` (Default):** Deep Coptic Navy (`#070B14`) with Malt Gold accents and atmospheric glassmorphism.
-2. **`dark`:** High-contrast Charcoal Dark (`#121316`) for low-light environments.
-3. **`light`:** Crisp Warm Porcelain (`#F8F9FA`) with high readability.
-4. **`system`:** Automatically matches the operating system's prefers-color-scheme setting.
-
-### Identity Accents
-1. **`gold` (الذهب القبطي الملكي):** Primary brand accent `#C29938`.
-2. **`burgundy` (العنابي الكنسي):** Ecclesiastical wine `#7B0017`.
-3. **`navy` (الأزرق النيلي):** Scholarly deep blue `#0B1B3D`.
-4. **`emerald` (الأخضر النخل):** Palm emerald `#10B981`.
+> **تاريخ التحديث:** 2026-10-31  
+> **الإصدار:** `1.0.1`  
+> **المرجع البرمجي:** `frontend/src/context/ThemeContext.tsx` و`frontend/src/app/globals.css`
 
 ---
 
-## 2. Persistence & Hydration Strategy
+## 1. نظرة عامة على محرك الثيمات
 
-- The selected theme mode and accent are stored in `localStorage` under keys `elkarooz-theme-mode` and `elkarooz-theme-accent`.
-- To prevent Flash of Wrong Theme (FOUC), an inline initialization script runs in `<head>` before rendering body content.
+يدعم محرك الهوية البصرية لمدرسة الكاروز **4 أوضاع عرض (`Theme`)** و**5 ألوان تمييز (`AccentColor`)** قابلة للتخصيص الفوري:
+
+### أوضاع العرض (`Theme`: `'light' | 'dark' | 'luxury' | 'system'`)
+1. **`luxury` (الوضع الفاخر):** كحلي قبطي عميق (`#070B14`) مع لمسات ذهبية وتأثيرات زجاجية (`glassmorphism`).
+2. **`dark` (الوضع الداكن):** فحمي عالي التباين (`#121316`) مريح للقراءة في الإضاءة المنخفضة.
+3. **`light` (الوضع الفاتح — الافتراضي في `ThemeContext`):** عاجي دافئ عالي الوضوح (`#F8F9FA`).
+4. **`system` (تلقائي حسب النظام):** يطابق إعدادات نظام التشغيل (`prefers-color-scheme: dark`).
+
+### ألوان التمييز (`AccentColor`: `'gold' | 'burgundy' | 'navy' | 'emerald' | 'amethyst'`)
+1. **`gold` (الذهب القبطي الملكي — الافتراضي):** `#C29938`.
+2. **`burgundy` (العنابي الكنسي):** `#7B0017`.
+3. **`navy` (الأزرق النيلي الأكاديمي):** `#0B1B3D`.
+4. **`emerald` (الأخضر الزمردي):** `#10B981`.
+5. **`amethyst` (البنفسجي الجمشتي):** لون التمييز الخامس المعتمد في `ThemeContext.tsx:6` و`settings/page.tsx`.
+
+---
+
+## 2. التخزين المحلي وتطبيق السمات (Persistence & DOM Attributes)
+
+- يتم حفظ اختيارات المستخدم في `localStorage` تحت المفتاحين الفعليين:
+  - وضع العرض: `elkarooz-theme`
+  - لون التمييز: `elkarooz-accent`
+- يتم تطبيق الوضع الفعلي على العنصر الجذري `document.documentElement` (`<html>`) عبر السمة `data-theme="<resolvedTheme>"` والسمة `data-accent="<accent>"` بالإضافة إلى الكلاس `dark` عند تفعيل الوضع الداكن أو الفاخر.

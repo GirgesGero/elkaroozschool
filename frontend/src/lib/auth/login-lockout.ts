@@ -63,19 +63,49 @@ function safeRemoveItem(key: string): void {
   delete inMemoryStore[key];
 }
 
+function normalizeIdentifier(identifier?: string): string {
+  return (identifier ?? '').trim().toLowerCase().replace(/[^a-z0-9._@-]/g, '');
+}
+
+function storageKeyFor(identifier?: string): string {
+  const norm = normalizeIdentifier(identifier);
+  return norm ? `${LOCKOUT_STORAGE_KEY}:${norm}` : LOCKOUT_STORAGE_KEY;
+}
+
 /**
  * Reset memory store (useful for automated testing)
  */
 export function resetLockoutStore(): void {
+  const keysToRemove = Object.keys(inMemoryStore);
   inMemoryStore = {};
+  for (const k of keysToRemove) {
+    safeRemoveItem(k);
+  }
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const localKeys: string[] = [];
+      for (let i = 0; i < window.localStorage.length; i++) {
+        const k = window.localStorage.key(i);
+        if (k && k.startsWith(LOCKOUT_STORAGE_KEY)) {
+          localKeys.push(k);
+        }
+      }
+      for (const k of localKeys) {
+        window.localStorage.removeItem(k);
+      }
+    }
+  } catch {
+    // Storage access denied
+  }
   safeRemoveItem(LOCKOUT_STORAGE_KEY);
 }
 
 /**
  * Retrieve current lockout status from storage
  */
-export function getLockoutState(now = Date.now()): LockoutState {
-  const raw = safeGetItem(LOCKOUT_STORAGE_KEY);
+export function getLockoutState(now = Date.now(), identifier?: string): LockoutState {
+  const key = storageKeyFor(identifier);
+  const raw = safeGetItem(key);
   if (!raw) {
     return {
       failedAttempts: 0,
@@ -104,7 +134,7 @@ export function getLockoutState(now = Date.now()): LockoutState {
     // Lockout expired or never locked
     if (lockedUntil && lockedUntil <= now) {
       // Cooldown finished: reset state
-      clearLockout();
+      clearLockout(identifier || data.lastIdentifier);
       return {
         failedAttempts: 0,
         isLocked: false,
@@ -125,7 +155,7 @@ export function getLockoutState(now = Date.now()): LockoutState {
       lockedUntil: null,
     };
   } catch {
-    clearLockout();
+    clearLockout(identifier);
     return {
       failedAttempts: 0,
       isLocked: false,
@@ -144,7 +174,8 @@ export function recordFailedAttempt(
   identifier?: string,
   now = Date.now()
 ): { state: LockoutState; isNewlyLocked: boolean } {
-  const current = getLockoutState(now);
+  const normId = normalizeIdentifier(identifier);
+  const current = getLockoutState(now, normId || undefined);
 
   // If already locked, keep existing lock
   if (current.isLocked) {
@@ -152,15 +183,20 @@ export function recordFailedAttempt(
   }
 
   const nextAttempts = current.failedAttempts + 1;
+  const scopedKey = storageKeyFor(normId || undefined);
 
   if (nextAttempts >= MAX_FAILED_ATTEMPTS) {
     const lockedUntil = now + LOCKOUT_DURATION_MS;
     const record: LockoutRecord = {
       failedAttempts: nextAttempts,
       lockedUntil,
-      lastIdentifier: identifier?.trim() || undefined,
+      lastIdentifier: normId || undefined,
     };
-    safeSetItem(LOCKOUT_STORAGE_KEY, JSON.stringify(record));
+    const serialized = JSON.stringify(record);
+    safeSetItem(scopedKey, serialized);
+    if (scopedKey !== LOCKOUT_STORAGE_KEY) {
+      safeSetItem(LOCKOUT_STORAGE_KEY, serialized);
+    }
 
     return {
       state: {
@@ -177,9 +213,13 @@ export function recordFailedAttempt(
   const record: LockoutRecord = {
     failedAttempts: nextAttempts,
     lockedUntil: null,
-    lastIdentifier: identifier?.trim() || undefined,
+    lastIdentifier: normId || undefined,
   };
-  safeSetItem(LOCKOUT_STORAGE_KEY, JSON.stringify(record));
+  const serialized = JSON.stringify(record);
+  safeSetItem(scopedKey, serialized);
+  if (scopedKey !== LOCKOUT_STORAGE_KEY) {
+    safeSetItem(LOCKOUT_STORAGE_KEY, serialized);
+  }
 
   return {
     state: {
@@ -196,6 +236,20 @@ export function recordFailedAttempt(
 /**
  * Clear lockout state upon successful authentication or admin reset
  */
-export function clearLockout(): void {
+export function clearLockout(identifier?: string): void {
+  const rawDefault = safeGetItem(LOCKOUT_STORAGE_KEY);
+  if (rawDefault) {
+    try {
+      const parsed: LockoutRecord = JSON.parse(rawDefault);
+      if (parsed.lastIdentifier) {
+        safeRemoveItem(storageKeyFor(parsed.lastIdentifier));
+      }
+    } catch {
+      // ignore malformed JSON
+    }
+  }
+  if (identifier) {
+    safeRemoveItem(storageKeyFor(identifier));
+  }
   safeRemoveItem(LOCKOUT_STORAGE_KEY);
 }

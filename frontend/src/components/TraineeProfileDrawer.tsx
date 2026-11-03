@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { explainDbError } from '@/lib/errors/db';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 import {
   X,
   User,
@@ -64,6 +65,7 @@ export default function TraineeProfileDrawer({
   const isAdminOrSuper = currentUserProfile?.role_id === 'admin';
   const isSecretariat = currentUserProfile?.role_id === 'secretariat';
   const canEdit = isAdminOrSuper || isSecretariat;
+  const containerRef = useFocusTrap(isOpen, onClose);
 
   useEffect(() => {
     if (!isOpen || !traineeId) return;
@@ -132,7 +134,12 @@ export default function TraineeProfileDrawer({
     }
 
     try {
-      const { error } = await supabase.from('profiles').update(updatePayload).eq('id', traineeId);
+      const { error } = await supabase
+        .from('profiles')
+        .update(updatePayload)
+        .eq('id', traineeId)
+        .select('id')
+        .single();
       if (error) throw error;
 
       setNotice({ type: 'success', text: 'تم حفظ بيانات وتعديلات المتدرب بنجاح!' });
@@ -156,7 +163,12 @@ export default function TraineeProfileDrawer({
     const newActiveState = !traineeData.profile.is_active;
 
     try {
-      const { error } = await supabase.from('profiles').update({ is_active: newActiveState }).eq('id', traineeId);
+      const { error } = await supabase
+        .from('profiles')
+        .update({ is_active: newActiveState })
+        .eq('id', traineeId)
+        .select('id')
+        .single();
       if (error) throw error;
 
       setNotice({
@@ -201,7 +213,7 @@ export default function TraineeProfileDrawer({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden bg-black/80 backdrop-blur-md animate-fade-in flex justify-end">
+    <div ref={containerRef} role="dialog" aria-modal="true" aria-label="الملف الأكاديمي والشخصي للمتدرب" className="fixed inset-0 z-50 overflow-hidden bg-black/80 backdrop-blur-md animate-fade-in flex justify-end">
       <div
         className="w-full max-w-2xl bg-canvas border-r border-gold/30 h-full flex flex-col shadow-2xl shadow-black/80 overflow-hidden animate-slide-in-left relative"
         dir="rtl"

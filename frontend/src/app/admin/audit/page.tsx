@@ -11,19 +11,14 @@ import UnifiedProfileModal from '@/components/UnifiedProfileModal';
 import {
   ScrollText,
   ShieldAlert,
-  ArrowRight,
   RefreshCw,
   Search,
   Filter,
-  Calendar,
   User,
-  Shield,
-  Activity,
   ChevronLeft,
   ChevronRight,
   Terminal,
   Database,
-  Lock,
 } from 'lucide-react';
 import type { Profile } from '@/types/database';
 
@@ -56,6 +51,7 @@ export default function AdminAuditPage() {
   const [page, setPage] = useState(1);
   const [pageSize] = useState(25);
   const [searchQuery, setSearchQuery] = useState('');
+  const [appliedSearchQuery, setAppliedSearchQuery] = useState('');
   const [actionFilter, setActionFilter] = useState('ALL');
   const [selectedLog, setSelectedLog] = useState<AuditLogEntry | null>(null);
 
@@ -102,48 +98,53 @@ export default function AdminAuditPage() {
   useEffect(() => {
     async function initUser() {
       setLoading(true);
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      try {
+        const supabase = createClient();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
 
-      if (!user) {
-        router.push('/login');
-        return;
-      }
+        if (!user) {
+          router.push('/login');
+          return;
+        }
 
-      const { data: pData } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
+        const { data: pData } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
 
-      if (!pData || pData.role_id !== 'admin') {
-        setIsAdmin(false);
+        if (!pData || pData.role_id !== 'admin') {
+          setIsAdmin(false);
+          setLoading(false);
+          return;
+        }
+
+        setProfile(pData as Profile);
+        setIsAdmin(true);
+        await fetchLogs(1, actionFilter, appliedSearchQuery);
+      } finally {
         setLoading(false);
-        return;
       }
-
-      setProfile(pData as Profile);
-      setIsAdmin(true);
-      await fetchLogs(1, actionFilter, searchQuery);
-      setLoading(false);
     }
 
-    initUser();
+    void initUser();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
+    const nextApplied = searchQuery.trim();
+    setAppliedSearchQuery(nextApplied);
     setPage(1);
-    fetchLogs(1, actionFilter, searchQuery);
+    void fetchLogs(1, actionFilter, nextApplied);
   };
 
   const handleFilterChange = (newFilter: string) => {
     setActionFilter(newFilter);
     setPage(1);
-    fetchLogs(1, newFilter, searchQuery);
+    void fetchLogs(1, newFilter, appliedSearchQuery);
   };
 
   const getActionBadgeClass = (action: string) => {
@@ -254,7 +255,7 @@ export default function AdminAuditPage() {
             </div>
 
             <button
-              onClick={() => fetchLogs(page, actionFilter, searchQuery)}
+              onClick={() => void fetchLogs(page, actionFilter, appliedSearchQuery)}
               className="px-4 py-2 rounded-2xl bg-canvas border border-line hover:border-gold text-xs font-bold text-content flex items-center gap-2 shadow-sm transition-all shrink-0"
             >
               <RefreshCw className="w-3.5 h-3.5 text-gold" />
@@ -378,7 +379,7 @@ export default function AdminAuditPage() {
                   onClick={() => {
                     const next = page - 1;
                     setPage(next);
-                    fetchLogs(next, actionFilter, searchQuery);
+                    void fetchLogs(next, actionFilter, appliedSearchQuery);
                   }}
                   className="px-3 py-1.5 rounded-xl bg-nav border border-line disabled:opacity-40 hover:border-gold transition-colors text-content flex items-center gap-1"
                 >
@@ -395,7 +396,7 @@ export default function AdminAuditPage() {
                   onClick={() => {
                     const next = page + 1;
                     setPage(next);
-                    fetchLogs(next, actionFilter, searchQuery);
+                    void fetchLogs(next, actionFilter, appliedSearchQuery);
                   }}
                   className="px-3 py-1.5 rounded-xl bg-nav border border-line disabled:opacity-40 hover:border-gold transition-colors text-content flex items-center gap-1"
                 >

@@ -148,9 +148,12 @@ class JwtAuthMiddleware {
         $decoded = null;
 
         if ($alg === 'HS256') {
-            $secret = (string)($config['jwt_secret'] ?? '');
+            $secret = trim((string)($config['jwt_secret'] ?? ''));
             if ($secret === '') {
                 throw new \RuntimeException('JWT secret is not configured');
+            }
+            if (preg_match('#^https?://#i', $secret) === 1 || strlen($secret) < 32) {
+                throw new \RuntimeException('Refusing HS256 verification: JWT secret must not be a URL and must be at least 32 bytes');
             }
             $decoded = JWT::decode($jwt, new Key($secret, 'HS256'));
         } elseif ($alg === 'ES256' || $alg === 'RS256') {
@@ -171,6 +174,15 @@ class JwtAuthMiddleware {
         $claims = json_decode(json_encode($decoded), true);
         if (!is_array($claims)) {
             $claims = [];
+        }
+        if (isset($claims['aud']) && $claims['aud'] !== '') {
+            $aud = $claims['aud'];
+            $validAud = is_array($aud)
+                ? in_array('authenticated', $aud, true)
+                : ($aud === 'authenticated');
+            if (!$validAud) {
+                throw new \UnexpectedValueException('Invalid JWT audience claim');
+            }
         }
         return $claims;
     }

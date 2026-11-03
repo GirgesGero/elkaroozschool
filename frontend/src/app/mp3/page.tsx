@@ -2,8 +2,6 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
-import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import SmartHeader from '@/components/SmartHeader';
 import SmartBottomNav from '@/components/SmartBottomNav';
@@ -11,21 +9,28 @@ import GlobalSearchModal from '@/components/GlobalSearchModal';
 import UnifiedProfileModal from '@/components/UnifiedProfileModal';
 import {
   AlertCircle,
-  ArrowRight,
   Headphones,
   Loader2,
-  Mic,
-  Music,
   Pause,
   Play,
   Plus,
-  RotateCcw,
-  Sparkles,
-  Users,
-  Volume2,
-  VolumeX,
 } from 'lucide-react';
 import type { Profile } from '@/types/database';
+
+function isSafeHttpUrl(rawUrl: string | null | undefined): boolean {
+  if (!rawUrl || typeof rawUrl !== 'string') return false;
+  const trimmed = rawUrl.trim();
+  if (!trimmed) return false;
+  if (trimmed.startsWith('/') && !trimmed.startsWith('//') && !trimmed.includes('\\')) {
+    return true;
+  }
+  try {
+    const parsed = new URL(trimmed);
+    return parsed.protocol === 'https:' || parsed.protocol === 'http:';
+  } catch {
+    return false;
+  }
+}
 
 interface Mp3Track {
   id: string;
@@ -51,14 +56,12 @@ export default function Mp3Page() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [isMuted, setIsMuted] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Upload Modal State (Staff)
   const [showAddModal, setShowAddModal] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newAudioUrl, setNewAudioUrl] = useState('');
-  const [newLecturerName, setNewLecturerName] = useState('');
   const [selectedGroupId, setSelectedGroupId] = useState<number>(1);
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -67,44 +70,51 @@ export default function Mp3Page() {
 
   useEffect(() => {
     async function init() {
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      try {
+        const supabase = createClient();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
 
-      if (!user) {
-        router.push('/login');
-        return;
-      }
-
-      const { data: userProfile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-
-      if (userProfile) {
-        const prof = userProfile as Profile;
-        setProfile(prof);
-        if (prof.group_id) setSelectedGroupId(prof.group_id);
-
-        // Fetch tracks for group (bounded for performance)
-        let trackQuery = supabase.from('mp3_tracks').select('*').is('deleted_at', null);
-        if (prof.role_id !== 'admin' && prof.group_id) {
-          trackQuery = trackQuery.eq('group_id', prof.group_id);
+        if (!user) {
+          router.push('/login');
+          return;
         }
 
-        const { data: tracks, error: tracksError } = await trackQuery
-          .select('id,group_id,title,lecturer_id,audio_url,duration_seconds,file_size_bytes,created_at')
-          .order('created_at', { ascending: false })
-          .limit(100);
-        if (tracksError) throw tracksError;
-        if (tracks) setTracks(tracks);
+        const { data: userProfile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+
+        if (userProfile) {
+          const prof = userProfile as Profile;
+          setProfile(prof);
+          if (prof.group_id) setSelectedGroupId(prof.group_id);
+
+          // Fetch tracks for group (bounded for performance)
+          let trackQuery = supabase
+            .from('mp3_tracks')
+            .select('id,group_id,title,lecturer_id,audio_url,duration_seconds,file_size_bytes,created_at')
+            .is('deleted_at', null);
+          if (prof.role_id !== 'admin' && prof.group_id) {
+            trackQuery = trackQuery.eq('group_id', prof.group_id);
+          }
+
+          const { data: tracksData, error: tracksError } = await trackQuery
+            .order('created_at', { ascending: false })
+            .limit(100);
+          if (tracksError) throw tracksError;
+          if (tracksData) setTracks(tracksData);
+        }
+      } catch (err) {
+        setNotice(err instanceof Error ? err.message : 'تعذر تحميل التسجيلات الصوتية.');
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }
 
-    init();
+    void init();
   }, [router]);
 
   const playAudio = (audio: HTMLAudioElement) => {
@@ -117,6 +127,10 @@ export default function Mp3Page() {
   };
 
   const handlePlayTrack = (track: Mp3Track) => {
+    if (!isSafeHttpUrl(track.audio_url)) {
+      setNotice('رابط الملف الصوتي غير صالح للتشغيل.');
+      return;
+    }
     if (currentTrack?.id === track.id) {
       if (isPlaying) {
         audioRef.current?.pause();
@@ -158,6 +172,10 @@ export default function Mp3Page() {
 
   const handleSaveTrack = async () => {
     if (!newTitle.trim() || !newAudioUrl.trim() || !profile) return;
+    if (!isSafeHttpUrl(newAudioUrl)) {
+      setNotice('رابط الملف الصوتي غير صالح. يجب أن يبدأ بـ https:// أو http://.');
+      return;
+    }
     const targetGroupId = profile.group_id || selectedGroupId;
     if (!targetGroupId) {
       setNotice('حدد الفرقة قبل الإضافة.');
@@ -184,16 +202,18 @@ export default function Mp3Page() {
     setNotice('تمت إضافة التسجيل الصوتي بنجاح.');
 
     try {
-      let trackQuery = supabase.from('mp3_tracks').select('*').is('deleted_at', null);
+      let trackQuery = supabase
+        .from('mp3_tracks')
+        .select('id,group_id,title,lecturer_id,audio_url,duration_seconds,file_size_bytes,created_at')
+        .is('deleted_at', null);
       if (profile.role_id !== 'admin' && profile.group_id) {
         trackQuery = trackQuery.eq('group_id', profile.group_id);
       }
-      const { data: tracks, error: refreshError } = await trackQuery
-        .select('id,group_id,title,lecturer_id,audio_url,duration_seconds,file_size_bytes,created_at')
+      const { data: tracksData, error: refreshError } = await trackQuery
         .order('created_at', { ascending: false })
         .limit(100);
       if (refreshError) throw refreshError;
-      if (tracks) setTracks(tracks);
+      if (tracksData) setTracks(tracksData);
     } catch (refreshError) {
       setNotice(`تمت الإضافة، لكن تعذر تحديث القائمة: ${refreshError instanceof Error ? refreshError.message : 'خطأ غير معروف'}`);
     } finally {
@@ -232,7 +252,7 @@ export default function Mp3Page() {
       />
 
       {/* Main Container */}
-      <main className="max-w-5xl w-full mx-auto px-4 py-6 flex-1 flex flex-col gap-6 pb-28 md:pb-12">
+      <main className="max-w-5xl w-full mx-auto px-4 py-6 flex-1 flex flex-col gap-6 pb-36 md:pb-20">
         {/* Banner */}
         <div className="bg-nav border border-line rounded-2xl p-5 shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
@@ -270,12 +290,17 @@ export default function Mp3Page() {
 
         {/* --- TRACKS PLAYLIST --- */}
         <div className="bg-nav border border-line rounded-2xl p-4 shadow-md space-y-2">
-          {tracks.length === 0 ? (
+          {loading ? (
+            <div className="p-12 flex flex-col items-center justify-center gap-3 text-content-muted text-xs">
+              <Loader2 className="w-7 h-7 animate-spin text-warning" />
+              <span>جاري تحميل التسجيلات الصوتية...</span>
+            </div>
+          ) : tracks.length === 0 ? (
             <div className="p-8 text-center text-content-muted text-xs">
               لا توجد تسجيلات صوتية مضافة لفرقتك حالياً.
             </div>
           ) : (
-            tracks.map((track, idx) => {
+            tracks.map((track) => {
               const isCurrent = currentTrack?.id === track.id;
 
               return (
@@ -389,7 +414,7 @@ export default function Mp3Page() {
 
       {/* --- BOTTOM STICKY AUDIO PLAYER BAR --- */}
       {currentTrack && (
-        <div className="fixed bottom-0 inset-x-0 bg-nav/95 border-t border-line p-3.5 backdrop-blur-md z-40 shadow-2xl">
+        <div className="fixed bottom-16 md:bottom-0 inset-x-0 bg-nav/95 border-t border-line p-3.5 backdrop-blur-md z-40 shadow-2xl">
           <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
             <div className="flex items-center gap-3 w-full sm:w-auto">
               <button

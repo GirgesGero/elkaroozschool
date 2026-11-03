@@ -2,24 +2,50 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
 import { getBibleArticle, type BibleArticle } from '@/lib/api/bible';
-import { ArrowRight, ArrowLeft, Loader2, BookOpen, ChevronLeft, Eye, Share2, Copy, Check } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Loader2, BookOpen, ChevronLeft, Copy, Check } from 'lucide-react';
 import DOMPurify from 'dompurify';
 import SmartHeader from '@/components/SmartHeader';
 import SmartBottomNav from '@/components/SmartBottomNav';
+import UnifiedProfileModal from '@/components/UnifiedProfileModal';
 import BibleSearchModal from '@/components/Bible/BibleSearchModal';
+import type { Profile } from '@/types/database';
 
 export default function ArticleReaderPage() {
   const params = useParams();
   const router = useRouter();
   const articleId = params.id ? parseInt(params.id as string, 10) : 0;
 
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [article, setArticle] = useState<BibleArticle | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function loadUserProfile() {
+      try {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: userProfile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+          if (userProfile) {
+            setProfile(userProfile as Profile);
+          }
+        }
+      } catch {
+        // Non-blocking profile fetch for encyclopedia reader
+      }
+    }
+    loadUserProfile();
+  }, []);
 
   useEffect(() => {
     if (articleId > 0) {
@@ -78,12 +104,21 @@ export default function ArticleReaderPage() {
     );
   }
 
+  const sanitizedHtml =
+    typeof window !== 'undefined' ? DOMPurify.sanitize(article.content || '') : '';
+
   return (
     <div className="min-h-screen bg-canvas" dir="rtl">
       <SmartHeader 
-        profile={null}
+        profile={profile}
         onOpenSearch={() => setIsSearchOpen(true)}
         onOpenProfile={(id) => setSelectedProfileId(id)}
+      />
+
+      <UnifiedProfileModal
+        profileId={selectedProfileId}
+        currentUser={profile}
+        onClose={() => setSelectedProfileId(null)}
       />
 
       <main className="max-w-4xl mx-auto px-4 py-8 pb-28">
@@ -149,7 +184,7 @@ export default function ArticleReaderPage() {
         <article className="p-6 md:p-10 rounded-3xl bg-canvas border border-line/80 shadow-xl leading-loose text-content text-base md:text-lg font-normal mb-8 select-text">
           <div 
             className="bible-article-body space-y-4 prose prose-invert max-w-none prose-headings:text-content prose-p:text-content prose-a:text-gold"
-            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(article.content) }}
+            dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
           />
         </article>
 
@@ -194,7 +229,7 @@ export default function ArticleReaderPage() {
         onSelectArticle={(id) => router.push(`/bible/reader/${id}`)}
       />
 
-      <SmartBottomNav profile={null} onOpenProfile={(id) => setSelectedProfileId(id)} />
+      <SmartBottomNav profile={profile} onOpenProfile={(id) => setSelectedProfileId(id)} />
     </div>
   );
 }

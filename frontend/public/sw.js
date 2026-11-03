@@ -22,7 +22,6 @@ const DATASET_CACHE = 'elkarooz-bible-v1';
 const DATASET_PREFIX = '/storage/bible-dataset/';
 
 const STATIC_ASSETS = [
-  '/',
   '/manifest.json',
   // The small icon rather than /logo.png. The master logo is 264 KB, and a precache is
   // paid on every install on a metered mobile connection; the 512 icon is 83 KB and is
@@ -140,12 +139,13 @@ self.addEventListener('push', (event) => {
  */
 function safeNotificationUrl(candidate) {
   if (typeof candidate !== 'string' || candidate === '') return '/';
-  // Reject scheme-relative and absolute URLs outright; only in-app paths are allowed.
-  if (candidate.startsWith('//') || candidate.includes('://')) return '/';
-  if (!candidate.startsWith('/')) return '/';
+  const trimmed = candidate.trim();
+  // Reject scheme-relative, backslash-relative, and absolute URLs outright; only in-app paths are allowed.
+  if (trimmed.startsWith('//') || trimmed.includes('://') || trimmed.includes('\\')) return '/';
+  if (!trimmed.startsWith('/')) return '/';
   // Control characters would allow 'java\0script:' style smuggling through the check.
-  if (/[\x00-\x1f\x7f]/.test(candidate)) return '/';
-  return candidate;
+  if (/[\x00-\x1f\x7f]/.test(trimmed)) return '/';
+  return trimmed;
 }
 
 // Notification Click Handler

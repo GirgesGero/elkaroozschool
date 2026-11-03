@@ -14,6 +14,7 @@ import {
   Lock,
 } from 'lucide-react';
 import { QRScannerService, parsePersonQR, type QRIdentityResolution, type QRPayload } from '@/lib/mobile/qr-scanner';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 import type { AttendanceStatus, Profile } from '@/types/database';
 
 interface QRScannerModalProps {
@@ -47,6 +48,8 @@ export default function QRScannerModal({
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const animFrameRef = useRef<number | null>(null);
+  const isOpenRef = useRef(isOpen);
+  isOpenRef.current = isOpen;
 
   // Stop camera tracks cleanly
   const stopCamera = useCallback(() => {
@@ -60,6 +63,13 @@ export default function QRScannerModal({
     }
     setIsScanning(false);
   }, []);
+
+  const handleClose = useCallback(() => {
+    stopCamera();
+    onClose();
+  }, [stopCamera, onClose]);
+
+  const containerRef = useFocusTrap(isOpen, handleClose);
 
   // Handle scanned raw payload
   const handleProcessRawQR = useCallback(
@@ -130,6 +140,9 @@ export default function QRScannerModal({
     [processing, trainees, selectedStatus, onRecordAttendance]
   );
 
+  const processQRRef = useRef(handleProcessRawQR);
+  processQRRef.current = handleProcessRawQR;
+
   // Start video stream & scanner loop
   const startCamera = useCallback(async () => {
     setCameraError(null);
@@ -144,6 +157,11 @@ export default function QRScannerModal({
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
       });
+
+      if (!isOpenRef.current) {
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
 
       streamRef.current = stream;
       if (videoRef.current) {
@@ -160,7 +178,7 @@ export default function QRScannerModal({
               try {
                 const barcodes = await detector.detect(videoRef.current);
                 if (barcodes && barcodes.length > 0 && barcodes[0].rawValue) {
-                  await handleProcessRawQR(barcodes[0].rawValue);
+                  await processQRRef.current(barcodes[0].rawValue);
                 }
               } catch (err) {}
             }
@@ -176,7 +194,7 @@ export default function QRScannerModal({
       setCameraError('تعذر فتح الكاميرا. يرجى التأكد من منح الإذن لاستخدام الكاميرا.');
       setIsScanning(false);
     }
-  }, [handleProcessRawQR]);
+  }, []);
 
   useEffect(() => {
     if (isOpen) {
@@ -194,7 +212,7 @@ export default function QRScannerModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-nav/80 backdrop-blur-md" dir="rtl">
+    <div ref={containerRef} role="dialog" aria-modal="true" aria-label="ماسح الـ QR الذكي لرصد الحضور" className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-nav/80 backdrop-blur-md" dir="rtl">
       <div
         className="w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl flex flex-col transition-all border"
         style={{

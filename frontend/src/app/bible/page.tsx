@@ -767,7 +767,7 @@ function BiblePageContent() {
             <div className="space-y-4">
               <div
                 className="bible-article-body space-y-4 text-content leading-loose text-base sm:text-lg select-text"
-                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(chapterArticle.content) }}
+                dangerouslySetInnerHTML={{ __html: typeof window !== 'undefined' ? DOMPurify.sanitize(chapterArticle.content) : '' }}
               />
               <div className="pt-4 border-t border-line flex justify-end">
                 <Link

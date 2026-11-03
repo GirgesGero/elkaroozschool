@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
@@ -52,17 +52,28 @@ export default function GlobalSearchModal({
   }, [isOpen]);
 
   const containerRef = useFocusTrap(isOpen, onClose);
+  const searchSeqRef = useRef(0);
 
   useEffect(() => {
-    if (!query.trim() || query.length < 2) {
+    const sanitized = query
+      .trim()
+      .replace(/[%_.,()&|!*\[\]"'`\\]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    if (!sanitized || sanitized.length < 2) {
+      searchSeqRef.current += 1;
+      setIsLoading(false);
       setResults({ people: [], groups: [], books: [], posts: [] });
       return;
     }
 
+    const seq = ++searchSeqRef.current;
+
     const timer = setTimeout(async () => {
       setIsLoading(true);
       const supabase = createClient();
-      const q = `%${query.trim()}%`;
+      const q = `%${sanitized}%`;
 
       try {
         const [peopleRes, groupsRes, booksRes, postsRes] = await Promise.all([
@@ -88,6 +99,8 @@ export default function GlobalSearchModal({
             .limit(4),
         ]);
 
+        if (seq !== searchSeqRef.current) return;
+
         setResults({
           people: peopleRes.data || [],
           groups: groupsRes.data || [],
@@ -97,7 +110,9 @@ export default function GlobalSearchModal({
       } catch (err) {
         console.error('Search error:', err);
       } finally {
-        setIsLoading(false);
+        if (seq === searchSeqRef.current) {
+          setIsLoading(false);
+        }
       }
     }, 300);
 

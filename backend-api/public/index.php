@@ -139,12 +139,12 @@ try {
     elseif ($path === '/storage/upload' && $requestMethod === 'POST') {
         // Uploads consume disk and bandwidth. 20/min leaves room for a real bulk job
         // while stopping a single client from filling the quota.
-        RateLimitMiddleware::check('upload', 20, 60);
+        RateLimitMiddleware::check('storage_upload', 20, 60);
         (new \App\Controllers\StorageController())->upload();
     }
     elseif ($path === '/storage/delete' && $requestMethod === 'POST') {
-        // Grouped with upload: the two are used together and should share a budget.
-        RateLimitMiddleware::check('upload', 20, 60);
+        // Separate bucket from upload so file cleanup does not consume upload quota.
+        RateLimitMiddleware::check('storage_delete', 20, 60);
         (new \App\Controllers\StorageController())->delete();
     }
     elseif (preg_match('#^/storage/file/([a-zA-Z0-9_-]+)$#', $path, $matches) && $requestMethod === 'GET') {
@@ -156,11 +156,11 @@ try {
     // Administrator-only reset API. The controller re-checks the live DB role,
     // recent auth_time, backup checksum, and storage inventory on every request.
     elseif ($path === '/system-reset/preview' && $requestMethod === 'POST') {
-        RateLimitMiddleware::check('system_reset', 10, 60);
+        RateLimitMiddleware::check('system_reset_preview', 10, 60);
         (new \App\Controllers\SystemResetController())->preview();
     }
     elseif ($path === '/system-reset/execute' && $requestMethod === 'POST') {
-        RateLimitMiddleware::check('system_reset', 20, 60);
+        RateLimitMiddleware::check('system_reset_execute', 20, 60);
         (new \App\Controllers\SystemResetController())->execute();
     }
 
@@ -168,47 +168,47 @@ try {
     elseif ($path === '/backup/create' && $requestMethod === 'POST') {
         // A backup is a full database export. 5 per 5 minutes: enough to take a few
         // before an operation and one after, not enough to loop it.
-        RateLimitMiddleware::check('backup', 5, 300);
+        RateLimitMiddleware::check('backup_create', 5, 300);
         (new \App\Controllers\BackupController())->create();
     }
     elseif ($path === '/backup/list' && $requestMethod === 'GET') {
         // Listing is a cheap metadata read, and the UI polls it.
-        RateLimitMiddleware::check('backup', 60, 60);
+        RateLimitMiddleware::check('backup_list', 60, 60);
         (new \App\Controllers\BackupController())->list();
     }
     // SRS 26: an archive must be validated BEFORE it is ever uploaded to storage,
     // otherwise a corrupt file consumes space and a later restore attempt finds it.
     elseif ($path === '/backup/validate-zip' && $requestMethod === 'POST') {
         // Unzips the uploaded archive, so it costs real CPU and memory.
-        RateLimitMiddleware::check('backup', 10, 60);
+        RateLimitMiddleware::check('backup_validate', 10, 60);
         (new \App\Controllers\BackupController())->validateZip();
     }
     elseif ($path === '/backup/delete' && $requestMethod === 'POST') {
-        RateLimitMiddleware::check('backup', 30, 60);
+        RateLimitMiddleware::check('backup_delete', 30, 60);
         (new \App\Controllers\BackupController())->delete();
     }
     elseif ($path === '/restore/preview' && $requestMethod === 'POST') {
         // Preview reads a whole archive. Tight, because it is a preview and not an
         // operation, and because it is the cheapest way to learn the file format.
-        RateLimitMiddleware::check('restore', 10, 300);
+        RateLimitMiddleware::check('restore_preview', 10, 300);
         (new \App\Controllers\RestoreController())->preview();
     }
     // SRS 25.4/25.5: the missing execute path. Atomic (safety backup + auto rollback).
     elseif ($path === '/restore/execute' && $requestMethod === 'POST') {
         // The most destructive route here: it rewrites the database. Two per ten
         // minutes is deliberately tight -- an operator retries once, not in a loop.
-        RateLimitMiddleware::check('restore', 2, 600);
+        RateLimitMiddleware::check('restore_execute', 2, 600);
         (new \App\Controllers\RestoreController())->execute();
     }
 
     // Bulk Import & Export
     elseif ($path === '/import/trainees' && $requestMethod === 'POST') {
         // Parses a spreadsheet and writes many rows per run.
-        RateLimitMiddleware::check('import', 10, 300);
+        RateLimitMiddleware::check('import_trainees', 10, 300);
         (new \App\Controllers\ImportController())->importTrainees();
     }
     elseif ($path === '/import/history' && $requestMethod === 'GET') {
-        RateLimitMiddleware::check('import', 60, 60);
+        RateLimitMiddleware::check('import_history', 60, 60);
         (new \App\Controllers\ImportController())->history();
     }
     elseif ($path === '/export/data' && $requestMethod === 'GET') {

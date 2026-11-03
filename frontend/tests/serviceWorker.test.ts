@@ -275,6 +275,7 @@ describe('a notification cannot be pointed at an attacker-controlled target', ()
   const hostile = [
     'javascript:alert(document.cookie)',
     '//evil.test/steal',
+    '/\\evil.test/steal',
     'https://evil.test/steal',
     'http://evil.test',
     'data:text/html,<script>alert(1)</script>',

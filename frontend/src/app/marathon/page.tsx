@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import SmartHeader from '@/components/SmartHeader';
@@ -11,14 +10,10 @@ import GlobalSearchModal from '@/components/GlobalSearchModal';
 import UnifiedProfileModal from '@/components/UnifiedProfileModal';
 import {
   AlertCircle,
-  ArrowRight,
   CheckCircle2,
-  ChevronLeft,
-  GraduationCap,
+  Loader2,
   Play,
-  Plus,
   Settings,
-  Sparkles,
   Trophy,
 } from 'lucide-react';
 import type { Profile } from '@/types/database';
@@ -42,79 +37,143 @@ export default function MarathonListPage() {
   const [marathons, setMarathons] = useState<MarathonItem[]>([]);
   const [canManage, setCanManage] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [errorNotice, setErrorNotice] = useState<string | null>(null);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadMarathons() {
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      try {
+        const supabase = createClient();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
 
-      if (!user) {
-        router.push('/login');
-        return;
-      }
-
-      const { data: userProfile, error: profileError } = await supabase
-        .from('profiles')
-        .select('id,full_name,username,role_id,group_id,is_active,phone,avatar_url,created_at')
-        .eq('id', user.id)
-        .single();
-      if (profileError) throw profileError;
-
-      if (userProfile) {
-        const prof = userProfile as Profile;
-        setProfile(prof);
-
-        let hasManage = prof.role_id === 'admin';
-        if (!hasManage && prof.role_id === 'servant') {
-          const { data: perm, error: permissionError } = await supabase.rpc('has_servant_permission', { perm_id: 'MANAGE_MARATHON' });
-          hasManage = Boolean(perm && !permissionError);
-        }
-        setCanManage(hasManage);
-
-        // Fetch Marathons for user's group (or all active if admin / no group)
-        let mQuery = supabase
-          .from('marathons')
-          .select('*, marathon_questions(count)')
-          .eq('is_active', true);
-
-        if (prof.role_id !== 'admin' && prof.group_id) {
-          mQuery = mQuery.eq('group_id', prof.group_id);
+        if (!user) {
+          router.push('/login');
+          return;
         }
 
-        const { data: mList, error: marathonError } = await mQuery
-          .order('created_at', { ascending: false })
-          .limit(100);
-        if (marathonError) throw marathonError;
+        const { data: userProfile, error: profileError } = await supabase
+          .from('profiles')
+          .select('id,full_name,username,role_id,group_id,is_active,phone,avatar_url,created_at')
+          .eq('id', user.id)
+          .single();
+        if (profileError) throw profileError;
 
-        if (mList) {
-          // Fetch trainee progress for each marathon
-          const enhanced = await Promise.all(
-            mList.map(async (m: any) => {
-              const { data: state, error: stateError } = await supabase.rpc('get_trainee_marathon_state', {
-                p_marathon_id: m.id,
-                p_trainee_id: prof.id,
+        if (userProfile) {
+          const prof = userProfile as Profile;
+          setProfile(prof);
+
+          let hasManage = prof.role_id === 'admin';
+          if (!hasManage && prof.role_id === 'servant') {
+            const { data: perm, error: permissionError } = await supabase.rpc('has_servant_permission', { perm_id: 'MANAGE_MARATHON' });
+            hasManage = Boolean(perm && !permissionError);
+          }
+          setCanManage(hasManage);
+
+          // Fetch Marathons for user's group (or all active if admin / no group)
+          let mQuery = supabase
+            .from('marathons')
+            .select('*, marathon_questions(count)')
+            .eq('is_active', true)
+            .is('deleted_at', null);
+
+          if (prof.role_id !== 'admin' && prof.group_id) {
+            mQuery = mQuery.eq('group_id', prof.group_id);
+          }
+
+          const { data: mList, error: marathonError } = await mQuery
+            .order('created_at', { ascending: false })
+            .limit(100);
+          if (marathonError) throw marathonError;
+
+          if (mList && mList.length > 0) {
+            const mIds = mList.map((m: any) => m.id);
+
+            // Batch-fetch published questions and trainee submissions in parallel (eliminates N+1 RPC)
+            const [{ data: pubQuestions }, { data: subs }] = await Promise.all([
+              supabase
+                .from('marathon_questions')
+                .select('id, marathon_id')
+                .in('marathon_id', mIds)
+                .eq('status', 'PUBLISHED'),
+              supabase
+                .from('marathon_trainee_submissions')
+                .select('id, marathon_id, is_submitted')
+                .in('marathon_id', mIds)
+                .eq('trainee_id', prof.id),
+            ]);
+
+            const subIds = (subs || []).map((s: any) => s.id);
+            const { data: answers } = subIds.length > 0
+              ? await supabase
+                  .from('marathon_trainee_answers')
+                  .select('submission_id, question_id, is_reopened')
+                  .in('submission_id', subIds)
+              : { data: [] as any[] };
+
+            const pubQByMarathon = new Map<string, Set<string>>();
+            if (pubQuestions) {
+              pubQuestions.forEach((q: any) => {
+                if (!pubQByMarathon.has(q.marathon_id)) {
+                  pubQByMarathon.set(q.marathon_id, new Set());
+                }
+                pubQByMarathon.get(q.marathon_id)!.add(q.id);
               });
-              if (stateError) throw stateError;
+            }
+
+            const subByMarathon = new Map<string, any>();
+            (subs || []).forEach((s: any) => {
+              subByMarathon.set(s.marathon_id, s);
+            });
+
+            const answersBySub = new Map<string, any[]>();
+            (answers || []).forEach((a: any) => {
+              if (!answersBySub.has(a.submission_id)) {
+                answersBySub.set(a.submission_id, []);
+              }
+              answersBySub.get(a.submission_id)!.push(a);
+            });
+
+            const enhanced: MarathonItem[] = mList.map((m: any) => {
+              const pubSet = pubQByMarathon.get(m.id);
+              const questionsCount = pubQuestions
+                ? (pubSet ? pubSet.size : 0)
+                : (m.marathon_questions?.[0]?.count || 0);
+              const sub = subByMarathon.get(m.id);
+              const subAnswers = sub ? (answersBySub.get(sub.id) || []) : [];
+              const answeredCount = subAnswers.filter(
+                (a: any) => !a.is_reopened && (!pubSet || pubSet.has(a.question_id))
+              ).length;
+              const progressPercentage = questionsCount > 0
+                ? Math.min(100, Math.round((answeredCount / questionsCount) * 100))
+                : 0;
+              const isCompleted = Boolean(
+                sub?.is_submitted || (questionsCount > 0 && answeredCount >= questionsCount)
+              );
 
               return {
                 ...m,
-                questions_count: m.marathon_questions?.[0]?.count || 0,
-                trainee_progress: state?.progress_percentage || 0,
-                is_completed: state?.is_completed || false,
+                questions_count: questionsCount,
+                trainee_progress: progressPercentage,
+                is_completed: isCompleted,
               };
-            })
-          );
-          setMarathons(enhanced);
+            });
+
+            setMarathons(enhanced);
+          } else {
+            setMarathons([]);
+          }
         }
+      } catch (err) {
+        setErrorNotice(err instanceof Error ? err.message : 'تعذر تحميل قائمة الماراثون.');
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }
 
-    loadMarathons();
+    void loadMarathons();
   }, [router]);
 
   return (
@@ -170,9 +229,21 @@ export default function MarathonListPage() {
           )}
         </div>
 
+        {errorNotice && (
+          <div className="p-3.5 bg-canvas/60 border border-danger/60 text-danger rounded-xl text-xs flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-danger flex-shrink-0" />
+            <span>{errorNotice}</span>
+          </div>
+        )}
+
         {/* Marathons List */}
         <div className="space-y-4">
-          {marathons.length === 0 ? (
+          {loading ? (
+            <div className="bg-nav border border-line rounded-2xl p-12 flex flex-col items-center justify-center gap-3 text-content-muted text-xs">
+              <Loader2 className="w-7 h-7 animate-spin text-warning" />
+              <span>جاري تحميل مسابقات الماراثون...</span>
+            </div>
+          ) : marathons.length === 0 ? (
             <div className="bg-nav border border-line rounded-2xl p-8 text-center text-content-muted text-xs">
               لا توجد مسابقات ماراثون نشطة حالياً لفرقتك الدراسية.
             </div>

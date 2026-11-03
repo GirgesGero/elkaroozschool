@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -69,7 +69,7 @@ export default function MarathonManagePage() {
   const [newQText, setNewQText] = useState('');
   const [newQOptions, setNewQOptions] = useState<string[]>(['', '', '', '']); // 4 default
   const [newQCorrectIdx, setNewQCorrectIdx] = useState<number>(0);
-  const [selectedReopenQuestionId, setSelectedReopenQuestionId] = useState<string>('');
+  const [selectedReopenQuestionBySub, setSelectedReopenQuestionBySub] = useState<Record<string, string>>({});
   const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
   const [isUploadingQAttachment, setIsUploadingQAttachment] = useState(false);
 
@@ -110,122 +110,130 @@ export default function MarathonManagePage() {
 
   useEffect(() => {
     async function init() {
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      try {
+        const supabase = createClient();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
 
-      if (!user) {
-        router.push('/login');
-        return;
-      }
-
-      const { data: userProfile, error: profileError } = await supabase
-        .from('profiles')
-        .select('id,full_name,username,role_id,group_id,is_active,phone,avatar_url,created_at')
-        .eq('id', user.id)
-        .single();
-      if (profileError) throw profileError;
-
-      if (userProfile) {
-        const prof = userProfile as Profile;
-        setProfile(prof);
-
-        const permissionResult = prof.role_id === 'admin'
-          ? { data: true, error: null }
-          : await supabase.rpc('has_servant_permission', { perm_id: 'MANAGE_MARATHON' });
-        if (permissionResult.error) throw permissionResult.error;
-        const canManage = prof.role_id === 'admin' || Boolean(permissionResult.data);
-        if (!canManage) {
-          router.replace('/marathon');
+        if (!user) {
+          router.push('/login');
           return;
         }
 
-        // Fetch marathons (scoped to group if user is assigned to one, otherwise all)
-        let mQuery = supabase.from('marathons').select('*');
-        if (prof.group_id) {
-          mQuery = mQuery.eq('group_id', prof.group_id);
-        }
-        const { data: mList, error: marathonError } = await mQuery
-          .order('created_at', { ascending: false })
-          .limit(100);
-        if (marathonError) throw marathonError;
+        const { data: userProfile, error: profileError } = await supabase
+          .from('profiles')
+          .select('id,full_name,username,role_id,group_id,is_active,phone,avatar_url,created_at')
+          .eq('id', user.id)
+          .single();
+        if (profileError) throw profileError;
 
-        if (mList && mList.length > 0) {
-          setMarathons(mList);
-          setSelectedMarathonId(mList[0].id);
+        if (userProfile) {
+          const prof = userProfile as Profile;
+          setProfile(prof);
+
+          const permissionResult = prof.role_id === 'admin'
+            ? { data: true, error: null }
+            : await supabase.rpc('has_servant_permission', { perm_id: 'MANAGE_MARATHON' });
+          if (permissionResult.error) throw permissionResult.error;
+          const canManage = prof.role_id === 'admin' || Boolean(permissionResult.data);
+          if (!canManage) {
+            router.replace('/marathon');
+            return;
+          }
+
+          // Fetch marathons (scoped to group if user is assigned to one, otherwise all)
+          let mQuery = supabase.from('marathons').select('*').is('deleted_at', null);
+          if (prof.group_id) {
+            mQuery = mQuery.eq('group_id', prof.group_id);
+          }
+          const { data: mList, error: marathonError } = await mQuery
+            .order('created_at', { ascending: false })
+            .limit(100);
+          if (marathonError) throw marathonError;
+
+          if (mList && mList.length > 0) {
+            setMarathons(mList);
+            setSelectedMarathonId(mList[0].id);
+          }
         }
+      } catch (err) {
+        setNotice(err instanceof Error ? err.message : 'تعذر تحميل بيانات إدارة الماراثون.');
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }
 
-    init();
+    void init();
   }, [router]);
+
+  const loadMarathonDetails = useCallback(async (target?: MarathonDetail | string | null) => {
+    const targetId = typeof target === 'string' ? target : target?.id || selectedMarathonId;
+    if (!targetId) return;
+
+    const supabase = createClient();
+
+    // Parallel fetch sections, questions, and submissions
+    const [
+      { data: sections },
+      { data: questions },
+      { data: subs },
+    ] = await Promise.all([
+      supabase
+        .from('marathon_sections')
+        .select('id,marathon_id,title,description,order_index,status')
+        .eq('marathon_id', targetId)
+        .eq('status', 'PUBLISHED')
+        .order('order_index', { ascending: true })
+        .limit(100),
+      supabase
+        .from('marathon_questions')
+        .select('id, marathon_id, section_id, question_text, question_type, score_weight, order_index, status, marathon_answers(id, answer_text, is_correct, order_index)')
+        .eq('marathon_id', targetId)
+        .eq('status', 'PUBLISHED')
+        .order('order_index', { ascending: true })
+        .limit(500),
+      supabase
+        .from('marathon_trainee_submissions')
+        .select('id,marathon_id,trainee_id,total_score,appreciation_grade,is_submitted,submitted_at,profiles(full_name,username)')
+        .eq('marathon_id', targetId)
+        .order('total_score', { ascending: false })
+        .limit(500),
+    ]);
+
+    const mappedQ = (questions || []).map((q: any) => ({
+      ...q,
+      options: q.marathon_answers || [],
+    }));
+
+    setSelectedMarathon({
+      id: targetId,
+      title: marathons.find((m) => m.id === targetId)?.title || '',
+      group_id: profile?.group_id || 1,
+      total_score: 100,
+      is_active: true,
+      sections: sections || [],
+      questions: mappedQ,
+    });
+
+    if (subs) {
+      const mappedSubs: SubmissionRow[] = subs.map((s: any) => ({
+        id: s.id,
+        trainee_id: s.trainee_id,
+        trainee_name: s.profiles?.full_name || 'متدرب',
+        username: s.profiles?.username || '',
+        total_score: s.total_score,
+        appreciation_grade: s.appreciation_grade,
+        is_submitted: s.is_submitted,
+      }));
+      setSubmissions(mappedSubs);
+    }
+  }, [selectedMarathonId, marathons, profile]);
 
   useEffect(() => {
     if (!selectedMarathonId) return;
-
-    async function loadMarathonDetails() {
-      const supabase = createClient();
-
-      // Parallel fetch sections, questions, and submissions
-      const [
-        { data: sections },
-        { data: questions },
-        { data: subs },
-      ] = await Promise.all([
-          supabase
-            .from('marathon_sections')
-            .select('id,marathon_id,title,description,order_index,status')
-            .eq('marathon_id', selectedMarathonId)
-            .eq('status', 'PUBLISHED')
-            .order('order_index', { ascending: true })
-            .limit(100),
-        supabase
-          .from('marathon_questions')
-          .select('id, marathon_id, section_id, question_text, question_type, score_weight, order_index, status, marathon_answers(id, answer_text, is_correct, order_index)')
-          .eq('marathon_id', selectedMarathonId)
-          .order('order_index', { ascending: true })
-          .limit(500),
-        supabase
-          .from('marathon_trainee_submissions')
-          .select('id,marathon_id,trainee_id,total_score,appreciation_grade,is_submitted,submitted_at,profiles(full_name,username)')
-          .eq('marathon_id', selectedMarathonId)
-          .order('total_score', { ascending: false })
-          .limit(500),
-      ]);
-
-      const mappedQ = (questions || []).map((q: any) => ({
-        ...q,
-        options: q.marathon_answers || [],
-      }));
-
-      setSelectedMarathon({
-        id: selectedMarathonId,
-        title: marathons.find((m) => m.id === selectedMarathonId)?.title || '',
-        group_id: profile?.group_id || 1,
-        total_score: 100,
-        is_active: true,
-        sections: sections || [],
-        questions: mappedQ,
-      });
-
-      if (subs) {
-        const mappedSubs: SubmissionRow[] = subs.map((s: any) => ({
-          id: s.id,
-          trainee_id: s.trainee_id,
-          trainee_name: s.profiles?.full_name || 'متدرب',
-          username: s.profiles?.username || '',
-          total_score: s.total_score,
-          appreciation_grade: s.appreciation_grade,
-          is_submitted: s.is_submitted,
-        }));
-        setSubmissions(mappedSubs);
-      }
-    }
-
-    loadMarathonDetails();
-  }, [selectedMarathonId, marathons, profile]);
+    void loadMarathonDetails(selectedMarathonId);
+  }, [selectedMarathonId, loadMarathonDetails]);
 
   // Handler to add section
   const handleAddSection = async () => {
@@ -257,22 +265,29 @@ export default function MarathonManagePage() {
     if (!newQText.trim() || !selectedMarathonId) return;
     const supabase = createClient();
 
-    // 1. Validate before creating a question. The old handler inserted the
-    // question, then ignored option-insert failures, leaving an unusable item.
-    const cleanOptions = newQOptions.map((item) => item.trim()).filter(Boolean);
-    if (newQCorrectIdx < 0 || newQCorrectIdx >= newQOptions.length || !newQOptions[newQCorrectIdx]?.trim()) {
+    // 1. Build options preserving original index before filtering
+    const indexedOptions = newQOptions
+      .map((opt, idx) => ({
+        option_text: opt.trim(),
+        answer_text: opt.trim(),
+        is_correct: idx === newQCorrectIdx,
+      }))
+      .filter((o) => o.option_text.length > 0);
+
+    if (!indexedOptions.some((o) => o.is_correct)) {
       setNotice('حدد إجابة صحيحة غير فارغة.');
       return;
     }
-    if (cleanOptions.length < 2) {
+    if (indexedOptions.length < 2) {
       setNotice('أدخل خيارين صحيحين على الأقل وحدد إجابة صحيحة واحدة.');
       return;
     }
-    const optionsPayload = cleanOptions.map((optText, idx) => ({
-      answer_text: optText,
-      is_correct: optText === newQOptions[newQCorrectIdx]?.trim(),
+
+    const optionsPayload = indexedOptions.map((opt, idx) => ({
+      ...opt,
       order_index: idx + 1,
     }));
+
     const { error: qErr } = await supabase.rpc('create_marathon_question', {
       p_marathon_id: selectedMarathonId,
       p_section_id: newQSectionId || null,
@@ -284,7 +299,12 @@ export default function MarathonManagePage() {
       return;
     }
 
-    // Refresh questions
+    // Refresh questions immediately
+    if (selectedMarathon) {
+      await loadMarathonDetails(selectedMarathon);
+    } else {
+      await loadMarathonDetails(selectedMarathonId);
+    }
     setShowAddQModal(false);
     setNewQText('');
     setNewQOptions(['', '', '', '']);
@@ -315,6 +335,11 @@ export default function MarathonManagePage() {
 
     if (!error) {
       setNotice('تم إعادة فتح السؤال للمتدرب لإعادة المحاولة بنجاح.');
+      if (selectedMarathon) {
+        await loadMarathonDetails(selectedMarathon);
+      } else {
+        await loadMarathonDetails(selectedMarathonId);
+      }
     } else {
       setNotice(`فشل إعادة الفتح: ${error.message}`);
     }
@@ -518,8 +543,13 @@ export default function MarathonManagePage() {
                       </td>
                       <td className="p-3 text-center">
                         <select
-                          value={selectedReopenQuestionId}
-                          onChange={(e) => setSelectedReopenQuestionId(e.target.value)}
+                          value={selectedReopenQuestionBySub[sub.id] || ''}
+                          onChange={(e) =>
+                            setSelectedReopenQuestionBySub((prev) => ({
+                              ...prev,
+                              [sub.id]: e.target.value,
+                            }))
+                          }
                           className="mb-2 max-w-44 bg-nav border border-line rounded-lg px-2 py-1 text-xs text-content"
                         >
                           <option value="">اختر السؤال</option>
@@ -529,12 +559,13 @@ export default function MarathonManagePage() {
                         </select>
                         <button
                           onClick={() => {
-                            if (selectedReopenQuestionId) {
-                              handleSelectiveReopen(sub.id, selectedReopenQuestionId);
+                            const questionId = selectedReopenQuestionBySub[sub.id];
+                            if (questionId) {
+                              void handleSelectiveReopen(sub.id, questionId);
                             }
                           }}
                           className="p-1.5 bg-nav hover:bg-input text-content-secondary rounded-lg text-xs font-semibold inline-flex items-center gap-1 transition-colors"
-                          title="إعادة فتح السؤال الأول"
+                          title="إعادة فتح السؤال المحدد"
                         >
                           <RotateCcw className="w-3.5 h-3.5 text-warning" />
                           <span>إعادة فتح السؤال المحدد</span>

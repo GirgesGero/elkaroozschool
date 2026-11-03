@@ -92,11 +92,23 @@ export async function updateSession(request: NextRequest) {
   // Redirect from login to destination or feed if already logged in
   if (user && request.nextUrl.pathname === '/login') {
     const redirectTo = request.nextUrl.searchParams.get('redirectTo');
-    const target =
-      redirectTo && redirectTo.startsWith('/') && !redirectTo.startsWith('//')
-        ? redirectTo
-        : '/';
-    const url = new URL(target, request.nextUrl.origin);
+    const isSafeRelative =
+      typeof redirectTo === 'string' &&
+      redirectTo.startsWith('/') &&
+      !redirectTo.startsWith('//') &&
+      !redirectTo.includes('\\') &&
+      !/[\x00-\x1f\x7f]/.test(redirectTo);
+    const target = isSafeRelative ? redirectTo : '/';
+    let url: URL;
+    try {
+      const candidate = new URL(target, request.nextUrl.origin);
+      url =
+        candidate.origin === request.nextUrl.origin
+          ? candidate
+          : new URL('/', request.nextUrl.origin);
+    } catch {
+      url = new URL('/', request.nextUrl.origin);
+    }
     return NextResponse.redirect(url);
   }
 

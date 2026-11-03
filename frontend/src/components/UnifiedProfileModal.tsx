@@ -84,12 +84,16 @@ export default function UnifiedProfileModal({
     church: '',
   });
   const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [profileSaveError, setProfileSaveError] = useState<string | null>(null);
+  const [staffPermissions, setStaffPermissions] = useState<string[]>([]);
 
   useEffect(() => {
     if (!profileId) return;
 
     const fetchProfileData = async () => {
       setIsLoading(true);
+      setProfileSaveError(null);
+      setStaffPermissions([]);
       const supabase = createClient();
 
       try {
@@ -114,17 +118,22 @@ export default function UnifiedProfileModal({
           // If trainee, fetch attendance & activity records
           if (pData.role_id === 'trainee') {
             const { data: attData } = await supabase
-              .from('attendance')
+              .from('attendance_records')
               .select('status')
               .eq('trainee_id', profileId);
 
             const totalSessions = attData?.length || 0;
-            const present = attData?.filter((a) => a.status === 'present').length || 0;
-            const absent = attData?.filter((a) => a.status === 'absent').length || 0;
-            const rate = totalSessions > 0 ? Math.round((present / totalSessions) * 100) : 100;
+            const present =
+              attData?.filter((a) => {
+                const st = String(a.status || '').toUpperCase();
+                return st === 'PRESENT' || st === 'LATE';
+              }).length || 0;
+            const absent =
+              attData?.filter((a) => String(a.status || '').toUpperCase() === 'ABSENT').length || 0;
+            const rate = totalSessions > 0 ? Math.round((present / totalSessions) * 100) : 0;
 
             const { count: marathonCount } = await supabase
-              .from('marathon_responses')
+              .from('marathon_trainee_submissions')
               .select('id', { count: 'exact', head: true })
               .eq('trainee_id', profileId);
 
@@ -135,6 +144,14 @@ export default function UnifiedProfileModal({
               marathonParticipation: marathonCount || 0,
               examsCount: 0,
             });
+          } else {
+            const { data: permRows } = await supabase
+              .from('servant_permissions')
+              .select('permission_id')
+              .eq('profile_id', profileId);
+            if (permRows) {
+              setStaffPermissions(permRows.map((r: any) => String(r.permission_id)));
+            }
           }
         }
       } catch (err) {
@@ -264,6 +281,7 @@ export default function UnifiedProfileModal({
     e.preventDefault();
     if (!profile || !canEdit || isSavingProfile) return;
     setIsSavingProfile(true);
+    setProfileSaveError(null);
     const supabase = createClient();
 
     try {
@@ -276,23 +294,30 @@ export default function UnifiedProfileModal({
           confession_father: editFormData.confession_father.trim() || null,
           church: editFormData.church.trim() || null,
         })
-        .eq('id', profile.id);
+        .eq('id', profile.id)
+        .select('id')
+        .single();
 
-      if (!error) {
-        const updated = {
-          ...profile,
-          full_name: editFormData.full_name.trim(),
-          phone: editFormData.phone.trim() || null,
-          address: editFormData.address.trim() || null,
-          confession_father: editFormData.confession_father.trim() || null,
-          church: editFormData.church.trim() || null,
-        };
-        setProfile(updated);
-        setIsEditingProfile(false);
-        if (onProfileUpdated) onProfileUpdated(updated);
-      }
-    } catch (err) {
+      if (error) throw error;
+
+      const updated = {
+        ...profile,
+        full_name: editFormData.full_name.trim(),
+        phone: editFormData.phone.trim() || null,
+        address: editFormData.address.trim() || null,
+        confession_father: editFormData.confession_father.trim() || null,
+        church: editFormData.church.trim() || null,
+      };
+      setProfile(updated);
+      setIsEditingProfile(false);
+      if (onProfileUpdated) onProfileUpdated(updated);
+    } catch (err: any) {
       console.error('Save profile error:', err);
+      setProfileSaveError(
+        err instanceof Error && err.message
+          ? `تعذّر حفظ تعديلات الملف الشخصي: ${err.message}`
+          : 'تعذّر حفظ تعديلات الملف الشخصي، يرجى المحاولة مرة أخرى.'
+      );
     } finally {
       setIsSavingProfile(false);
     }
@@ -587,6 +612,12 @@ export default function UnifiedProfileModal({
                   )}
 
                   {/* Personal Information & Edit Form */}
+                  {profileSaveError && (
+                    <div className="flex items-center gap-2 rounded-2xl border border-danger/40 bg-danger/10 px-4 py-2.5 text-xs font-bold text-danger">
+                      <AlertCircle className="w-4 h-4 shrink-0" />
+                      <span>{profileSaveError}</span>
+                    </div>
+                  )}
                   {isEditingProfile ? (
                     <form onSubmit={handleSaveProfileInfo} className="p-4 rounded-2xl bg-canvas border border-gold/40 space-y-3">
                       <span className="text-xs font-black text-gold block mb-2">تعديل البيانات الأساسية</span>
@@ -713,17 +744,43 @@ export default function UnifiedProfileModal({
                 <div className="p-4 rounded-2xl bg-canvas border border-line space-y-2">
                   <span className="text-xs font-black text-gold block mb-2">الصلاحيات الإدارية والأكاديمية</span>
                   <div className="space-y-2 text-xs">
-                    <div className="flex items-center justify-between p-2 rounded-xl bg-nav border border-line">
-                      <span>إدارة محاضرات الفرقة والمناهج</span>
-                      <span className="text-success font-bold">مفوضة ✓</span>
-                    </div>
+                    {[
+                      { id: 'MANAGE_LECTURES', label: 'إدارة محاضرات الفرقة' },
+                      { id: 'MANAGE_CURRICULUM', label: 'إدارة المناهج الدراسية' },
+                      { id: 'MANAGE_MARATHON', label: 'إدارة أسئلة الماراثون' },
+                      { id: 'GRADE_EXAMS', label: 'رصد وتصحيح درجات الامتحانات' },
+                      { id: 'MANAGE_BOOKS', label: 'إدارة الكتب والأبحاث' },
+                    ].map((perm) => {
+                      const isGranted =
+                        profile?.role_id === 'admin' ||
+                        profile?.role_id === 'supervisor' ||
+                        staffPermissions.includes(perm.id);
+                      return (
+                        <div key={perm.id} className="flex items-center justify-between p-2 rounded-xl bg-nav border border-line">
+                          <span>{perm.label}</span>
+                          <span className={isGranted ? 'text-success font-bold' : 'text-content-muted'}>
+                            {isGranted ? 'مفوضة ✓' : 'غير مفوضة ✕'}
+                          </span>
+                        </div>
+                      );
+                    })}
                     <div className="flex items-center justify-between p-2 rounded-xl bg-nav border border-line">
                       <span>تسجيل حضور وغياب الطلاب</span>
-                      <span className="text-success font-bold">مفوضة ✓</span>
-                    </div>
-                    <div className="flex items-center justify-between p-2 rounded-xl bg-nav border border-line">
-                      <span>إدارة أسئلة الماراثون</span>
-                      <span className="text-content-muted">تلقائية للنظام</span>
+                      <span
+                        className={
+                          profile?.role_id === 'admin' ||
+                          profile?.role_id === 'supervisor' ||
+                          profile?.role_id === 'secretariat'
+                            ? 'text-success font-bold'
+                            : 'text-content-muted'
+                        }
+                      >
+                        {profile?.role_id === 'admin' ||
+                        profile?.role_id === 'supervisor' ||
+                        profile?.role_id === 'secretariat'
+                          ? 'مفوضة ✓'
+                          : 'للسكرتارية والإدارة فقط'}
+                      </span>
                     </div>
                   </div>
                 </div>

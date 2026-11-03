@@ -187,6 +187,7 @@ export interface BackupCreateResult {
   includes_database: boolean;
   database_tables?: number;
   database_rows?: number;
+  storage_type?: string;
 }
 
 export interface RestorePreviewResult {

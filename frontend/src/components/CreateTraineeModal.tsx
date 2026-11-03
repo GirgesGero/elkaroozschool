@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { explainDbError } from '@/lib/errors/db';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 import {
   UserPlus,
   X,
@@ -53,6 +54,7 @@ export default function CreateTraineeModal({
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const containerRef = useFocusTrap(isOpen, onClose);
 
   useEffect(() => {
     if (isOpen) {
@@ -136,7 +138,7 @@ export default function CreateTraineeModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-nav/80 backdrop-blur-md overflow-y-auto" dir="rtl">
+    <div ref={containerRef} role="dialog" aria-modal="true" aria-label="إضافة متدرب جديد" className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-nav/80 backdrop-blur-md overflow-y-auto" dir="rtl">
       <div
         className="w-full max-w-xl rounded-3xl overflow-hidden shadow-2xl flex flex-col transition-all border my-8"
         style={{

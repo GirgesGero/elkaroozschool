@@ -107,4 +107,19 @@ describe('Login Lockout Engine', () => {
     expect(afterClear.failedAttempts).toBe(0);
     expect(afterClear.remainingAttempts).toBe(MAX_FAILED_ATTEMPTS);
   });
+
+  it('scopes lockout state per user identifier so one locked account does not lock other users on a shared device', () => {
+    const t0 = 1000000;
+    for (let i = 0; i < MAX_FAILED_ATTEMPTS; i++) {
+      recordFailedAttempt('user1', t0);
+    }
+
+    expect(getLockoutState(t0, 'user1').isLocked).toBe(true);
+    expect(getLockoutState(t0, 'user2').isLocked).toBe(false);
+    expect(getLockoutState(t0, 'user2').failedAttempts).toBe(0);
+
+    const user2Attempt = recordFailedAttempt('user2', t0);
+    expect(user2Attempt.state.isLocked).toBe(false);
+    expect(user2Attempt.state.failedAttempts).toBe(1);
+  });
 });

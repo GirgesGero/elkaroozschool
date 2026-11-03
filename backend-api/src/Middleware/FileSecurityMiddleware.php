@@ -14,8 +14,17 @@ class FileSecurityMiddleware {
             Response::error('فشل رفع الملف: خطأ في نقل البيانات من العميل', 'UPLOAD_ERROR', 400);
         }
 
-        // 1. Check max size
-        $maxSize = $storageConfig['max_sizes'][$category] ?? (20 * 1024 * 1024);
+        // 1. Check max size (support both direct folder_type keys and legacy category aliases)
+        $categoryAlias = match ($category) {
+            'users' => 'avatar',
+            'curriculum', 'books', 'research' => 'pdf',
+            'lectures' => 'mp3',
+            'gallery' => 'feed',
+            default => $category,
+        };
+        $maxSize = $storageConfig['max_sizes'][$category]
+            ?? $storageConfig['max_sizes'][$categoryAlias]
+            ?? (20 * 1024 * 1024);
         if ($file['size'] > $maxSize) {
             $mbLimit = round($maxSize / (1024 * 1024));
             Response::error("حجم الملف يتجاوز الحد الأقصى المسموح به ({$mbLimit} ميجابايت)", 'FILE_TOO_LARGE', 400);

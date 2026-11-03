@@ -42,3 +42,5 @@ deploy-packages/
 backend-api/storage/
 !backend-api/storage/.htaccess
 !backend-api/storage/index.html
+
+backups/

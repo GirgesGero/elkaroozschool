@@ -230,21 +230,24 @@ export class QRScannerService {
           video: { facingMode: 'environment' },
         });
 
-        const video = document.createElement('video');
-        video.srcObject = mediaStream;
-        video.playsInline = true;
-        await video.play();
+        try {
+          const video = document.createElement('video');
+          video.srcObject = mediaStream;
+          video.playsInline = true;
+          await video.play();
 
-        const barcodes = await detector.detect(video);
-        mediaStream.getTracks().forEach((track) => track.stop());
+          const barcodes = await detector.detect(video);
 
-        if (barcodes && barcodes.length > 0 && barcodes[0].rawValue) {
-          const raw = barcodes[0].rawValue;
-          return {
-            rawValue: raw,
-            format: 'QR_CODE',
-            parsedPayload: this.parsePayload(raw),
-          };
+          if (barcodes && barcodes.length > 0 && barcodes[0].rawValue) {
+            const raw = barcodes[0].rawValue;
+            return {
+              rawValue: raw,
+              format: 'QR_CODE',
+              parsedPayload: this.parsePayload(raw),
+            };
+          }
+        } finally {
+          mediaStream.getTracks().forEach((track) => track.stop());
         }
       } catch (err) {
         // Fallback gracefully if camera stream or detector throws

@@ -87,6 +87,10 @@
     RewriteCond %{REQUEST_METHOD} ^(TRACE|TRACK|CONNECT|DEBUG) [NC]
     RewriteRule ^.*$ - [F]
 
+    # Block direct web access to internal directories and sensitive file extensions in any subdirectory
+    RewriteCond %{REQUEST_URI} !^/(?:api/)?storage/(?:upload|delete|file/[a-zA-Z0-9_-]+)$
+    RewriteRule ^(?:src|config|vendor|migrations|tests|scripts|apps-script|docs|storage)(?:/|$) - [F,L]
+    RewriteRule (?:^|/)(?:\.env|\.git|\.htaccess|.*\.(?:sql|bak|log|ini|sh|lock|ya?ml|gs|md))$ - [F,L]
     RewriteRule ^(\.env|\.git|\.htaccess|\.sql|\.bak|\.log|\.ini|\.sh|\.lock|\.ya?ml)$ - [F,L]
     RewriteRule ^(composer\.(json|lock)|package(-lock)?\.json)$ - [F,L]
 

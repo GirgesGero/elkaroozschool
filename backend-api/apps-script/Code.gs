@@ -6,7 +6,6 @@
  * Security: Token-gated REST Bridge for Hostinger PHP Backend
  */
 
-var DEFAULT_ACCESS_TOKEN = "ELKARO...2026";
 var BIBLE_V1_FOLDER_ID = "1hi5NoKnzdLW6UQ96SsRgYWerGle5iT_e";
 
 function doGet(e) {
@@ -32,7 +31,17 @@ function handleRequest(e) {
       }
     }
 
-    var expectedToken = PropertiesService.getScriptProperties().getProperty("APPS_SCRIPT_ACCESS_TOKEN") || DEFAULT_ACCESS_TOKEN;
+    var expectedToken = PropertiesService.getScriptProperties().getProperty("APPS_SCRIPT_ACCESS_TOKEN");
+    if (!expectedToken || expectedToken.trim() === "") {
+      return jsonResponse({
+        ok: false,
+        data: null,
+        error: {
+          code: "SERVER_MISCONFIGURED",
+          message: "Access denied: APPS_SCRIPT_ACCESS_TOKEN is not configured in ScriptProperties."
+        }
+      }, 500);
+    }
     var providedToken = params.token || (e && e.headers && (e.headers.Authorization || e.headers.authorization));
     
     if (providedToken && providedToken.indexOf("Bearer ") === 0) {

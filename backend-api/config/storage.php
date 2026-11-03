@@ -6,8 +6,15 @@ return [
     'public_url' => getenv('STORAGE_PUBLIC_URL') ?: 'https://storage.elkarooz-school.com',
     'max_sizes' => [
         'avatar' => 10 * 1024 * 1024,      // 10 MB
+        'users' => 10 * 1024 * 1024,       // 10 MB
         'feed' => 15 * 1024 * 1024,        // 15 MB
+        'gallery' => 15 * 1024 * 1024,     // 15 MB
+        'general' => 20 * 1024 * 1024,     // 20 MB
         'pdf' => 50 * 1024 * 1024,         // 50 MB
+        'curriculum' => 50 * 1024 * 1024,  // 50 MB
+        'books' => 50 * 1024 * 1024,       // 50 MB
+        'research' => 50 * 1024 * 1024,    // 50 MB
+        'lectures' => 150 * 1024 * 1024,   // 150 MB
         'mp3' => 150 * 1024 * 1024,        // 150 MB
         'backup' => 2048 * 1024 * 1024,    // 2 GB
     ],

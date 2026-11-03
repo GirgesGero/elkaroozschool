@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
@@ -58,6 +58,9 @@ interface PageProps {
   params?: { id?: string };
 }
 
+const getLocalTodayIso = () =>
+  new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0];
+
 export default function GroupDetailsPage({ params }: PageProps) {
   const routeParams = useParams();
   const rawId = routeParams?.id || params?.id;
@@ -105,7 +108,7 @@ export default function GroupDetailsPage({ params }: PageProps) {
 
   // Admin Operational Modals
   const [isCreateSessionOpen, setIsCreateSessionOpen] = useState(false);
-  const [newSessionDate, setNewSessionDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [newSessionDate, setNewSessionDate] = useState(() => getLocalTodayIso());
   const [newSessionStatus, setNewSessionStatus] = useState<'OPEN' | 'LOCKED'>('OPEN');
   const [creatingSession, setCreatingSession] = useState(false);
 
@@ -127,72 +130,15 @@ export default function GroupDetailsPage({ params }: PageProps) {
   const isGroupServant = profile?.role_id === 'servant' && profile?.group_id === groupId;
   const canMarkAttendance = isAdminOrSuper || isGroupSecretariat;
 
-  // Load Group Data
-  const loadGroupData = async (gId: number, currentProf: Profile) => {
-    setLoading(true);
-    const supabase = createClient();
-
-    // Parallel fetch group operational data (eliminates 7-step waterfall)
-    const [
-      { data: sumData },
-      { data: servData },
-      { data: secData },
-      { data: traineeList },
-      { data: sessList },
-      { data: currList },
-      { data: marList },
-    ] = await Promise.all([
-      supabase.rpc('get_group_operational_summary', { p_group_id: gId }),
-      supabase.rpc('get_group_servants_detailed', { p_group_id: gId }),
-      supabase.rpc('get_group_secretariat_detailed', { p_group_id: gId }),
-      supabase
-        .from('profiles')
-        .select('*')
-        .eq('group_id', gId)
-        .eq('role_id', 'trainee')
-        .order('full_name', { ascending: true }),
-      supabase
-        .from('attendance_sessions')
-        .select('*')
-        .eq('group_id', gId)
-        .order('session_date', { ascending: false }),
-      supabase
-        .from('curriculums')
-        .select('*')
-        .eq('group_id', gId)
-        .is('deleted_at', null),
-      supabase
-        .from('marathons')
-        .select('*, marathon_questions(count)')
-        .eq('group_id', gId)
-        .is('deleted_at', null),
-    ]);
-
-    if (sumData) setSummary(sumData);
-    if (servData) setServants(servData);
-    if (secData) setSecretariat(secData);
-    if (traineeList) setTrainees(traineeList as Profile[]);
-
-    if (sessList && sessList.length > 0) {
-      setSessions(sessList);
-      setSelectedSessionId(sessList[0].id);
-      loadSessionRecords(sessList[0].id);
-    }
-
-    if (currList) setCurriculums(currList);
-    if (marList) setMarathons(marList);
-
-    setLoading(false);
-  };
-
-  const loadSessionRecords = async (sId: string) => {
+  const loadSessionRecords = useCallback(async (sId: string) => {
     if (!sId) return;
     const supabase = createClient();
     const { data: records } = await supabase
       .from('attendance_records')
       .select('trainee_id, status')
       .eq('session_id', sId)
-      .is('deleted_at', null);
+      .is('deleted_at', null)
+      .limit(500);
 
     const recMap: Record<string, AttendanceStatus> = {};
     if (records) {
@@ -201,50 +147,122 @@ export default function GroupDetailsPage({ params }: PageProps) {
       });
     }
     setSessionRecords(recMap);
-  };
+  }, []);
+
+  // Load Group Data
+  const loadGroupData = useCallback(async (gId: number, _currentProf: Profile) => {
+    setLoading(true);
+    try {
+      const supabase = createClient();
+
+      // Parallel fetch group operational data (eliminates 7-step waterfall)
+      const [
+        { data: sumData },
+        { data: servData },
+        { data: secData },
+        { data: traineeList },
+        { data: sessList },
+        { data: currList },
+        { data: marList },
+      ] = await Promise.all([
+        supabase.rpc('get_group_operational_summary', { p_group_id: gId }),
+        supabase.rpc('get_group_servants_detailed', { p_group_id: gId }),
+        supabase.rpc('get_group_secretariat_detailed', { p_group_id: gId }),
+        supabase
+          .from('profiles')
+          .select('*')
+          .eq('group_id', gId)
+          .eq('role_id', 'trainee')
+          .is('deleted_at', null)
+          .order('full_name', { ascending: true })
+          .limit(500),
+        supabase
+          .from('attendance_sessions')
+          .select('*')
+          .eq('group_id', gId)
+          .is('deleted_at', null)
+          .order('session_date', { ascending: false })
+          .limit(100),
+        supabase
+          .from('curriculums')
+          .select('*')
+          .eq('group_id', gId)
+          .is('deleted_at', null)
+          .limit(200),
+        supabase
+          .from('marathons')
+          .select('*, marathon_questions(count)')
+          .eq('group_id', gId)
+          .is('deleted_at', null)
+          .limit(100),
+      ]);
+
+      if (sumData) setSummary(sumData);
+      if (servData) setServants(servData);
+      if (secData) setSecretariat(secData);
+      if (traineeList) setTrainees(traineeList as Profile[]);
+
+      if (sessList && sessList.length > 0) {
+        setSessions(sessList);
+        setSelectedSessionId(sessList[0].id);
+        loadSessionRecords(sessList[0].id);
+      }
+
+      if (currList) setCurriculums(currList);
+      if (marList) setMarathons(marList);
+    } finally {
+      setLoading(false);
+    }
+  }, [loadSessionRecords]);
 
   useEffect(() => {
     async function init() {
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      try {
+        const supabase = createClient();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
 
-      if (!user) {
-        router.push('/login');
-        return;
-      }
-
-      const { data: userProfile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-
-      if (userProfile) {
-        const prof = userProfile as Profile;
-        setProfile(prof);
-
-        // Security check: If not Admin/Super and trying to access other group, enforce isolation
-        if (prof.role_id !== 'admin' && prof.group_id !== groupId) {
-          router.push(`/groups/${prof.group_id}`);
+        if (!user) {
+          router.push('/login');
           return;
         }
 
-        if (typeof window !== 'undefined') {
-          const tabParam = new URLSearchParams(window.location.search).get('tab');
-          if (
-            tabParam &&
-            ['overview', 'servants', 'secretariat', 'trainees', 'attendance', 'curriculum', 'marathon', 'reports'].includes(
-              tabParam
-            )
-          ) {
-            setActiveTab(tabParam as any);
-          }
-        }
+        const { data: userProfile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
 
-        loadGroupData(groupId, prof);
+        if (userProfile) {
+          const prof = userProfile as Profile;
+          setProfile(prof);
+
+          // Security check: If not Admin/Super and trying to access other group, enforce isolation
+          if (prof.role_id !== 'admin' && prof.group_id !== groupId) {
+            router.push(`/groups/${prof.group_id}`);
+            return;
+          }
+
+          if (typeof window !== 'undefined') {
+            const tabParam = new URLSearchParams(window.location.search).get('tab');
+            if (
+              tabParam &&
+              ['overview', 'servants', 'secretariat', 'trainees', 'attendance', 'curriculum', 'marathon', 'reports'].includes(
+                tabParam
+              )
+            ) {
+              setActiveTab(tabParam as any);
+            }
+          }
+
+          await loadGroupData(groupId, prof);
+        } else {
+          setLoading(false);
+        }
+      } catch {
+        setLoading(false);
       }
     }
 
     init();
-  }, [groupId, router]);
+  }, [groupId, router, loadGroupData]);
 
   const handleSessionChange = (sId: string) => {
     setSelectedSessionId(sId);
@@ -398,6 +416,7 @@ export default function GroupDetailsPage({ params }: PageProps) {
       .select('*')
       .in('role_id', ['servant', 'secretariat'])
       .neq('group_id', groupId)
+      .is('deleted_at', null)
       .order('full_name', { ascending: true });
 
     if (data) {
@@ -1170,7 +1189,7 @@ export default function GroupDetailsPage({ params }: PageProps) {
                           >
                             {sessions.map((s) => (
                               <option key={s.id} value={s.id}>
-                                {new Date(s.session_date).toLocaleDateString('ar-EG', {
+                                {new Date(`${String(s.session_date).slice(0, 10)}T12:00:00`).toLocaleDateString('ar-EG', {
                                   weekday: 'long',
                                   year: 'numeric',
                                   month: 'short',
@@ -1211,7 +1230,7 @@ export default function GroupDetailsPage({ params }: PageProps) {
 
                           <button
                             onClick={() => {
-                              setNewSessionDate(new Date().toISOString().split('T')[0]);
+                              setNewSessionDate(getLocalTodayIso());
                               setIsCreateSessionOpen(true);
                             }}
                             className="px-3.5 py-2 rounded-xl bg-nav hover:bg-input text-content border border-line font-bold text-xs transition-all flex items-center gap-1.5"

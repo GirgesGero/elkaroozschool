@@ -26,6 +26,8 @@
 
 \set ON_ERROR_STOP on
 
+BEGIN;
+
 -- Resolve the test actors as the owner role, BEFORE dropping to authenticated.
 -- (Scoping note: reading profiles while already SET ROLE authenticated returns
 --  only same-group rows, so the subqueries would come back empty and every
@@ -81,7 +83,6 @@ GRANT EXECUTE ON FUNCTION public._pastoral_probe(uuid, uuid, uuid) TO authentica
 -- the function: the function body runs AFTER SET LOCAL ROLE authenticated, where
 -- RLS returns only same-group profiles. An in-function lookup would yield NULL
 -- for every actor and every comparison would silently pass against NULL.
-BEGIN;
 SET LOCAL ROLE authenticated;
 
 WITH measured AS (

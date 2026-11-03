@@ -322,6 +322,30 @@ class BibleDataService
             }
         }
 
+        if ($targetId <= 0 && !empty($path)) {
+            $slugMap = $this->getSlugMap();
+            $cleanPath = ltrim(str_replace('\\', '/', $path), '/');
+            $baseName = basename($cleanPath);
+            $targetId = (int)($slugMap[$cleanPath] ?? ($slugMap[$baseName] ?? ($slugMap[pathinfo($baseName, PATHINFO_FILENAME)] ?? 0)));
+        }
+
+        if ($targetId <= 0 && !empty($book)) {
+            $slugMap = $this->getSlugMap();
+            $chapterNum = max(1, $ch);
+            $candidates = [
+                "{$book}-{$chapterNum}",
+                "{$book}_{$chapterNum}",
+                "{$book}/{$chapterNum}",
+                $book,
+            ];
+            foreach ($candidates as $cand) {
+                if (isset($slugMap[$cand])) {
+                    $targetId = (int)$slugMap[$cand];
+                    break;
+                }
+            }
+        }
+
         if ($targetId <= 0) {
             return null;
         }

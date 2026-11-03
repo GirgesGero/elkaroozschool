@@ -268,13 +268,19 @@ class GoogleDriveService {
         }
 
         $token = $this->getAccessToken();
-        $fileSize = filesize($localFilePath);
-        $boundary = '-------' . bin2hex(random_bytes(16));
+        $fileSize = (int) filesize($localFilePath);
 
         $metadata = json_encode([
             'name' => Security::sanitizeFilename($fileName),
             'parents' => [$folderId],
         ]);
+
+        // For files > 5 MB, stream via Resumable Upload instead of loading the entire file into RAM
+        if ($fileSize > 5 * 1024 * 1024) {
+            return $this->uploadFileResumable($localFilePath, $fileName, $mimeType, (string) $metadata, $fileSize, $token);
+        }
+
+        $boundary = '-------' . bin2hex(random_bytes(16));
 
         $multipartBody = "--" . $boundary . "\r\n"
             . "Content-Type: application/json; charset=UTF-8\r\n\r\n"
@@ -315,6 +321,91 @@ class GoogleDriveService {
             'drive_file_id' => $result['id'],
             'name' => $result['name'] ?? $fileName,
             'size' => (int)($result['size'] ?? $fileSize),
+            'mime_type' => $result['mimeType'] ?? $mimeType,
+        ];
+    }
+
+    /**
+     * Stream large files to Google Drive via Resumable Upload without buffering into PHP memory.
+     */
+    private function uploadFileResumable(
+        string $localFilePath,
+        string $fileName,
+        string $mimeType,
+        string $metadataJson,
+        int $fileSize,
+        string $token
+    ): array {
+        $uploadUrl = null;
+        $initCh = curl_init('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&supportsAllDrives=true&fields=id,name,size,mimeType,md5Checksum,createdTime');
+        curl_setopt_array($initCh, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => $metadataJson,
+            CURLOPT_HTTPHEADER => [
+                'Authorization: Bearer ' . $token,
+                'Content-Type: application/json; charset=UTF-8',
+                'X-Upload-Content-Type: ' . $mimeType,
+                'X-Upload-Content-Length: ' . $fileSize,
+            ],
+            CURLOPT_HEADERFUNCTION => static function ($curl, string $headerLine) use (&$uploadUrl): int {
+                if (stripos($headerLine, 'Location:') === 0) {
+                    $uploadUrl = trim(substr($headerLine, 9));
+                }
+                return strlen($headerLine);
+            },
+            CURLOPT_TIMEOUT => $this->timeoutSeconds,
+            CURLOPT_SSL_VERIFYPEER => true,
+        ]);
+        curl_exec($initCh);
+        $initCode = (int) curl_getinfo($initCh, CURLINFO_HTTP_CODE);
+        curl_close($initCh);
+
+        if ($initCode < 200 || $initCode >= 300 || empty($uploadUrl)) {
+            throw new \RuntimeException('Google Drive resumable session initialization failed with HTTP ' . $initCode);
+        }
+
+        $fp = fopen($localFilePath, 'rb');
+        if ($fp === false) {
+            throw new \RuntimeException('Failed to open local file stream for upload');
+        }
+
+        try {
+            $putCh = curl_init($uploadUrl);
+            curl_setopt_array($putCh, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_UPLOAD => true,
+                CURLOPT_CUSTOMREQUEST => 'PUT',
+                CURLOPT_INFILE => $fp,
+                CURLOPT_INFILESIZE => $fileSize,
+                CURLOPT_HTTPHEADER => [
+                    'Authorization: Bearer ' . $token,
+                    'Content-Type: ' . $mimeType,
+                    'Content-Length: ' . $fileSize,
+                ],
+                CURLOPT_TIMEOUT => max(120, $this->timeoutSeconds * 6),
+                CURLOPT_SSL_VERIFYPEER => true,
+            ]);
+            $response = curl_exec($putCh);
+            $httpCode = (int) curl_getinfo($putCh, CURLINFO_HTTP_CODE);
+            curl_close($putCh);
+        } finally {
+            fclose($fp);
+        }
+
+        if ($httpCode < 200 || $httpCode >= 300) {
+            throw new \RuntimeException('Google Drive resumable upload failed with HTTP ' . $httpCode);
+        }
+
+        $result = json_decode((string) $response, true);
+        if (empty($result['id'])) {
+            throw new \RuntimeException('Google Drive did not return file ID');
+        }
+
+        return [
+            'drive_file_id' => $result['id'],
+            'name' => $result['name'] ?? $fileName,
+            'size' => (int) ($result['size'] ?? $fileSize),
             'mime_type' => $result['mimeType'] ?? $mimeType,
         ];
     }

@@ -77,6 +77,8 @@ tar -czf "$DEPLOY_DIR/backend-deploy.tar.gz" \
     --exclude='vendor' \
     --exclude='.git' \
     --exclude='.gitignore' \
+    --exclude='.env*' \
+    --exclude='storage/backups/*' \
     --exclude='storage/logs/*' \
     --exclude='storage/cache/*' \
     --exclude='storage/bible/bible_encyclopedia.sqlite-shm' \
@@ -196,8 +198,8 @@ nano .env  # Fill in your credentials
 Required variables:
 - SUPABASE_URL
 - SUPABASE_ANON_KEY
-- SUPABASE_SERVICE_KEY
-- JWT_SECRET
+- SUPABASE_SERVICE_ROLE_KEY
+- SUPABASE_JWT_SECRET
 - APP_URL
 - CORS_ALLOWED_ORIGINS
 

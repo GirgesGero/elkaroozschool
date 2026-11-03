@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import SmartHeader from '@/components/SmartHeader';
 import SmartBottomNav from '@/components/SmartBottomNav';
@@ -11,22 +10,32 @@ import GlobalSearchModal from '@/components/GlobalSearchModal';
 import UnifiedProfileModal from '@/components/UnifiedProfileModal';
 import {
   AlertCircle,
-  ArrowRight,
   BookOpen,
   Bookmark,
-  CheckCircle2,
   Eye,
   FileText,
-  Filter,
   Heart,
   Loader2,
   Plus,
   Search,
-  Sparkles,
-  Trash2,
   X,
 } from 'lucide-react';
 import type { Profile } from '@/types/database';
+
+function isSafeHttpUrl(rawUrl: string | null | undefined): boolean {
+  if (!rawUrl || typeof rawUrl !== 'string') return false;
+  const trimmed = rawUrl.trim();
+  if (!trimmed) return false;
+  if (trimmed.startsWith('/') && !trimmed.startsWith('//') && !trimmed.includes('\\')) {
+    return true;
+  }
+  try {
+    const parsed = new URL(trimmed);
+    return parsed.protocol === 'https:' || parsed.protocol === 'http:';
+  } catch {
+    return false;
+  }
+}
 
 interface CategoryItem {
   id: string;
@@ -52,7 +61,7 @@ export default function BooksAndResearchPage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [canManage, setCanManage] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
+  const [selectedProfileId, setSelectedProfileId] = useState(null as string | null);
 
   // Active Tab: 'books' | 'researches' | 'favorites'
   const [activeTab, setActiveTab] = useState<'books' | 'researches' | 'favorites'>('books');
@@ -78,44 +87,49 @@ export default function BooksAndResearchPage() {
 
   useEffect(() => {
     async function init() {
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      try {
+        const supabase = createClient();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
 
-      if (!user) {
-        router.push('/login');
-        return;
-      }
-
-      const { data: userProfile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-
-      if (userProfile) {
-        const prof = userProfile as Profile;
-        setProfile(prof);
-
-        // Resolve management through the supported permission ID; RLS scopes writes.
-        let hasMgmt = prof.role_id === 'admin';
-        if (!hasMgmt) {
-          const { data: perm } = await supabase.rpc('has_servant_permission', { perm_id: 'MANAGE_BOOKS' });
-          hasMgmt = Boolean(perm);
+        if (!user) {
+          router.push('/login');
+          return;
         }
-        setCanManage(hasMgmt);
 
-        // Fetch categories
-        const { data: cats } = await supabase.from('categories').select('*').order('name_ar');
-        if (cats) setCategories(cats);
+        const { data: userProfile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
 
-        await loadLibraryContent(user.id);
+        if (userProfile) {
+          const prof = userProfile as Profile;
+          setProfile(prof);
+
+          // Resolve management through the supported permission ID; RLS scopes writes.
+          let hasMgmt = prof.role_id === 'admin';
+          if (!hasMgmt) {
+            const { data: perm } = await supabase.rpc('has_servant_permission', { perm_id: 'MANAGE_BOOKS' });
+            hasMgmt = Boolean(perm);
+          }
+          setCanManage(hasMgmt);
+
+          // Fetch categories
+          const { data: cats } = await supabase.from('categories').select('*').order('name_ar');
+          if (cats) setCategories(cats);
+
+          await loadLibraryContent(user.id);
+        }
+      } catch (err) {
+        setNotice(err instanceof Error ? err.message : 'تعذر تحميل محتويات المكتبة.');
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }
 
-    init();
+    void init();
   }, [router]);
 
   const loadLibraryContent = async (userId: string) => {
@@ -206,6 +220,14 @@ export default function BooksAndResearchPage() {
   // Add Item (Staff/Admin)
   const handleSaveItem = async () => {
     if (!newTitle.trim() || !newFileUrl.trim()) return;
+    if (!isSafeHttpUrl(newFileUrl)) {
+      setNotice('رابط ملف المحتوى غير صالح. يجب أن يبدأ بـ https:// أو http://.');
+      return;
+    }
+    if (newCoverUrl.trim() && !isSafeHttpUrl(newCoverUrl)) {
+      setNotice('رابط صورة الغلاف غير صالح. يجب أن يبدأ بـ https:// أو http://.');
+      return;
+    }
     setSavingItem(true);
     const supabase = createClient();
 
@@ -379,7 +401,12 @@ export default function BooksAndResearchPage() {
 
         {/* --- ITEMS GRID --- */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
-          {filteredItems.length === 0 ? (
+          {loading ? (
+            <div className="col-span-full bg-nav border border-line rounded-2xl p-12 flex flex-col items-center justify-center gap-3 text-content-muted text-xs">
+              <Loader2 className="w-7 h-7 animate-spin text-warning" />
+              <span>جاري تحميل المكتبة...</span>
+            </div>
+          ) : filteredItems.length === 0 ? (
             <div className="col-span-full bg-nav border border-line rounded-2xl p-12 text-center text-content-muted text-xs">
               لا توجد عناصر مطابقة لبحثك في المكتبة.
             </div>
@@ -392,10 +419,12 @@ export default function BooksAndResearchPage() {
                 <div>
                   {/* Cover & Type Badge */}
                   <div className="relative h-44 bg-nav rounded-xl overflow-hidden mb-3 border border-line flex items-center justify-center">
-                    {item.cover_url ? (
-                      <img
+                    {item.cover_url && isSafeHttpUrl(item.cover_url) ? (
+                      <Image
                         src={item.cover_url}
                         alt={item.title}
+                        fill
+                        unoptimized
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
                     ) : (
@@ -463,11 +492,19 @@ export default function BooksAndResearchPage() {
             </div>
 
             <div className="flex-1 max-w-5xl w-full mx-auto mt-4 bg-nav rounded-2xl overflow-hidden border border-line shadow-2xl flex flex-col">
-              <iframe
-                src={readingItem.file_url}
-                className="w-full h-full flex-1 border-0"
-                title={readingItem.title}
-              />
+              {isSafeHttpUrl(readingItem.file_url) ? (
+                <iframe
+                  src={readingItem.file_url}
+                  referrerPolicy="no-referrer"
+                  sandbox="allow-scripts allow-same-origin"
+                  className="w-full h-full flex-1 border-0"
+                  title={readingItem.title}
+                />
+              ) : (
+                <div className="flex-1 flex items-center justify-center p-8 text-center text-danger text-sm">
+                  رابط الملف غير صالح أو غير آمن للعرض.
+                </div>
+              )}
             </div>
           </div>
         )}

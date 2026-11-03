@@ -3,10 +3,11 @@ import { describe, it, expect } from 'vitest';
 describe('UI/UX Architecture & Responsive Interactions Suite', () => {
   it('verifies theme modes and accent classes structure', () => {
     const validModes = ['light', 'dark', 'luxury', 'system'];
-    const validAccents = ['gold', 'burgundy', 'navy', 'emerald'];
+    const validAccents = ['gold', 'burgundy', 'navy', 'emerald', 'amethyst'];
 
     expect(validModes).toContain('luxury');
     expect(validAccents).toContain('gold');
+    expect(validAccents).toContain('amethyst');
   });
 
   it('verifies scroll threshold parameters for SmartHeader & SmartBottomNav', () => {

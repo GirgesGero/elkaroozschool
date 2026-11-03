@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
@@ -21,7 +21,6 @@ import {
   FileArchive,
   ArrowRight,
   CheckCircle2,
-  XCircle,
   AlertTriangle,
   Upload,
   Layers,
@@ -42,7 +41,7 @@ interface BackupRecord {
 
 export default function AdminBackupsPage() {
   const router = useRouter();
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -68,11 +67,7 @@ export default function AdminBackupsPage() {
   // the File objects in memory for this page only — never uploaded, never persisted.
   const [backupFiles, setBackupFiles] = useState<Record<string, File>>({});
 
-  useEffect(() => {
-    fetchBackups();
-  }, []);
-
-  const fetchBackups = async () => {
+  const fetchBackups = useCallback(async () => {
     setLoading(true);
     setLoadError(null);
     try {
@@ -116,6 +111,25 @@ export default function AdminBackupsPage() {
     } finally {
       setLoading(false);
     }
+  }, [router, supabase]);
+
+  useEffect(() => {
+    void fetchBackups();
+  }, [fetchBackups]);
+
+  const triggerManifestDownload = (manifestData: Record<string, unknown>, baseFilename: string) => {
+    if (typeof window === 'undefined') return;
+    const blob = new Blob([JSON.stringify(manifestData, null, 2)], {
+      type: 'application/json;charset=utf-8;',
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${baseFilename.replace(/\.zip$/i, '')}_manifest.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(url), 0);
   };
 
   const handleCreateBackup = async (e: React.FormEvent) => {
@@ -145,12 +159,35 @@ export default function AdminBackupsPage() {
         ? ` · قاعدة البيانات: ${result.database_tables ?? 0} جدول / ${result.database_rows ?? 0} صف`
         : '';
 
-      setOperationMsg({
-        type: 'success',
-        text: `تم إنشاء النسخة الاحتياطية فعلياً: ${result.filename} (${result.files_included} ملف${dbNote})`,
-      });
+      if (storageOption === 'DOWNLOAD') {
+        triggerManifestDownload(
+          {
+            backup_id: result.backup_id,
+            filename: result.filename,
+            size_bytes: result.file_size_bytes,
+            checksum_sha256: result.checksum_sha256,
+            files_included: result.files_included,
+            includes_database: result.includes_database,
+            database_tables: result.database_tables,
+            database_rows: result.database_rows,
+            storage_type: result.storage_type ?? 'DOWNLOAD_ONLY',
+            created_at: new Date().toISOString(),
+          },
+          result.filename
+        );
+        setOperationMsg({
+          type: 'success',
+          text: `تم إنشاء النسخة الاحتياطية المشفرة على الخادم (${result.filename} · ${result.files_included} ملف${dbNote}) وتنزيل وثيقة التحقق (Manifest SHA-256) إلى جهازك.`,
+        });
+      } else {
+        setOperationMsg({
+          type: 'success',
+          text: `تم إنشاء وحفظ النسخة الاحتياطية فعلياً على الخادم: ${result.filename} (${result.files_included} ملف${dbNote})`,
+        });
+      }
+
       setBackupPassword('');
-      fetchBackups();
+      void fetchBackups();
     } catch (err) {
       const message =
         err instanceof PhpApiError
@@ -277,7 +314,7 @@ export default function AdminBackupsPage() {
           <ShieldAlert className="w-16 h-16 text-danger mx-auto mb-4" />
           <h2 className="text-xl font-bold text-content mb-2">غير مصرح بالوصول</h2>
           <p className="text-content-muted mb-6 text-sm">
-            لوحة النسخ الاحتياطي وإدارة الملفات محصورة حصراً على مسؤولي النظام (Admin / Super User).
+            لوحة النسخ الاحتياطي وإدارة الملفات محصورة حصراً على مسؤولي النظام (Admin).
           </p>
           <Link
             href="/"
@@ -419,7 +456,7 @@ export default function AdminBackupsPage() {
                     }`}
                   >
                     <Download className="w-4 h-4" />
-                    تحميل مباشر
+                    حفظ وتنزيل إيصال التحقق
                   </button>
                 </div>
               </div>
@@ -453,7 +490,7 @@ export default function AdminBackupsPage() {
               <h2 className="text-lg font-bold text-content">سجل النسخ الاحتياطية المسجلة ({backups.length})</h2>
             </div>
             <button
-              onClick={fetchBackups}
+              onClick={() => void fetchBackups()}
               className="p-2 bg-nav hover:bg-input rounded-lg text-content-secondary transition"
               title="تحديث القائمة"
             >
@@ -464,7 +501,7 @@ export default function AdminBackupsPage() {
           {loadError ? (
             <div className="rounded-2xl border border-danger/40 bg-danger/10 p-5 text-danger flex items-center justify-between gap-3">
               <span>{loadError}</span>
-              <button onClick={fetchBackups} className="px-3 py-2 rounded-xl border border-danger/40">إعادة المحاولة</button>
+              <button onClick={() => void fetchBackups()} className="px-3 py-2 rounded-xl border border-danger/40">إعادة المحاولة</button>
             </div>
           ) : backups.length === 0 ? (
             <div className="text-center py-12 text-content-muted">
@@ -525,6 +562,26 @@ export default function AdminBackupsPage() {
                       </td>
                       <td className="py-4 pl-4">
                         <div className="flex items-center justify-center gap-2">
+                          <button
+                            onClick={() =>
+                              triggerManifestDownload(
+                                {
+                                  id: b.id,
+                                  filename: b.filename,
+                                  file_size_bytes: b.file_size_bytes,
+                                  storage_type: b.storage_type,
+                                  storage_path: b.storage_path,
+                                  checksum_sha256: b.checksum_sha256,
+                                  created_at: b.created_at,
+                                },
+                                b.filename
+                              )
+                            }
+                            className="p-2 bg-info/10 hover:bg-info/20 text-info rounded-lg border border-info/30 transition text-xs font-medium flex items-center gap-1"
+                            title="تنزيل إيصال التحقق (Manifest)"
+                          >
+                            <Download className="w-3.5 h-3.5" />
+                          </button>
                           <button
                             onClick={() => setSelectedBackupForRestore(b)}
                             className="p-2 bg-success/10 hover:bg-success/20 text-success rounded-lg border border-success/30 transition text-xs font-medium flex items-center gap-1"

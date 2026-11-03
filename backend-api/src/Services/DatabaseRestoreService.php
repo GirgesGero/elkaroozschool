@@ -199,14 +199,16 @@ final class DatabaseRestoreService
         // contain one. Without this check a truncated archive would restore
         // nothing and the operator would read the success response as "the
         // database was restored".
-        $report = $this->client()->rpc('system_reset_guarded_restore_database', [
+        $rawReport = $this->client()->rpc('system_reset_guarded_restore_database', [
             'p_tables'   => $decoded,
             'p_truncate' => $truncate,
         ]);
 
-        if (!is_array($report)) {
+        if (!is_array($rawReport)) {
             throw new \RuntimeException('استجابة غير متوقعة من استعادة قاعدة البيانات');
         }
+
+        $report = $this->unwrapRpcResponse($rawReport, 'system_reset_guarded_restore_database');
 
         $tables = (int) ($report['tables_restored'] ?? 0);
         if ($tables < 1) {
@@ -221,6 +223,29 @@ final class DatabaseRestoreService
             'truncate_mode'       => (bool) ($report['truncate_mode'] ?? $truncate),
             'detail'              => 'تمت استعادة قاعدة البيانات فعلياً من النسخة',
         ];
+    }
+
+    /**
+     * Unwraps the ['status' => int, 'data' => mixed] envelope returned by SupabaseClient::rpc(),
+     * while remaining compatible with unit/contract test doubles that return payload arrays directly.
+     */
+    private function unwrapRpcResponse(array $res, string $rpcName): array
+    {
+        if (array_key_exists('status', $res) && array_key_exists('data', $res)) {
+            $status = (int) $res['status'];
+            if ($status < 200 || $status >= 300) {
+                throw new \RuntimeException(sprintf(
+                    'فشل استدعاء استعادة قاعدة البيانات (%s) برمز حالة HTTP %d',
+                    $rpcName,
+                    $status
+                ));
+            }
+            if (!is_array($res['data'])) {
+                throw new \RuntimeException('استجابة غير متوقعة من استعادة قاعدة البيانات');
+            }
+            return $res['data'];
+        }
+        return $res;
     }
 
     /**

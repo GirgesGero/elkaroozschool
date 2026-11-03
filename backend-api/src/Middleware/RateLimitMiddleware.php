@@ -25,6 +25,21 @@ class RateLimitMiddleware {
         Response::error('الخدمة غير متاحة مؤقتاً', 'RATE_LIMIT_UNAVAILABLE', 503);
         }
 
+        // Probabilistic cleanup of expired rate-limit counter files
+        if (random_int(1, 50) === 1) {
+            $cleanupNow = time();
+            foreach (glob($cacheDir . '/*.json') ?: [] as $staleFile) {
+                $raw = @file_get_contents($staleFile);
+                if ($raw === false) {
+                    continue;
+                }
+                $data = json_decode($raw, true);
+                if (is_array($data) && isset($data['expires_at']) && (int) $data['expires_at'] < $cleanupNow) {
+                    @unlink($staleFile);
+                }
+            }
+        }
+
         $rateFile = $cacheDir . '/' . md5($clientIp . '_' . $endpointKey) . '.json';
 
         $handle = @fopen($rateFile, 'c+');

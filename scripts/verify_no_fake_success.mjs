@@ -144,8 +144,9 @@ check('gateway refuses to run without a configured base URL',
   /PHP_API_URL_MISSING/.test(gateway));
 check('gateway never treats a non-2xx as success',
   /!response\.ok \|\| payload\?\.status !== ['"]success['"]/.test(gateway));
-check('gateway is the only module importing the PHP base URL', (() => {
+check('gateway is the only UI module importing the PHP base URL', (() => {
   const users = files.filter((f) => f !== join(SRC, 'lib', 'api', 'php.ts'))
+    .filter((f) => !f.includes(join('app', 'api')))
     .filter((f) => /NEXT_PUBLIC_PHP_API_URL/.test(readFileSync(f, 'utf8')));
   return users.length === 0;
 })());
