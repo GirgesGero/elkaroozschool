@@ -45,6 +45,8 @@ export default function QRScannerModal({
   const [manualInput, setManualInput] = useState('');
   const [processing, setProcessing] = useState(false);
 
+  const processingRef = useRef(false);
+  const lastScannedRef = useRef<{ raw: string; time: number } | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const animFrameRef = useRef<number | null>(null);
@@ -74,19 +76,39 @@ export default function QRScannerModal({
   // Handle scanned raw payload
   const handleProcessRawQR = useCallback(
     async (raw: string) => {
-      if (!raw || processing) return;
+      const trimmed = raw.trim();
+      if (!trimmed || processingRef.current) return;
+
+      if (sessionStatus === 'LOCKED') {
+        setStatusNotice({
+          type: 'warning',
+          message: 'الجلسة مغلقة حالياً، لا يمكن تسجيل الحضور.',
+        });
+        return;
+      }
+
+      const now = Date.now();
+      if (
+        lastScannedRef.current &&
+        lastScannedRef.current.raw === trimmed &&
+        now - lastScannedRef.current.time < 3000
+      ) {
+        return;
+      }
+
+      processingRef.current = true;
+      lastScannedRef.current = { raw: trimmed, time: now };
       setProcessing(true);
       setStatusNotice(null);
 
       try {
-        const parsed: QRPayload = QRScannerService.parsePayload(raw);
+        const parsed: QRPayload = QRScannerService.parsePayload(trimmed);
 
         if (!parsed.isValid || parsed.type !== 'PERSON_IDENTITY' || !parsed.personId) {
           setStatusNotice({
             type: 'error',
             message: 'رمز QR غير صالح أو لا يحتوي على معرف المتدرب المعتمد.',
           });
-          setProcessing(false);
           return;
         }
 
@@ -98,7 +120,6 @@ export default function QRScannerModal({
             type: 'error',
             message: `المتدرب ذو المعرف (${parsed.personId}) غير موجود في الفرقة الحالية.`,
           });
-          setProcessing(false);
           return;
         }
 
@@ -110,7 +131,6 @@ export default function QRScannerModal({
             type: 'warning',
             message: `تحذير مطابقة الهوية: الاسم بالرمز (${resolution.qrName}) لا يطابق المسجل (${resolution.actualName}).`,
           });
-          setProcessing(false);
           return;
         }
 
@@ -134,10 +154,11 @@ export default function QRScannerModal({
           message: err?.message || 'حدث خطأ أثناء معالجة رمز QR.',
         });
       } finally {
+        processingRef.current = false;
         setProcessing(false);
       }
     },
-    [processing, trainees, selectedStatus, onRecordAttendance]
+    [sessionStatus, trainees, selectedStatus, onRecordAttendance]
   );
 
   const processQRRef = useRef(handleProcessRawQR);
@@ -214,7 +235,7 @@ export default function QRScannerModal({
   return (
     <div ref={containerRef} role="dialog" aria-modal="true" aria-label="ماسح الـ QR الذكي لرصد الحضور" className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-nav/80 backdrop-blur-md" dir="rtl">
       <div
-        className="w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl flex flex-col transition-all border"
+        className="w-full max-w-lg max-h-[92dvh] overflow-y-auto rounded-3xl shadow-2xl flex flex-col transition-all border"
         style={{
           backgroundColor: 'var(--bg-card, #0e182d)',
           borderColor: 'var(--border-card, #253556)',
@@ -250,7 +271,7 @@ export default function QRScannerModal({
         </div>
 
         {/* Status Selector Bar */}
-        <div className="p-3 bg-nav/60 border-b border-line/60 flex items-center justify-between gap-2">
+        <div className="p-3 bg-nav/60 border-b border-line/60 flex flex-wrap items-center justify-between gap-2">
           <span className="text-xs font-semibold text-content-secondary">الحالة المراد رصدها:</span>
           <div className="flex items-center gap-1.5">
             <button

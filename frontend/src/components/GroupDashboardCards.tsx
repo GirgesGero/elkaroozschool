@@ -43,22 +43,30 @@ export default function GroupDashboardCards({ onSelectGroup }: GroupDashboardCar
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
     async function fetchGroupsData() {
       setLoading(true);
       const supabase = createClient();
 
       try {
-        const results: Record<number, GroupSummary> = {};
-        for (let gId = 1; gId <= 3; gId++) {
-          const { data, error } = await supabase.rpc('get_group_operational_summary', {
-            p_group_id: gId,
-          });
+        const groupIds = [1, 2, 3] as const;
+        const responses = await Promise.all(
+          groupIds.map((gId) =>
+            supabase.rpc('get_group_operational_summary', {
+              p_group_id: gId,
+            })
+          )
+        );
+        if (cancelled) return;
 
+        const results: Record<number, GroupSummary> = {};
+        groupIds.forEach((gId, idx) => {
+          const { data, error } = responses[idx];
           if (data && !error) {
             results[gId] = data as GroupSummary;
           } else {
             results[gId] = {
-              group_id: gId as any,
+              group_id: gId,
               group_name: gId === 1 ? 'الفرقة الأولى' : gId === 2 ? 'الفرقة الثانية' : 'الفرقة الثالثة',
               trainees_count: 0,
               servants_count: 0,
@@ -70,15 +78,18 @@ export default function GroupDashboardCards({ onSelectGroup }: GroupDashboardCar
               latest_late: 0,
             };
           }
-        }
+        });
         setSummaries(results);
       } catch (e) {
         console.error('Error fetching group operational summaries', e);
       }
-      setLoading(false);
+      if (!cancelled) setLoading(false);
     }
 
-    fetchGroupsData();
+    void fetchGroupsData();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const getAttendanceRateColor = (rate: number) => {
@@ -202,7 +213,7 @@ export default function GroupDashboardCards({ onSelectGroup }: GroupDashboardCar
                       </div>
                       <div
                         className={`text-sm font-black px-3.5 py-1.5 rounded-2xl border flex items-center gap-1.5 shadow-sm ${getAttendanceRateColor(
-                          summary?.attendance_rate || 100
+                          summary?.attendance_rate ?? 100
                         )}`}
                       >
                         <TrendingUp className="w-4 h-4" />

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
@@ -54,8 +54,10 @@ export default function AdminAuditPage() {
   const [appliedSearchQuery, setAppliedSearchQuery] = useState('');
   const [actionFilter, setActionFilter] = useState('ALL');
   const [selectedLog, setSelectedLog] = useState<AuditLogEntry | null>(null);
+  const requestIdRef = useRef(0);
 
   const fetchLogs = async (pageNum: number, filter: string, query: string) => {
+    const reqId = ++requestIdRef.current;
     try {
       const supabase = createClient();
       const from = (pageNum - 1) * pageSize;
@@ -82,6 +84,8 @@ export default function AdminAuditPage() {
       }
 
       const { data, count, error } = await q;
+
+      if (reqId !== requestIdRef.current) return;
 
       if (!error && data) {
         setLogs(data as AuditLogEntry[]);
@@ -242,7 +246,7 @@ export default function AdminAuditPage() {
                 <ScrollText className="w-7 h-7 text-gold" />
               </div>
               <div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <h1 className="text-xl sm:text-2xl font-black text-content">سجل التدقيق الأمني (Audit Log)</h1>
                   <span className="px-2.5 py-0.5 rounded-full bg-success/10 text-success border border-success/30 text-[10px] font-bold">
                     سجل محمي وغير قابل للتعديل
@@ -301,7 +305,7 @@ export default function AdminAuditPage() {
         {logs.length > 0 ? (
           <div className="bg-nav border border-line rounded-2xl overflow-hidden shadow-xl">
             <div className="overflow-x-auto">
-              <table className="w-full text-right text-xs">
+              <table className="w-full min-w-[720px] text-right text-xs">
                 <thead className="bg-canvas/80 border-b border-line text-content-secondary font-black">
                   <tr>
                     <th className="p-3.5">الوقت والتاريخ</th>
@@ -416,7 +420,7 @@ export default function AdminAuditPage() {
         {/* Log Details Modal */}
         {selectedLog && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-            <div className="w-full max-w-2xl rounded-3xl bg-nav border-2 border-gold/40 shadow-2xl p-6 relative max-h-[90vh] flex flex-col">
+            <div className="w-full max-w-2xl rounded-3xl bg-nav border-2 border-gold/40 shadow-2xl p-4 sm:p-6 relative max-h-[90dvh] flex flex-col">
               <div className="flex items-center justify-between pb-3 border-b border-line mb-4">
                 <div className="flex items-center gap-2">
                   <Terminal className="w-5 h-5 text-gold" />
@@ -433,22 +437,22 @@ export default function AdminAuditPage() {
               </div>
 
               <div className="flex-1 overflow-y-auto space-y-4 text-xs font-mono">
-                <div className="grid grid-cols-2 gap-3 bg-canvas/70 p-3 rounded-2xl border border-line">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-canvas/70 p-3 rounded-2xl border border-line">
                   <div>
                     <span className="text-content-muted block text-[10px]">العملية:</span>
                     <span className="font-bold text-gold">{selectedLog.action}</span>
                   </div>
                   <div>
                     <span className="text-content-muted block text-[10px]">الفاعل:</span>
-                    <span className="font-bold text-content">{selectedLog.actor_name} ({selectedLog.actor_role})</span>
+                    <span className="font-bold text-content">{selectedLog.actor_name || 'مستخدم غير مسجل'} ({selectedLog.actor_role || 'SYSTEM'})</span>
                   </div>
                   <div>
                     <span className="text-content-muted block text-[10px]">الكيان:</span>
-                    <span className="text-content">{selectedLog.entity_type} - {selectedLog.entity_id}</span>
+                    <span className="text-content break-all">{selectedLog.entity_type}{selectedLog.entity_id ? ` - ${selectedLog.entity_id}` : ''}</span>
                   </div>
                   <div>
                     <span className="text-content-muted block text-[10px]">الوقت:</span>
-                    <span className="text-content">{selectedLog.created_at}</span>
+                    <span className="text-content break-all">{selectedLog.created_at}</span>
                   </div>
                 </div>
 

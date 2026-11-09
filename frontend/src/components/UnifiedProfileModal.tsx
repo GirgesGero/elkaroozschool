@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import {
   prepareAvatar,
@@ -89,6 +90,13 @@ export default function UnifiedProfileModal({
 
   useEffect(() => {
     if (!profileId) return;
+    let cancelled = false;
+
+    setActiveTab('overview');
+    setIsEditingProfile(false);
+    setIsChangingAvatar(false);
+    setAvatarErrorMsg(null);
+    setAvatarSuccessMsg(false);
 
     const fetchProfileData = async () => {
       setIsLoading(true);
@@ -103,6 +111,8 @@ export default function UnifiedProfileModal({
           .select('*')
           .eq('id', profileId)
           .single();
+
+        if (cancelled) return;
 
         if (pData) {
           setProfile(pData);
@@ -122,6 +132,8 @@ export default function UnifiedProfileModal({
               .select('status')
               .eq('trainee_id', profileId);
 
+            if (cancelled) return;
+
             const totalSessions = attData?.length || 0;
             const present =
               attData?.filter((a) => {
@@ -137,6 +149,8 @@ export default function UnifiedProfileModal({
               .select('id', { count: 'exact', head: true })
               .eq('trainee_id', profileId);
 
+            if (cancelled) return;
+
             setStats({
               attendanceRate: rate,
               presentCount: present,
@@ -149,19 +163,22 @@ export default function UnifiedProfileModal({
               .from('servant_permissions')
               .select('permission_id')
               .eq('profile_id', profileId);
-            if (permRows) {
+            if (!cancelled && permRows) {
               setStaffPermissions(permRows.map((r: any) => String(r.permission_id)));
             }
           }
         }
       } catch (err) {
-        console.error('Profile fetch error:', err);
+        if (!cancelled) console.error('Profile fetch error:', err);
       } finally {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
     };
 
-    fetchProfileData();
+    void fetchProfileData();
+    return () => {
+      cancelled = true;
+    };
   }, [profileId]);
 
   if (!profileId) return null;
@@ -365,7 +382,7 @@ export default function UnifiedProfileModal({
 
           {/* User Avatar with Halo Ring & Camera Edit Trigger */}
           <div className="absolute -bottom-11 right-6 group">
-            <div className="relative w-22 h-22 sm:w-26 sm:h-26 rounded-full bg-gradient-to-tr from-gold via-amber-400 to-warning p-1 shadow-2xl ring-4 ring-canvas">
+            <div className="relative w-[88px] h-[88px] sm:w-[104px] sm:h-[104px] rounded-full bg-gradient-to-tr from-gold via-amber-400 to-warning p-1 shadow-2xl ring-4 ring-canvas">
               <div className="w-full h-full rounded-full bg-nav flex items-center justify-center text-content font-black text-3xl overflow-hidden relative shadow-inner">
                 {profile?.avatar_url ? (
                   <Avatar src={profile.avatar_url} name={profile.full_name} size={104} />
@@ -533,7 +550,7 @@ export default function UnifiedProfileModal({
         <div className="flex items-center gap-2 px-6 py-2 bg-canvas border-b border-line text-xs font-bold overflow-x-auto scrollbar-none">
           <button
             onClick={() => setActiveTab('overview')}
-            className={`px-3.5 py-1.5 rounded-xl transition-all ${
+            className={`shrink-0 whitespace-nowrap px-3.5 py-1.5 rounded-xl transition-all ${
               activeTab === 'overview'
                 ? 'bg-gold text-brand-on font-black'
                 : 'text-content-muted hover:text-content'
@@ -546,7 +563,7 @@ export default function UnifiedProfileModal({
             <>
               <button
                 onClick={() => setActiveTab('attendance')}
-                className={`px-3.5 py-1.5 rounded-xl transition-all ${
+                className={`shrink-0 whitespace-nowrap px-3.5 py-1.5 rounded-xl transition-all ${
                   activeTab === 'attendance'
                     ? 'bg-gold text-brand-on font-black'
                     : 'text-content-muted hover:text-content'
@@ -556,7 +573,7 @@ export default function UnifiedProfileModal({
               </button>
               <button
                 onClick={() => setActiveTab('academic')}
-                className={`px-3.5 py-1.5 rounded-xl transition-all ${
+                className={`shrink-0 whitespace-nowrap px-3.5 py-1.5 rounded-xl transition-all ${
                   activeTab === 'academic'
                     ? 'bg-gold text-brand-on font-black'
                     : 'text-content-muted hover:text-content'
@@ -570,7 +587,7 @@ export default function UnifiedProfileModal({
           {isStaff && (
             <button
               onClick={() => setActiveTab('permissions')}
-              className={`px-3.5 py-1.5 rounded-xl transition-all ${
+              className={`shrink-0 whitespace-nowrap px-3.5 py-1.5 rounded-xl transition-all ${
                 activeTab === 'permissions'
                   ? 'bg-gold text-brand-on font-black'
                   : 'text-content-muted hover:text-content'
@@ -734,6 +751,49 @@ export default function UnifiedProfileModal({
                     <div className="flex items-center justify-between text-xs text-content-muted">
                       <span>حضور: {stats.presentCount} جلسة</span>
                       <span>غياب: {stats.absentCount} جلسة</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Tab 2b: Academic & Marathon */}
+              {activeTab === 'academic' && (
+                <div className="space-y-4">
+                  <div className="p-4 rounded-2xl bg-canvas border border-line space-y-3">
+                    <span className="text-xs font-black text-gold block">ملخص الماراثون والتقييم الأكاديمي</span>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-center">
+                      <div className="p-3 rounded-xl bg-nav border border-line">
+                        <span className="text-[11px] text-content-muted block mb-1">نسبة الحضور</span>
+                        <span className="text-base font-black text-gold">{stats.attendanceRate}%</span>
+                      </div>
+                      <div className="p-3 rounded-xl bg-nav border border-line">
+                        <span className="text-[11px] text-content-muted block mb-1">مشاركات الماراثون</span>
+                        <span className="text-base font-black text-success">{stats.marathonParticipation}</span>
+                      </div>
+                      <div className="p-3 rounded-xl bg-nav border border-line">
+                        <span className="text-[11px] text-content-muted block mb-1">الحالة الأكاديمية</span>
+                        <span className="text-base font-black text-content">
+                          {stats.attendanceRate >= 70 ? 'منتظم ✓' : 'يحتاج متابعة'}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-line">
+                      <Link
+                        href="/marathon"
+                        onClick={onClose}
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gold/15 border border-gold/30 text-gold text-xs font-bold hover:bg-gold/25 transition-colors"
+                      >
+                        <Award className="w-3.5 h-3.5" />
+                        <span>صفحة الماراثون</span>
+                      </Link>
+                      <Link
+                        href="/exams"
+                        onClick={onClose}
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-nav border border-line text-content text-xs font-bold hover:border-gold/40 transition-colors"
+                      >
+                        <BookOpen className="w-3.5 h-3.5 text-gold" />
+                        <span>الامتحانات والدرجات</span>
+                      </Link>
                     </div>
                   </div>
                 </div>

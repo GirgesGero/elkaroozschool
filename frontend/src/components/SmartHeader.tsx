@@ -125,7 +125,7 @@ export default function SmartHeader({ profile, onOpenSearch, onOpenProfile }: Sm
       }}
       dir="rtl"
     >
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-3 px-4 sm:px-6">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-2 sm:gap-3 px-2.5 sm:px-6">
         {/* Right: brand */}
         <div className="flex items-center gap-3">
           <Link href="/" className="app-card-interactive flex items-center gap-2.5 rounded-[14px] px-1 py-1">
@@ -142,7 +142,7 @@ export default function SmartHeader({ profile, onOpenSearch, onOpenProfile }: Sm
               >
                 مدرسة الكاروز
               </span>
-              <span className="-mt-0.5 block text-[11px]" style={{ color: 'var(--text-muted)' }}>
+              <span className="-mt-0.5 hidden sm:block text-[11px]" style={{ color: 'var(--text-muted)' }}>
                 كنيسة مارمرقس بالمنشية
               </span>
             </div>
@@ -192,7 +192,7 @@ export default function SmartHeader({ profile, onOpenSearch, onOpenProfile }: Sm
         </nav>
 
         {/* Left: mobile search, theme, overflow, notifications, profile, logout */}
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1 sm:gap-2">
           <button onClick={onOpenSearch} className="tap-target md:hidden" aria-label="بحث" title="بحث">
             <Search className="h-5 w-5" aria-hidden="true" />
           </button>
@@ -275,6 +275,30 @@ export default function SmartHeader({ profile, onOpenSearch, onOpenProfile }: Sm
                   boxShadow: 'var(--shadow-overlay)',
                 }}
               >
+                <div className="lg:hidden mb-2 pb-2 border-b border-line-subtle space-y-1">
+                  <div className="app-meta px-3 py-1.5 text-xs font-bold" style={{ color: 'var(--text-muted)' }}>
+                    التنقل الرئيسي
+                  </div>
+                  {PRIMARY_NAV.map((item) => {
+                    const active = navIsActive(item, pathname);
+                    const Icon = item.icon;
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={() => setShowSectionsMenu(false)}
+                        className="flex min-h-[40px] items-center gap-2.5 rounded-[10px] px-3 text-xs font-semibold transition-colors"
+                        style={{
+                          backgroundColor: active ? 'var(--bg-active-tab)' : 'transparent',
+                          color: active ? 'var(--text-active-tab)' : 'var(--text-primary)',
+                        }}
+                      >
+                        <Icon className="h-4 w-4" style={{ color: active ? 'var(--brand-primary)' : 'var(--text-muted)' }} />
+                        <span>{item.label}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
                 <div className="app-meta px-3 py-1.5 text-xs font-bold" style={{ borderBottom: '1px solid var(--border-subtle)', color: 'var(--text-muted)' }}>
                   أقسام المدرسة
                 </div>

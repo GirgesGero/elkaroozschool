@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ChevronDown, Layers, Check } from 'lucide-react';
 
 interface GroupSelectorProps {
@@ -15,6 +15,15 @@ export default function GroupSelector({
   showAllOption = false,
 }: GroupSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsOpen(false);
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen]);
 
   const groups = [
     { id: 1, name: 'الفرقة الأولى', desc: 'مرحلة التأسيس' },
@@ -38,7 +47,7 @@ export default function GroupSelector({
       {isOpen && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
-          <div className="absolute right-0 mt-2 w-60 rounded-3xl bg-canvas border border-gold/30 shadow-2xl shadow-black/90 p-2 z-50 animate-scale-in">
+          <div className="absolute right-0 mt-2 w-60 max-w-[calc(100vw-2rem)] rounded-3xl bg-canvas border border-gold/30 shadow-2xl shadow-black/90 p-2 z-50 animate-scale-in">
             {showAllOption && (
               <button
                 onClick={() => {

@@ -111,9 +111,9 @@ export default function SystemRoleManagementPanel({ adminId }: { adminId: string
     const db = DB();
     try {
       const { data: { user } } = await db.auth.getUser();
-      if (!user?.email || user.id !== adminId) throw new Error('identity');
+      if (!user?.email || user.id !== adminId) throw new Error('فشل التحقق من كلمة المرور أو الهوية الحالية.');
       const { data, error: authError } = await db.auth.signInWithPassword({ email: user.email, password: grantPassword });
-      if (authError || data.user?.id !== adminId) throw new Error('reauth');
+      if (authError || data.user?.id !== adminId) throw new Error('فشل التحقق من كلمة المرور أو الهوية الحالية.');
 
       const { error: rpcError } = await db.rpc('grant_system_admin', {
         p_target_profile_id: grantTarget,
@@ -154,9 +154,9 @@ export default function SystemRoleManagementPanel({ adminId }: { adminId: string
     const db = DB();
     try {
       const { data: { user } } = await db.auth.getUser();
-      if (!user?.email || user.id !== adminId) throw new Error('identity');
+      if (!user?.email || user.id !== adminId) throw new Error('فشل التحقق من كلمة المرور أو الهوية الحالية.');
       const { data, error: authError } = await db.auth.signInWithPassword({ email: user.email, password: revokePassword });
-      if (authError || data.user?.id !== adminId) throw new Error('reauth');
+      if (authError || data.user?.id !== adminId) throw new Error('فشل التحقق من كلمة المرور أو الهوية الحالية.');
 
       const { error: rpcError } = await db.rpc('revoke_system_admin', {
         p_target_profile_id: revokeTarget.id,

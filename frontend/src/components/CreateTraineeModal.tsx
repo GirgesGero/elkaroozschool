@@ -114,6 +114,9 @@ export default function CreateTraineeModal({
       });
 
       if (error) throw error;
+      if (data && data.success === false) {
+        throw new Error(data.message || 'تعذر إنشاء الحساب');
+      }
 
       if (data && data.success) {
         setSuccessMsg(`تم إنشاء حساب المتدرب ${cleanFullName} بنجاح!`);
@@ -138,9 +141,9 @@ export default function CreateTraineeModal({
   };
 
   return (
-    <div ref={containerRef} role="dialog" aria-modal="true" aria-label="إضافة متدرب جديد" className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-nav/80 backdrop-blur-md overflow-y-auto" dir="rtl">
+    <div ref={containerRef} role="dialog" aria-modal="true" aria-label="إضافة متدرب جديد" className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-4 bg-nav/80 backdrop-blur-md overflow-y-auto" dir="rtl">
       <div
-        className="w-full max-w-xl rounded-3xl overflow-hidden shadow-2xl flex flex-col transition-all border my-8"
+        className="w-full max-w-xl max-h-[90dvh] overflow-y-auto rounded-3xl shadow-2xl flex flex-col transition-all border my-8"
         style={{
           backgroundColor: 'var(--bg-card, #0e182d)',
           borderColor: 'var(--border-card, #253556)',

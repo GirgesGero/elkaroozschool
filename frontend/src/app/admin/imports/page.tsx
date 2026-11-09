@@ -97,6 +97,7 @@ export default function AdminImportsPage() {
   } | null>(null);
 
   const [processing, setProcessing] = useState(false);
+  const [exportingFormat, setExportingFormat] = useState<'csv' | 'excel' | null>(null);
   const [statusMsg, setStatusMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const fetchData = useCallback(async () => {
@@ -229,7 +230,7 @@ export default function AdminImportsPage() {
 
       if (error) throw error;
 
-      if (data.success) {
+      if (data?.success) {
         setStatusMsg({
           type: 'success',
           text: isDryRun
@@ -241,13 +242,24 @@ export default function AdminImportsPage() {
           setCsvText('');
           setPreviewStats(null);
           void fetchData();
+        } else {
+          setPreviewStats((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  newCount: data.new_accounts ?? prev.newCount,
+                  updatedCount: data.updated_accounts ?? 0,
+                }
+              : null
+          );
+          void fetchData();
         }
       } else {
         setStatusMsg({
           type: 'error',
           text: 'فشل الاستيراد لوجود أخطاء في التحقق (All-or-Nothing)'
         });
-        if (data.errors && data.errors.length > 0) {
+        if (data?.errors && data.errors.length > 0) {
           setPreviewStats((prev) => prev ? { ...prev, errors: data.errors } : null);
         }
       }
@@ -264,6 +276,8 @@ export default function AdminImportsPage() {
   };
 
   const handleExportTrainees = async (format: 'csv' | 'excel') => {
+    if (exportingFormat) return;
+    setExportingFormat(format);
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -361,6 +375,8 @@ export default function AdminImportsPage() {
       setStatusMsg({ type: 'success', text: `تم تصدير وحفظ كشف المتدربين بنجاح (${format.toUpperCase()})` });
     } catch (err: unknown) {
       setStatusMsg({ type: 'error', text: explainDbError(err) });
+    } finally {
+      setExportingFormat(null);
     }
   };
 
@@ -435,7 +451,7 @@ export default function AdminImportsPage() {
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <Link
               href="/admin/backups"
               className="flex items-center gap-2 bg-nav hover:bg-input border border-line text-content px-4 py-2.5 rounded-xl text-sm font-medium transition"
@@ -473,21 +489,22 @@ export default function AdminImportsPage() {
 
         {/* Quick Export Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="bg-nav border border-line rounded-2xl p-5 flex items-center justify-between">
+          <div className="bg-nav border border-line rounded-2xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div>
               <h3 className="font-bold text-content mb-1">تصدير سجلات المتدربين (CSV)</h3>
               <p className="text-xs text-content-muted">تصدير فوري لكافة المتدربين حسب الصلاحية والنطاق</p>
             </div>
             <button
+              disabled={exportingFormat !== null}
               onClick={() => handleExportTrainees('csv')}
-              className="flex items-center gap-2 bg-nav hover:bg-input border border-line text-content px-4 py-2 rounded-xl text-xs font-semibold transition"
+              className="flex items-center justify-center shrink-0 w-full sm:w-auto gap-2 bg-nav hover:bg-input border border-line text-content px-4 py-2 rounded-xl text-xs font-semibold transition disabled:opacity-50"
             >
               <Download className="w-4 h-4 text-warning" />
-              تحميل CSV
+              {exportingFormat === 'csv' ? 'جاري التصدير...' : 'تحميل CSV'}
             </button>
           </div>
 
-          <div className="bg-nav border border-line rounded-2xl p-5 flex items-center justify-between">
+          <div className="bg-nav border border-line rounded-2xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div>
               <h3 className="font-bold text-content mb-1">تصدير سجلات المتدربين (Excel / XLSX)</h3>
               <p className="text-xs text-content-muted">
@@ -495,11 +512,12 @@ export default function AdminImportsPage() {
               </p>
             </div>
             <button
+              disabled={exportingFormat !== null}
               onClick={() => handleExportTrainees('excel')}
-              className="flex items-center gap-2 bg-nav hover:bg-input border border-line text-content px-4 py-2 rounded-xl text-xs font-semibold transition"
+              className="flex items-center justify-center shrink-0 w-full sm:w-auto gap-2 bg-nav hover:bg-input border border-line text-content px-4 py-2 rounded-xl text-xs font-semibold transition disabled:opacity-50"
             >
               <FileSpreadsheet className="w-4 h-4 text-success" />
-              تحميل Excel
+              {exportingFormat === 'excel' ? 'جاري التصدير...' : 'تحميل Excel'}
             </button>
           </div>
         </div>
@@ -511,7 +529,7 @@ export default function AdminImportsPage() {
               <Upload className="w-5 h-5 text-success" />
               <h2 className="text-lg font-bold text-content">استيراد حسابات الطلاب (CSV / Excel)</h2>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
               <label className="cursor-pointer inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-nav border border-line hover:border-success text-xs font-bold text-content transition">
                 <Upload className="w-3.5 h-3.5 text-success" />
                 <span>اختيار ملف CSV من الجهاز</span>
@@ -555,9 +573,9 @@ export default function AdminImportsPage() {
             {/* Validation & Preview Stats */}
             {previewStats && (
               <div className="bg-nav p-4 rounded-xl border border-line space-y-3 text-xs">
-                <div className="flex items-center justify-between border-b border-line pb-2">
+                <div className="flex items-center justify-between gap-2 flex-wrap border-b border-line pb-2">
                   <span className="font-bold text-content">معاينة دفعة الاستيراد:</span>
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-4 flex-wrap">
                     <span className="text-content-muted">الإجمالي: <strong className="text-content">{previewStats.total}</strong></span>
                     <span className="text-success">حسابات جديدة: <strong>{previewStats.newCount}</strong></span>
                     <span className="text-info">تحديث حسابات: <strong>{previewStats.updatedCount}</strong></span>
@@ -585,7 +603,7 @@ export default function AdminImportsPage() {
               </div>
             )}
 
-            <div className="flex items-center gap-3 pt-2">
+            <div className="flex items-center gap-3 flex-wrap pt-2">
               <button
                 type="button"
                 disabled={processing || parsedRows.length === 0}
@@ -641,7 +659,7 @@ export default function AdminImportsPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-right text-sm">
+              <table className="w-full min-w-[600px] text-right text-sm">
                 <thead>
                   <tr className="border-b border-line text-content-muted font-medium">
                     <th className="pb-3 pr-4">الملف</th>

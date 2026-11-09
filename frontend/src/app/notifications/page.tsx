@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import SmartHeader from '@/components/SmartHeader';
@@ -43,7 +43,7 @@ export default function NotificationsPage() {
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<'ALL' | 'UNREAD' | 'PASTORAL' | 'SYSTEM'>('ALL');
 
-  const fetchNotifications = async () => {
+  const fetchNotifications = useCallback(async () => {
     setIsLoading(true);
     const supabase = createClient();
 
@@ -54,33 +54,38 @@ export default function NotificationsPage() {
         return;
       }
 
-      const { data: userProfile, error: profileError } = await supabase
-        .from('profiles')
-        .select('id,full_name,username,role_id,group_id,is_active,phone,avatar_url,created_at')
-        .eq('id', user.id)
-        .single();
-      if (profileError) throw profileError;
-
-      if (userProfile) setProfile(userProfile as Profile);
-
-      const { data: data, error: notificationsError } = await supabase
+      const [
+        { data: userProfile, error: profileError },
+        { data: data, error: notificationsError },
+      ] = await Promise.all([
+        supabase
+          .from('profiles')
+          .select('id,full_name,username,role_id,group_id,is_active,phone,avatar_url,created_at')
+          .eq('id', user.id)
+          .single(),
+        supabase
           .from('notifications')
           .select('id,recipient_id,category,title,body,is_read,action_url,created_at')
           .eq('recipient_id', user.id)
           .order('created_at', { ascending: false })
-          .limit(50);
-        if (notificationsError) throw notificationsError;
+          .limit(50),
+      ]);
+      if (profileError) throw profileError;
+
+      if (userProfile) setProfile(userProfile as Profile);
+
+      if (notificationsError) throw notificationsError;
       setNotifications(data || []);
     } catch (err) {
       console.error('Notifications fetch error:', err);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [router]);
 
   useEffect(() => {
     fetchNotifications();
-  }, [router]);
+  }, [fetchNotifications]);
 
   const handleMarkAsRead = async (id: string) => {
     if (!profile) return;
@@ -125,6 +130,8 @@ export default function NotificationsPage() {
         return <Cake className="w-5 h-5 text-danger" />;
       case 'PASTORAL':
         return <Sparkles className="w-5 h-5 text-warning" />;
+      case 'DAILY_VERSE':
+        return <BookOpen className="w-5 h-5 text-info" />;
       case 'MARATHON':
         return <Flame className="w-5 h-5 text-orange-400" />;
       case 'EXAM':
@@ -160,9 +167,9 @@ export default function NotificationsPage() {
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-3xl w-full mx-auto px-4 py-6 pb-28 md:pb-12">
+      <main className="flex-1 max-w-5xl w-full mx-auto px-4 py-6 pb-28 md:pb-12">
         {/* Title & Mark All as Read */}
-        <div className="flex items-center justify-between gap-3 mb-5">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 rounded-2xl bg-gold/15 border border-gold/40 text-gold flex items-center justify-center shadow-md">
               <Bell className="w-6 h-6" />
@@ -178,7 +185,7 @@ export default function NotificationsPage() {
           {unreadCount > 0 && (
             <button
               onClick={handleMarkAllAsRead}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-nav border border-line hover:border-gold/50 text-xs font-bold text-gold transition-all"
+              className="min-h-tap flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-nav border border-line hover:border-gold/50 text-xs font-bold text-gold transition-all"
             >
               <Check className="w-4 h-4" />
               <span>تحديد الكل كمقروء</span>
@@ -190,7 +197,7 @@ export default function NotificationsPage() {
         <div className="flex items-center gap-2 mb-4 p-1.5 bg-canvas rounded-2xl border border-line overflow-x-auto scrollbar-none text-xs font-bold">
           <button
             onClick={() => setActiveFilter('ALL')}
-            className={`px-3.5 py-1.5 rounded-xl transition-all ${
+            className={`whitespace-nowrap shrink-0 min-h-tap px-3.5 py-1.5 rounded-xl transition-all ${
               activeFilter === 'ALL'
                 ? 'bg-gold text-brand-on font-black'
                 : 'text-content-muted hover:text-content'
@@ -200,7 +207,7 @@ export default function NotificationsPage() {
           </button>
           <button
             onClick={() => setActiveFilter('UNREAD')}
-            className={`px-3.5 py-1.5 rounded-xl transition-all ${
+            className={`whitespace-nowrap shrink-0 min-h-tap px-3.5 py-1.5 rounded-xl transition-all ${
               activeFilter === 'UNREAD'
                 ? 'bg-gold text-brand-on font-black'
                 : 'text-content-muted hover:text-content'
@@ -210,7 +217,7 @@ export default function NotificationsPage() {
           </button>
           <button
             onClick={() => setActiveFilter('PASTORAL')}
-            className={`px-3.5 py-1.5 rounded-xl transition-all ${
+            className={`whitespace-nowrap shrink-0 min-h-tap px-3.5 py-1.5 rounded-xl transition-all ${
               activeFilter === 'PASTORAL'
                 ? 'bg-gold text-brand-on font-black'
                 : 'text-content-muted hover:text-content'
@@ -220,7 +227,7 @@ export default function NotificationsPage() {
           </button>
           <button
             onClick={() => setActiveFilter('SYSTEM')}
-            className={`px-3.5 py-1.5 rounded-xl transition-all ${
+            className={`whitespace-nowrap shrink-0 min-h-tap px-3.5 py-1.5 rounded-xl transition-all ${
               activeFilter === 'SYSTEM'
                 ? 'bg-gold text-brand-on font-black'
                 : 'text-content-muted hover:text-content'
@@ -247,8 +254,8 @@ export default function NotificationsPage() {
             {filteredList.map((notif) => (
               <div
                 key={notif.id}
-                onClick={() => {
-                  if (!notif.is_read) handleMarkAsRead(notif.id);
+                onClick={async () => {
+                  if (!notif.is_read) await handleMarkAsRead(notif.id);
                   if (notif.action_url?.startsWith('/') && !notif.action_url.startsWith('//')) router.push(notif.action_url);
                 }}
                 className={`p-4 rounded-3xl border transition-all cursor-pointer flex items-start gap-3.5 ${
@@ -267,12 +274,12 @@ export default function NotificationsPage() {
                   {getNotificationIcon(notif.category)}
                 </div>
 
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
                     <h4 className={`text-xs font-black ${notif.is_read ? 'text-content' : 'text-gold'}`}>
                       {notif.title}
                     </h4>
-                    <span className="text-[10px] text-content-muted flex items-center gap-1">
+                    <span className="text-[10px] text-content-muted flex items-center gap-1 shrink-0">
                       <Clock className="w-3 h-3" />
                       {new Date(notif.created_at).toLocaleDateString('ar-EG', {
                         month: 'short',
@@ -283,7 +290,7 @@ export default function NotificationsPage() {
                     </span>
                   </div>
 
-                  <p className="text-xs text-content-secondary mt-1 leading-relaxed">{notif.body}</p>
+                  <p className="text-xs text-content-secondary mt-1 leading-relaxed break-words">{notif.body}</p>
 
                   {notif.action_url && (
                     <div className="mt-2.5 flex items-center gap-1 text-[11px] font-bold text-gold">

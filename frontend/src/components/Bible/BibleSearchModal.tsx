@@ -33,9 +33,25 @@ export default function BibleSearchModal({ isOpen, onClose, onSelectArticle, sec
   // Read the real count from the dataset instead of a hardcoded figure that
   // drifts the moment the encyclopedia is rebuilt.
   const [articleCount, setArticleCount] = useState<number | null>(null);
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const searchSeqRef = useRef(0);
 
   useEffect(() => {
-    if (!isOpen || articleCount !== null) return;
+    if (!isOpen) {
+      searchSeqRef.current += 1;
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+      setSearchState({
+        query: '',
+        results: [],
+        total: 0,
+        loading: false,
+        searched: false,
+      });
+      return;
+    }
+    if (articleCount !== null) return;
     let cancelled = false;
     getBibleStats()
       .then((s) => {
@@ -49,8 +65,6 @@ export default function BibleSearchModal({ isOpen, onClose, onSelectArticle, sec
     };
   }, [isOpen, articleCount]);
 
-  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
-
   useEffect(() => {
     return () => {
       if (debounceTimerRef.current) {
@@ -62,6 +76,7 @@ export default function BibleSearchModal({ isOpen, onClose, onSelectArticle, sec
   const executeSearch = async (searchQuery: string) => {
     const trimmed = searchQuery.trim();
     if (!trimmed) {
+      searchSeqRef.current += 1;
       setSearchState({
         query: searchQuery,
         results: [],
@@ -72,12 +87,14 @@ export default function BibleSearchModal({ isOpen, onClose, onSelectArticle, sec
       return;
     }
 
+    const seq = ++searchSeqRef.current;
     setSearchState(prev => ({ ...prev, loading: true, searched: true, query: searchQuery }));
     try {
       const response = await searchBibleEncyclopedia(trimmed, { 
         limit: 20,
         sectionId: sectionId && sectionId > 0 ? sectionId : undefined 
       });
+      if (seq !== searchSeqRef.current) return;
       setSearchState(prev => ({
         ...prev,
         results: response.results || response.items || [],
@@ -88,6 +105,7 @@ export default function BibleSearchModal({ isOpen, onClose, onSelectArticle, sec
         expandedTokens: response.prefix_expanded,
       }));
     } catch (error) {
+      if (seq !== searchSeqRef.current) return;
       console.error('Search error:', error);
       setSearchState(prev => ({
         ...prev,
@@ -108,7 +126,7 @@ export default function BibleSearchModal({ isOpen, onClose, onSelectArticle, sec
     
     // 400ms debounce
     debounceTimerRef.current = setTimeout(() => {
-      executeSearch(value);
+      void executeSearch(value);
     }, 400);
   };
 
@@ -117,7 +135,7 @@ export default function BibleSearchModal({ isOpen, onClose, onSelectArticle, sec
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
       }
-      executeSearch(searchState.query);
+      void executeSearch(searchState.query);
     }
   };
 
@@ -128,10 +146,10 @@ export default function BibleSearchModal({ isOpen, onClose, onSelectArticle, sec
   const { query, results, total, loading, searched, expandedTokens } = searchState;
 
   return (
-    <div ref={containerRef} role="dialog" aria-modal="true" aria-label="البحث في الموسوعة" onClick={onClose} className="fixed inset-0 z-50 flex items-start justify-center p-4 bg-nav/80 backdrop-blur-md overflow-y-auto" dir="rtl">
-      <div onClick={(e) => e.stopPropagation()} className="w-full max-w-3xl mt-20 rounded-3xl overflow-hidden shadow-2xl border border-line bg-canvas">
+    <div ref={containerRef} role="dialog" aria-modal="true" aria-label="البحث في الموسوعة" onClick={onClose} className="fixed inset-0 z-50 flex items-start justify-center p-2 sm:p-4 bg-nav/80 backdrop-blur-md overflow-y-auto" dir="rtl">
+      <div onClick={(e) => e.stopPropagation()} className="w-full max-w-3xl mt-2 sm:mt-12 md:mt-20 max-h-[calc(100dvh-1rem)] sm:max-h-[85dvh] flex flex-col rounded-3xl overflow-hidden shadow-2xl border border-line bg-canvas">
         {/* Header */}
-        <div className="p-6 border-b border-line/80 flex items-center justify-between">
+        <div className="p-4 sm:p-6 border-b border-line/80 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-2xl bg-gold/15 border border-gold/30">
               <Search className="w-5 h-5 text-gold" />
@@ -158,7 +176,7 @@ export default function BibleSearchModal({ isOpen, onClose, onSelectArticle, sec
         </div>
 
         {/* Search Input */}
-        <div className="p-6 border-b border-line/80">
+        <div className="p-4 sm:p-6 border-b border-line/80 shrink-0">
           <div className="relative">
             <input
               type="text"
@@ -178,7 +196,7 @@ export default function BibleSearchModal({ isOpen, onClose, onSelectArticle, sec
         </div>
 
         {/* Results */}
-        <div className="max-h-[500px] overflow-y-auto">
+        <div className="flex-1 min-h-0 overflow-y-auto">
           {loading && !results.length ? (
             <div className="p-12 text-center">
               <Loader2 className="w-8 h-8 text-gold animate-spin mx-auto mb-4" />

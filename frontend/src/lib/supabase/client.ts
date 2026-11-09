@@ -1,28 +1,32 @@
 import { createBrowserClient } from '@supabase/ssr';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { createSelfHostedClient } from '@/lib/self-hosted/client';
 
 /**
  * Lazily-initialised browser Supabase client.
  *
- * Why lazy: several pages call `createClient()` directly in the render body.
- * Next.js prerenders those routes at build time, where NEXT_PUBLIC_SUPABASE_*
- * is not necessarily present. Constructing the real client eagerly throws
- * during prerender and fails the entire production build.
- *
- * The real client is built on first property access, which only happens inside
- * effects/handlers — never during prerender. If the env vars are genuinely
- * missing at runtime the original @supabase/ssr error is still raised, just at
- * the point of actual use.
+ * Supports dual-mode:
+ * 1. Cloud mode: Supabase Cloud (when NEXT_PUBLIC_SUPABASE_URL is provided)
+ * 2. Self-Hosted mode: Hostinger/local backend (when NEXT_PUBLIC_DATABASE_DRIVER === 'self_hosted'
+ *    or NEXT_PUBLIC_SUPABASE_URL is omitted or 'self_hosted')
  */
 export function createClient(): SupabaseClient {
   let real: SupabaseClient | null = null;
 
   const resolve = (): SupabaseClient => {
     if (!real) {
-      real = createBrowserClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      );
+      const isSelfHosted =
+        process.env.NEXT_PUBLIC_DATABASE_DRIVER === 'self_hosted' ||
+        process.env.NEXT_PUBLIC_SUPABASE_URL === 'self_hosted';
+
+      if (isSelfHosted) {
+        real = createSelfHostedClient() as SupabaseClient;
+      } else {
+        real = createBrowserClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+        );
+      }
     }
     return real;
   };

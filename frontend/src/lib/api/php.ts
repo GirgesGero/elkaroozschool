@@ -31,7 +31,7 @@ export class PhpApiError extends Error {
  * Resolved lazily so a build without PHP_API_URL configured still compiles. When it is
  * missing the caller gets a clear, actionable error instead of a silent no-op.
  */
-function phpApiBaseUrl(): string {
+export function phpApiBaseUrl(): string {
   const raw = process.env.NEXT_PUBLIC_PHP_API_URL;
   if (!raw || !raw.trim()) {
     throw new PhpApiError(

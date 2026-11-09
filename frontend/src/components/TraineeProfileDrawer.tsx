@@ -69,6 +69,8 @@ export default function TraineeProfileDrawer({
 
   useEffect(() => {
     if (!isOpen || !traineeId) return;
+    let cancelled = false;
+    setActiveTab('profile');
 
     async function fetchTrainee() {
       setLoading(true);
@@ -80,9 +82,12 @@ export default function TraineeProfileDrawer({
         p_trainee_id: traineeId,
       });
 
+      if (cancelled) return;
+
       if (error || !data) {
         // Fallback to direct query if RPC fails
         const { data: prof } = await supabase.from('profiles').select('*').eq('id', traineeId).single();
+        if (cancelled) return;
         if (prof) {
           setTraineeData({
             profile: prof,
@@ -98,10 +103,13 @@ export default function TraineeProfileDrawer({
           initEditForm(data.profile);
         }
       }
-      setLoading(false);
+      if (!cancelled) setLoading(false);
     }
 
-    fetchTrainee();
+    void fetchTrainee();
+    return () => {
+      cancelled = true;
+    };
   }, [isOpen, traineeId]);
 
   const initEditForm = (p: Profile) => {
@@ -222,7 +230,7 @@ export default function TraineeProfileDrawer({
         <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-gold/10 via-gold/5 to-transparent rounded-full blur-3xl pointer-events-none" />
 
         {/* Top Header */}
-        <div className="p-4 sm:p-5 bg-canvas/90 border-b border-gold/20 flex items-center justify-between sticky top-0 z-20 backdrop-blur-xl">
+        <div className="p-4 sm:p-5 bg-canvas/90 border-b border-gold/20 flex flex-wrap gap-2 items-center justify-between sticky top-0 z-20 backdrop-blur-xl">
           <div className="flex items-center gap-3">
             <button
               onClick={onClose}
@@ -310,7 +318,7 @@ export default function TraineeProfileDrawer({
                 
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5">
                   <div className="flex items-center gap-4">
-                    <div className="relative w-18 h-18 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-tr from-gold/30 via-canvas to-gold/10 border-2 border-gold p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-lg shadow-gold/10">
+                    <div className="relative w-[72px] h-[72px] sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-tr from-gold/30 via-canvas to-gold/10 border-2 border-gold p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-lg shadow-gold/10">
                       {prof.avatar_url ? (
                         <Avatar src={prof.avatar_url} name={prof.full_name} size={80} />
                       ) : (
@@ -347,7 +355,7 @@ export default function TraineeProfileDrawer({
                     <span className="text-xs text-content-muted mb-1">نسبة الحضور الإجمالية</span>
                     <div
                       className={`text-base font-black px-3.5 py-1.5 rounded-2xl border flex items-center gap-2 shadow-sm ${getAttendanceRateColor(
-                        att?.attendance_rate || 100
+                        att?.attendance_rate ?? 100
                       )}`}
                     >
                       <TrendingUp className="w-4 h-4" />
@@ -357,7 +365,7 @@ export default function TraineeProfileDrawer({
                 </div>
 
                 {/* Quick KPI Bar */}
-                <div className="grid grid-cols-4 gap-2.5 mt-6 pt-5 border-t border-line/80 text-center">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mt-6 pt-5 border-t border-line/80 text-center">
                   <div className="bg-canvas/70 rounded-2xl p-2.5 border border-line">
                     <span className="block text-content-muted text-[11px]">الجلسات</span>
                     <span className="text-base font-bold text-content mt-0.5 block">{att?.total_sessions || 0}</span>

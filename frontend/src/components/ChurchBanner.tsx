@@ -62,8 +62,8 @@ export default function ChurchBanner({ className = '', size = 'md' }: ChurchBann
         <div className="flex-1 flex flex-col items-center justify-center text-center px-1 sm:px-4 space-y-1 sm:space-y-2 min-w-0">
           <div className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-0.5 rounded-full bg-gold/15 border border-gold/30 text-gold text-[9px] sm:text-xs font-bold shadow-sm whitespace-nowrap">
             <span>✝️</span>
-            <span className="hidden xs:inline">الكنيسة القبطية الأرثوذكسية</span>
-            <span className="xs:hidden">الكنيسة القبطية</span>
+            <span className="hidden sm:inline">الكنيسة القبطية الأرثوذكسية</span>
+            <span className="sm:hidden">الكنيسة القبطية</span>
           </div>
 
           <h2
@@ -86,9 +86,9 @@ export default function ChurchBanner({ className = '', size = 'md' }: ChurchBann
                 isLg
                   ? 'text-sm sm:text-lg md:text-xl'
                   : isSm
-                  ? 'text-[11px] sm:text-xs md:text-sm'
-                  : 'text-[11px] sm:text-sm md:text-lg'
-              } font-black text-gold tracking-wide whitespace-nowrap`}
+                  ? 'text-[11px] sm:text-xs md:text-sm whitespace-nowrap'
+                  : 'text-[11px] sm:text-sm md:text-lg whitespace-nowrap'
+              } font-black text-gold tracking-wide`}
             >
               كنيسة مارمرقس الرسول
             </h3>

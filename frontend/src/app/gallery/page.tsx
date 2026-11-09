@@ -108,6 +108,7 @@ export default function GalleryPage() {
         if (userProfile) {
           const prof = userProfile as Profile;
           setProfile(prof);
+          const initialGroupId = prof.role_id === 'admin' && prof.group_id ? prof.group_id : 1;
           if (prof.role_id === 'admin' && prof.group_id) setGroupId(prof.group_id);
 
           // Fetch albums for group (or all if admin)
@@ -175,7 +176,7 @@ export default function GalleryPage() {
             }
             setPhotos(photoList.map((photo) => ({ ...photo, group_id: prof.group_id || 0 })));
             const scopedAlbums = prof.role_id === 'admin'
-              ? albumRows.filter((album) => !album.group_id || album.group_id === groupId)
+              ? albumRows.filter((album) => !album.group_id || album.group_id === initialGroupId)
               : albumRows;
             const mappedAlbums = scopedAlbums.map((album) => ({
               ...album,
@@ -205,7 +206,7 @@ export default function GalleryPage() {
     }
 
     void init();
-  }, [router, groupId]);
+  }, [router]);
 
   const handleCreateAlbum = async () => {
     if (!newAlbumTitle.trim() || !profile) {
@@ -358,7 +359,18 @@ export default function GalleryPage() {
         .order('created_at', { ascending: false })
         .limit(120);
       if (refreshError) throw refreshError;
-      if (photoList) setPhotos(photoList.map((photo) => ({ ...photo, group_id: targetGroupId })));
+      if (photoList) {
+        setPhotos(photoList.map((photo) => ({ ...photo, group_id: targetGroupId })));
+        const counts = new Map<string, number>();
+        photoList.forEach((photo) => counts.set(photo.album_id, (counts.get(photo.album_id) || 0) + 1));
+        setAlbums((prev) =>
+          prev.map((album) =>
+            album.id === resolvedAlbumId
+              ? { ...album, items_count: counts.get(album.id) ?? (album.items_count || 0) + 1 }
+              : { ...album, items_count: counts.get(album.id) ?? album.items_count }
+          )
+        );
+      }
     } catch (err) {
       setNotice(`فشل الرفع: ${err instanceof Error ? err.message : 'خطأ غير معروف'}`);
     } finally {
@@ -580,7 +592,7 @@ export default function GalleryPage() {
         {/* --- CREATE ALBUM MODAL --- */}
         {showAlbumModal && (
           <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-nav border border-line rounded-2xl max-w-md w-full p-6 shadow-2xl">
+            <div className="bg-nav border border-line rounded-2xl max-w-md w-full max-h-[90dvh] overflow-y-auto p-6 shadow-2xl">
               <h3 className="text-base font-bold text-content mb-4">إنشاء ألبوم جديد</h3>
 
               <div className="space-y-3.5 text-xs">
@@ -646,7 +658,7 @@ export default function GalleryPage() {
         {/* --- UPLOAD MODAL --- */}
         {showUploadModal && (
           <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-nav border border-line rounded-2xl max-w-md w-full p-6 shadow-2xl">
+            <div className="bg-nav border border-line rounded-2xl max-w-md w-full max-h-[90dvh] overflow-y-auto p-6 shadow-2xl">
               <h3 className="text-base font-bold text-content mb-4">إضافة صورة جديدة للمعرض</h3>
 
               <div className="space-y-3.5 text-xs">

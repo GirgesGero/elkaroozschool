@@ -104,6 +104,7 @@ export default function MarathonManagePage() {
   const [newSecTitle, setNewSecTitle] = useState('');
 
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
@@ -206,12 +207,13 @@ export default function MarathonManagePage() {
       options: q.marathon_answers || [],
     }));
 
+    const matchedMarathon = marathons.find((m) => m.id === targetId);
     setSelectedMarathon({
       id: targetId,
-      title: marathons.find((m) => m.id === targetId)?.title || '',
-      group_id: profile?.group_id || 1,
-      total_score: 100,
-      is_active: true,
+      title: matchedMarathon?.title || (typeof target === 'object' && target ? target.title : '') || '',
+      group_id: matchedMarathon?.group_id ?? (typeof target === 'object' && target ? target.group_id : undefined) ?? (profile?.group_id || 1),
+      total_score: matchedMarathon?.total_score ?? (typeof target === 'object' && target ? target.total_score : undefined) ?? 100,
+      is_active: matchedMarathon?.is_active ?? (typeof target === 'object' && target ? target.is_active : undefined) ?? true,
       sections: sections || [],
       questions: mappedQ,
     });
@@ -237,33 +239,42 @@ export default function MarathonManagePage() {
 
   // Handler to add section
   const handleAddSection = async () => {
-    if (!newSecTitle.trim() || !selectedMarathonId) return;
+    if (saving || !newSecTitle.trim() || !selectedMarathonId) return;
+    setSaving(true);
+    setNotice(null);
     const supabase = createClient();
 
-    const { data: sectionId, error } = await supabase.rpc('create_marathon_section', {
-      p_marathon_id: selectedMarathonId,
-      p_title: newSecTitle.trim(),
-    });
-    const { data } = sectionId ? await supabase
-      .from('marathon_sections')
-      .select('*')
-      .eq('id', sectionId)
-      .single() : { data: null };
+    try {
+      const { data: sectionId, error } = await supabase.rpc('create_marathon_section', {
+        p_marathon_id: selectedMarathonId,
+        p_title: newSecTitle.trim(),
+      });
+      if (error) {
+        setNotice(`فشل إضافة القسم: ${error.message}`);
+        return;
+      }
+      const { data } = sectionId ? await supabase
+        .from('marathon_sections')
+        .select('*')
+        .eq('id', sectionId)
+        .single() : { data: null };
 
-    if (!error && data) {
-      setSelectedMarathon((prev) =>
-        prev ? { ...prev, sections: [...prev.sections, data] } : prev
-      );
-      setNewSecTitle('');
-      setShowAddSecModal(false);
-      setNotice('تم إضافة القسم بنجاح.');
+      if (data) {
+        setSelectedMarathon((prev) =>
+          prev ? { ...prev, sections: [...prev.sections, data] } : prev
+        );
+        setNewSecTitle('');
+        setShowAddSecModal(false);
+        setNotice('تم إضافة القسم بنجاح.');
+      }
+    } finally {
+      setSaving(false);
     }
   };
 
   // Handler to add question
   const handleAddQuestion = async () => {
-    if (!newQText.trim() || !selectedMarathonId) return;
-    const supabase = createClient();
+    if (saving || !newQText.trim() || !selectedMarathonId) return;
 
     // 1. Build options preserving original index before filtering
     const indexedOptions = newQOptions
@@ -288,28 +299,36 @@ export default function MarathonManagePage() {
       order_index: idx + 1,
     }));
 
-    const { error: qErr } = await supabase.rpc('create_marathon_question', {
-      p_marathon_id: selectedMarathonId,
-      p_section_id: newQSectionId || null,
-      p_question_text: newQText.trim(),
-      p_options: optionsPayload,
-    });
-    if (qErr) {
-      setNotice(`فشل إضافة السؤال: ${qErr.message}`);
-      return;
-    }
+    setSaving(true);
+    setNotice(null);
+    const supabase = createClient();
 
-    // Refresh questions immediately
-    if (selectedMarathon) {
-      await loadMarathonDetails(selectedMarathon);
-    } else {
-      await loadMarathonDetails(selectedMarathonId);
+    try {
+      const { error: qErr } = await supabase.rpc('create_marathon_question', {
+        p_marathon_id: selectedMarathonId,
+        p_section_id: newQSectionId || null,
+        p_question_text: newQText.trim(),
+        p_options: optionsPayload,
+      });
+      if (qErr) {
+        setNotice(`فشل إضافة السؤال: ${qErr.message}`);
+        return;
+      }
+
+      // Refresh questions immediately
+      if (selectedMarathon) {
+        await loadMarathonDetails(selectedMarathon);
+      } else {
+        await loadMarathonDetails(selectedMarathonId);
+      }
+      setShowAddQModal(false);
+      setNewQText('');
+      setNewQOptions(['', '', '', '']);
+      setNewQCorrectIdx(0);
+      setNotice('تم إضافة السؤال وتوزيع الـ 100 درجة بالتساوي تلقائياً.');
+    } finally {
+      setSaving(false);
     }
-    setShowAddQModal(false);
-    setNewQText('');
-    setNewQOptions(['', '', '', '']);
-    setNewQCorrectIdx(0);
-    setNotice('تم إضافة السؤال وتوزيع الـ 100 درجة بالتساوي تلقائياً.');
   };
 
   const handleArchiveQuestion = async (questionId: string) => {
@@ -372,14 +391,14 @@ export default function MarathonManagePage() {
       <main className="max-w-5xl w-full mx-auto px-4 py-6 flex-1 flex flex-col gap-6 pb-28 md:pb-12">
         {/* Controls Header */}
         <div className="bg-nav border border-line rounded-2xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div>
+          <div className="w-full sm:w-auto">
             <label className="block text-xs font-bold text-content-muted mb-1.5">
               اختر الماراثون للإدارة:
             </label>
             <select
               value={selectedMarathonId}
               onChange={(e) => setSelectedMarathonId(e.target.value)}
-              className="bg-nav border border-line text-content text-sm rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-warning font-bold"
+              className="w-full sm:w-auto bg-nav border border-line text-content text-sm rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-warning font-bold"
             >
               {marathons.map((m) => (
                 <option key={m.id} value={m.id}>
@@ -389,7 +408,7 @@ export default function MarathonManagePage() {
             </select>
           </div>
 
-          <div className="flex bg-nav p-1 rounded-xl border border-line">
+          <div className="flex bg-nav p-1 rounded-xl border border-line w-full sm:w-auto">
             <button
               onClick={() => setActiveTab('editor')}
               className={`py-2 px-4 rounded-lg text-xs font-bold transition-all ${
@@ -420,10 +439,17 @@ export default function MarathonManagePage() {
           </div>
         )}
 
+        {loading && (
+          <div className="py-20 flex flex-col items-center justify-center gap-3 text-content-muted">
+            <Loader2 className="w-8 h-8 animate-spin text-warning" />
+            <p className="text-sm">جاري تحميل بيانات إدارة الماراثون...</p>
+          </div>
+        )}
+
         {/* --- TAB 1: QUESTIONS & SECTIONS EDITOR --- */}
-        {activeTab === 'editor' && (
+        {!loading && activeTab === 'editor' && (
           <div className="space-y-6">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <span className="text-xs text-warning font-bold bg-canvas/50 border border-warning/40 px-3 py-1 rounded-lg">
                   القانون: 100 درجة موزعة بالتساوي (
@@ -434,7 +460,7 @@ export default function MarathonManagePage() {
                 </span>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <button
                   onClick={() => setShowAddSecModal(true)}
                   className="bg-nav hover:bg-input text-content px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors border border-line"
@@ -502,7 +528,7 @@ export default function MarathonManagePage() {
         )}
 
         {/* --- TAB 2: SUBMISSIONS & SELECTIVE REOPEN --- */}
-        {activeTab === 'submissions' && (
+        {!loading && activeTab === 'submissions' && (
           <div className="bg-nav border border-line rounded-2xl p-5 shadow-md">
             <h3 className="font-bold text-base text-content mb-4 flex items-center gap-2">
               <Users className="w-5 h-5 text-warning" />
@@ -510,7 +536,7 @@ export default function MarathonManagePage() {
             </h3>
 
             <div className="overflow-x-auto">
-              <table className="w-full text-right text-xs">
+              <table className="w-full min-w-[680px] text-right text-xs">
                 <thead className="bg-nav/80 text-content-muted border-b border-line font-semibold">
                   <tr>
                     <th className="p-3">اسم المتدرب</th>
@@ -558,13 +584,14 @@ export default function MarathonManagePage() {
                           ))}
                         </select>
                         <button
+                          disabled={!selectedReopenQuestionBySub[sub.id]}
                           onClick={() => {
                             const questionId = selectedReopenQuestionBySub[sub.id];
                             if (questionId) {
                               void handleSelectiveReopen(sub.id, questionId);
                             }
                           }}
-                          className="p-1.5 bg-nav hover:bg-input text-content-secondary rounded-lg text-xs font-semibold inline-flex items-center gap-1 transition-colors"
+                          className="p-1.5 bg-nav hover:bg-input text-content-secondary rounded-lg text-xs font-semibold inline-flex items-center gap-1 transition-colors disabled:opacity-50"
                           title="إعادة فتح السؤال المحدد"
                         >
                           <RotateCcw className="w-3.5 h-3.5 text-warning" />
@@ -582,7 +609,7 @@ export default function MarathonManagePage() {
         {/* Modal: Add Question */}
         {showAddQModal && (
           <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-nav border border-line rounded-2xl max-w-lg w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="bg-nav border border-line rounded-2xl max-w-lg w-full p-6 shadow-2xl max-h-[90dvh] overflow-y-auto">
               <h3 className="text-lg font-bold text-content mb-4">إضافة سؤال جديد للماراثون</h3>
 
               <div className="space-y-4">
@@ -687,10 +714,11 @@ export default function MarathonManagePage() {
                 </button>
                 <button
                   type="button"
+                  disabled={saving || isUploadingQAttachment}
                   onClick={handleAddQuestion}
-                  className="px-5 py-2 rounded-xl bg-warning hover:bg-warning text-content text-xs font-bold"
+                  className="px-5 py-2 rounded-xl bg-warning hover:bg-warning text-content text-xs font-bold disabled:opacity-50"
                 >
-                  حفظ السؤال
+                  {saving ? 'جاري الحفظ...' : 'حفظ السؤال'}
                 </button>
               </div>
             </div>
@@ -719,10 +747,11 @@ export default function MarathonManagePage() {
                 </button>
                 <button
                   type="button"
+                  disabled={saving || !newSecTitle.trim()}
                   onClick={handleAddSection}
-                  className="px-5 py-2 rounded-xl bg-warning text-content text-xs font-bold"
+                  className="px-5 py-2 rounded-xl bg-warning text-content text-xs font-bold disabled:opacity-50"
                 >
-                  حفظ
+                  {saving ? 'جاري الحفظ...' : 'حفظ'}
                 </button>
               </div>
             </div>

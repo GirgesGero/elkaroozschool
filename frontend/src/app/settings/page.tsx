@@ -61,6 +61,7 @@ type ResetProgress = { run_id: string; status: string; continue?: boolean; messa
 export default function SettingsPage() {
   const router = useRouter();
   const { theme, accent, setTheme, setAccent } = useAppTheme();
+  const [user, setUser] = useState<{ id: string; email?: string | null } | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -83,18 +84,19 @@ export default function SettingsPage() {
       const supabase = createClient();
       try {
         const {
-          data: { user },
+          data: { user: authUser },
         } = await supabase.auth.getUser();
-        if (!user) {
+        if (!authUser) {
           router.push('/login');
           return;
         }
-        if (user.email) setResetEmail(user.email);
+        setUser({ id: authUser.id, email: authUser.email });
+        if (authUser.email) setResetEmail(authUser.email);
 
         const { data: pData } = await supabase
           .from('profiles')
           .select('*')
-          .eq('id', user.id)
+          .eq('id', authUser.id)
           .single();
 
         if (pData) {
@@ -109,7 +111,7 @@ export default function SettingsPage() {
     loadUser();
   }, [router]);
 
-  const isAdminOrSuper = profile?.role_id === 'admin';
+  const isAdminOrSuper = profile?.role_id === 'admin' || profile?.role_id === 'supervisor';
   const isSystemAdmin = profile?.role_id === 'admin';
   const isServant = profile?.role_id === 'servant';
   const isSecretariat = profile?.role_id === 'secretariat';
@@ -141,8 +143,12 @@ export default function SettingsPage() {
     if (!isSystemAdmin || !profile || !resetEmail || !resetAuthPassword) {
       throw new Error('أدخل كلمة مرور حساب المدير الحالي لإعادة المصادقة.');
     }
+    if (resetEmail.trim().toLowerCase() !== (user?.email || '').trim().toLowerCase()) {
+      setResetError('البريد الإلكتروني لا يطابق الحساب الحالي.');
+      throw new Error('البريد الإلكتروني لا يطابق الحساب الحالي.');
+    }
     const supabase = createClient();
-    const { data, error } = await supabase.auth.signInWithPassword({ email: resetEmail, password: resetAuthPassword });
+    const { data, error } = await supabase.auth.signInWithPassword({ email: resetEmail.trim(), password: resetAuthPassword });
     if (error || !data.session || data.user?.id !== profile.id) {
       if (data.session && data.user?.id !== profile.id) await supabase.auth.signOut();
       throw new Error('تعذرت إعادة المصادقة لهذا الحساب. تحقق من كلمة المرور والبريد المرتبط بحساب المدير الحالي.');
@@ -269,7 +275,7 @@ export default function SettingsPage() {
       />
 
       {/* Main Settings Content */}
-      <main className="flex-1 max-w-4xl w-full mx-auto px-4 py-6 pb-28 md:pb-12 space-y-6">
+      <main className="flex-1 max-w-6xl w-full mx-auto px-4 py-6 pb-28 md:pb-12 space-y-6">
         {/* Page Hero Header */}
         <div className="flex items-center gap-3.5 p-5 rounded-3xl bg-gradient-to-r from-canvas via-canvas to-brand/30 border border-gold/30 shadow-xl">
           <div className="w-12 h-12 rounded-2xl bg-gold/20 border border-gold/40 text-gold flex items-center justify-center shadow-lg shrink-0">
@@ -303,7 +309,7 @@ export default function SettingsPage() {
                 onClick={() => setTheme('luxury')}
                 className={`p-3.5 rounded-2xl border flex flex-col items-center gap-2 transition-all ${
                   theme === 'luxury'
-                    ? 'bg-gold text-brand-on font-black border-gold shadow-lg shadow-gold/20 scale-102'
+                    ? 'bg-gold text-brand-on font-black border-gold shadow-lg shadow-gold/20 scale-[1.02]'
                     : 'bg-canvas text-content-secondary border-line hover:border-line'
                 }`}
               >
@@ -315,7 +321,7 @@ export default function SettingsPage() {
                 onClick={() => setTheme('dark')}
                 className={`p-3.5 rounded-2xl border flex flex-col items-center gap-2 transition-all ${
                   theme === 'dark'
-                    ? 'bg-nav text-content font-black border-line-subtle shadow-lg scale-102'
+                    ? 'bg-nav text-content font-black border-line-subtle shadow-lg scale-[1.02]'
                     : 'bg-canvas text-content-secondary border-line hover:border-line'
                 }`}
               >
@@ -327,7 +333,7 @@ export default function SettingsPage() {
                 onClick={() => setTheme('light')}
                 className={`p-3.5 rounded-2xl border flex flex-col items-center gap-2 transition-all ${
                   theme === 'light'
-                    ? 'bg-card text-content font-black border-line-subtle shadow-lg scale-102'
+                    ? 'bg-card text-content font-black border-line-subtle shadow-lg scale-[1.02]'
                     : 'bg-canvas text-content-secondary border-line hover:border-line'
                 }`}
               >
@@ -339,7 +345,7 @@ export default function SettingsPage() {
                 onClick={() => setTheme('system')}
                 className={`p-3.5 rounded-2xl border flex flex-col items-center gap-2 transition-all ${
                   theme === 'system'
-                    ? 'bg-info text-content font-black border-info shadow-lg scale-102'
+                    ? 'bg-info text-content font-black border-info shadow-lg scale-[1.02]'
                     : 'bg-canvas text-content-secondary border-line hover:border-line'
                 }`}
               >
@@ -469,6 +475,12 @@ export default function SettingsPage() {
         </section>
 
         {/* 2. User Identity Summary Card */}
+        {isLoading && !profile && (
+          <div className="p-6 rounded-3xl border border-line bg-canvas shadow-xl flex items-center justify-center gap-3 text-content-muted text-xs">
+            <Loader2 className="w-5 h-5 animate-spin text-gold" />
+            <span>جاري تحميل بيانات الحساب والصلاحيات...</span>
+          </div>
+        )}
         {profile && (
           <section className="relative overflow-hidden rounded-3xl border border-line bg-canvas shadow-xl">
             {/* Coptic gold hairline + ambient wash, matching the rest of the theme */}
@@ -543,10 +555,10 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            <div className="flex gap-3 rounded-2xl border border-red-500/25 bg-red-500/5 p-4 text-sm leading-6 text-content">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-2xl border border-red-500/25 bg-red-500/5 p-4 text-sm leading-6 text-content">
               <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-red-400" aria-hidden="true" />
-              <p>لا يمكن التراجع عن الحذف. أنشئ النسخة المشفرة ثم نزّلها من مركز النسخ الاحتياطية، وتأكد من إمكانية استعادتها قبل التنفيذ.</p>
-              <Link href="/admin/backups" className="shrink-0 rounded-lg border border-line px-3 py-2 text-xs font-bold text-content hover:border-gold">مركز النسخ الاحتياطية</Link>
+              <p className="flex-1">لا يمكن التراجع عن الحذف. أنشئ النسخة المشفرة ثم نزّلها من مركز النسخ الاحتياطية، وتأكد من إمكانية استعادتها قبل التنفيذ.</p>
+              <Link href="/admin/backups" className="self-start sm:self-auto shrink-0 rounded-lg border border-line px-3 py-2 text-xs font-bold text-content hover:border-gold">مركز النسخ الاحتياطية</Link>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">

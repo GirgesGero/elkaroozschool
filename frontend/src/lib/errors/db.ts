@@ -49,6 +49,18 @@ const EXPLANATIONS: { match: RegExp; message: string }[] = [
     match: /Failed to fetch|NetworkError|load failed/i,
     message: 'تعذّر الاتصال بالخادم. تحقق من الإنترنت وحاول مرة أخرى.',
   },
+  {
+    match: /ATTENDANCE_FORBIDDEN/i,
+    message: 'ليست لديك صلاحية لرصد الحضور والغياب لهذه الفرقة.',
+  },
+  {
+    match: /ATTENDANCE_WINDOW_CLOSED/i,
+    message: 'انتهت نافذة رصد الحضور لهذه الجلسة (تُغلق الجلسة بنهاية يوم الأربعاء).',
+  },
+  {
+    match: /ATTENDANCE_TARGET_INVALID/i,
+    message: 'بيانات الجلسة أو المتدرب غير مكتملة لرصد الحضور.',
+  },
 ];
 
 /**

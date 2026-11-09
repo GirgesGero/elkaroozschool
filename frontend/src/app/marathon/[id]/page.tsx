@@ -201,26 +201,26 @@ export default function MarathonPlayerPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-nav flex items-center justify-center text-content">
+      <div className="min-h-screen bg-nav flex items-center justify-center text-content" dir="rtl">
         <Loader2 className="w-8 h-8 animate-spin text-warning" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-nav text-content flex flex-col pb-16">
+    <div className="min-h-screen bg-nav text-content flex flex-col pb-16" dir="rtl">
       {/* Top Header */}
       <header className="sticky top-0 z-50 bg-nav/95 border-b border-line backdrop-blur-md">
-        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
+        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between gap-2">
           <Link
             href="/marathon"
-            className="flex items-center gap-2 text-sm text-content-secondary hover:text-content transition-colors"
+            className="flex items-center gap-2 text-sm text-content-secondary hover:text-content transition-colors shrink-0"
           >
             <ArrowRight className="w-4 h-4" />
             <span>قائمة الماراثون</span>
           </Link>
-          <div className="flex items-center gap-2">
-            <span className="font-bold text-sm text-warning truncate max-w-xs">{marathonTitle}</span>
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="font-bold text-sm text-warning truncate max-w-[160px] sm:max-w-xs">{marathonTitle}</span>
           </div>
         </div>
       </header>
@@ -255,7 +255,7 @@ export default function MarathonPlayerPage() {
               return (
                 <button
                   key={q.id}
-                  disabled={!isCompleted && !isAnswered && idx > answeredCount}
+                  disabled={!isCompleted && !isAnswered && idx !== currentQIndex && idx > answeredCount}
                   onClick={() => setCurrentQIndex(idx)}
                   className={`w-7 h-7 rounded-lg text-[11px] font-bold transition-all flex items-center justify-center ${
                     isCurrent
@@ -277,6 +277,12 @@ export default function MarathonPlayerPage() {
           <div className="p-3.5 bg-canvas/70 border border-danger/60 text-danger rounded-xl text-xs flex items-center gap-2">
             <AlertCircle className="w-4 h-4 text-danger flex-shrink-0" />
             <span>{errorMsg}</span>
+          </div>
+        )}
+
+        {!loading && questions.length === 0 && (
+          <div className="bg-nav border border-line rounded-2xl p-8 text-center text-content-muted text-xs">
+            لا توجد أسئلة منشورة لهذا الماراثون حالياً.
           </div>
         )}
 
@@ -312,7 +318,7 @@ export default function MarathonPlayerPage() {
                   return (
                     <label
                       key={opt.id}
-                      className={`w-full p-4 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
+                      className={`w-full p-4 rounded-xl border flex flex-wrap sm:flex-nowrap items-center justify-between gap-2 cursor-pointer transition-all ${
                         isQuestionAnswered
                           ? isSelectedInAnswer
                             ? hasCorrectFlag && !opt.is_correct
@@ -368,7 +374,7 @@ export default function MarathonPlayerPage() {
             </div>
 
             {/* Bottom Navigation & Submit Bar */}
-            <div className="flex items-center justify-between pt-4 border-t border-line/80">
+            <div className="flex items-center justify-between flex-wrap gap-2 pt-4 border-t border-line/80">
               <button
                 disabled={currentQIndex === 0}
                 onClick={() => setCurrentQIndex((prev) => prev - 1)}

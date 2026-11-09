@@ -21,6 +21,7 @@ function SectionBrowserContent() {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const initialSearchParamsRef = useRef(searchParams);
   const categoryCode = params.code as string;
 
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -42,6 +43,28 @@ function SectionBrowserContent() {
   const sectionRequestRef = useRef(0);
   const loadedKeyRef = useRef<string | null>(null);
   const lastHandledQueryRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    async function loadUserProfile() {
+      try {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: userProfile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+          if (userProfile) {
+            setProfile(userProfile as Profile);
+          }
+        }
+      } catch {
+        // Non-blocking profile fetch for section browser
+      }
+    }
+    void loadUserProfile();
+  }, []);
 
   const loadSectionArticles = useCallback(async (sectionId: number, page: number = 1) => {
     const requestId = ++articleRequestRef.current;
@@ -92,8 +115,8 @@ function SectionBrowserContent() {
       setSections(categorySections);
 
       // Check URL searchParams for section deep-link
-      const sectionParam = searchParams.get('section');
-      const pageParam = parseInt(searchParams.get('page') || '1', 10) || 1;
+      const sectionParam = initialSearchParamsRef.current.get('section');
+      const pageParam = parseInt(initialSearchParamsRef.current.get('page') || '1', 10) || 1;
 
       if (sectionParam) {
         const matchedFromParam =
@@ -127,7 +150,7 @@ function SectionBrowserContent() {
 
   useEffect(() => {
     if (categoryCode) {
-      loadSections();
+      void loadSections();
     }
   }, [categoryCode, loadSections]);
 
@@ -157,6 +180,7 @@ function SectionBrowserContent() {
 
     if (!changed) return;
     const q = urlParams.toString();
+    lastHandledQueryRef.current = q;
     const newUrl = q
       ? `/bible/section/${categoryCode}?${q}`
       : `/bible/section/${categoryCode}`;
@@ -234,7 +258,7 @@ function SectionBrowserContent() {
 
       <main className="max-w-7xl mx-auto px-4 py-8 pb-24">
         {/* Header Breadcrumb */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div>
             <div className="flex items-center gap-2 text-sm text-content-muted mb-3">
               <button onClick={() => router.push('/bible')} className="hover:text-gold transition-colors">
@@ -243,7 +267,7 @@ function SectionBrowserContent() {
               <ChevronLeft className="w-4 h-4" />
               <span className="text-content font-bold">{categoryTitle}</span>
             </div>
-            <h1 className="text-3xl md:text-4xl font-black text-content">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-content">
               {categoryTitle}
             </h1>
           </div>
@@ -313,7 +337,7 @@ function SectionBrowserContent() {
 
         {/* Selected Section Header */}
         {selectedSection && (
-          <div className="mb-6 flex items-center justify-between border-b border-line/80 pb-4">
+          <div className="mb-6 flex items-center justify-between flex-wrap gap-2 border-b border-line/80 pb-4">
             <div>
               <h2 className="text-xl font-bold text-content flex items-center gap-2">
                 <span>{selectedSection.icon}</span>
@@ -323,7 +347,7 @@ function SectionBrowserContent() {
                 <p className="text-sm text-content-muted mt-1">{selectedSection.description}</p>
               )}
             </div>
-            <div className="text-xs text-content-muted">
+            <div className="text-xs text-content-muted shrink-0">
               إجمالي: <span className="text-gold font-bold">{totalArticles.toLocaleString()}</span> وثيقة
             </div>
           </div>

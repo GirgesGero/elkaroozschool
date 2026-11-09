@@ -4,7 +4,7 @@ import { ArrowRight, BookOpen, GraduationCap, Heart, ShieldCheck } from 'lucide-
 
 export default function AboutPage() {
   return (
-    <div className="min-h-screen bg-nav text-content flex flex-col">
+    <div className="min-h-screen bg-nav text-content flex flex-col" dir="rtl">
       {/* Header */}
       <header className="border-b border-line bg-nav/80 backdrop-blur sticky top-0 z-50">
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
@@ -30,7 +30,7 @@ export default function AboutPage() {
           <div className="relative w-28 h-28 mx-auto mb-4">
             <Image src="/logo.png" alt="شعار مدرسة الكاروز" fill className="object-contain" priority />
           </div>
-          <h1 className="text-3xl font-extrabold text-content mb-2">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-content mb-2">
             مدرسة الكاروز للكتاب المقدس
           </h1>
           <p className="text-content-muted text-sm max-w-xl mx-auto leading-relaxed">
@@ -77,7 +77,7 @@ export default function AboutPage() {
           <p className="text-xs text-content-secondary mb-5">
             تصفح نصوص العهدين وتفاسير موقع الأنبا تكلا هيمانوت المتاحة للجميع مجاناً.
           </p>
-          <div className="flex items-center justify-center gap-3">
+          <div className="flex items-center justify-center gap-3 flex-wrap">
             <Link
               href="/bible"
               className="bg-gold hover:bg-gold text-brand-on font-bold py-2.5 px-5 rounded-xl text-sm transition-all"

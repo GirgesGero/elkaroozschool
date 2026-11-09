@@ -56,12 +56,15 @@ function LoginFormContent() {
     const syncState = () => {
       const current = getLockoutState();
       setLockout(current);
+      return current;
     };
 
-    syncState();
+    const initial = syncState();
+    if (!initial.isLocked) return;
+
     const interval = setInterval(syncState, 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [lockout.isLocked]);
 
   const handleLogin = async (e?: React.FormEvent, customUser?: string, customPass?: string) => {
     if (e) e.preventDefault();
@@ -135,9 +138,12 @@ function LoginFormContent() {
       clearLockout();
       setLockout(getLockoutState());
 
-      if (data.user) {
+      if (data?.user) {
         router.push(redirectTo);
         router.refresh();
+      } else {
+        setError('تعذر التحقق من جلسة المستخدم. يرجى المحاولة مرة أخرى.');
+        setLoading(false);
       }
     } catch (err: any) {
       setError(err.message || 'حدث خطأ غير متوقع أثناء تسجيل الدخول');
@@ -164,7 +170,7 @@ function LoginFormContent() {
       </div>
 
       {/* Top Navbar (Facebook Style Minimal Header) */}
-      <header className="relative z-10 w-full border-b backdrop-blur-md px-4 sm:px-8 py-3 flex items-center justify-between"
+      <header className="relative z-10 w-full border-b backdrop-blur-md px-3 sm:px-8 py-3 flex flex-wrap items-center justify-between gap-2"
               style={{ backgroundColor: 'var(--bg-nav)', borderColor: 'var(--border-card)' }}>
         
         {/* Right side in RTL: Brand details */}
@@ -198,7 +204,7 @@ function LoginFormContent() {
               onClick={() => setTheme('light')}
               aria-pressed={theme === 'light'}
               aria-label="المظهر النهاري"
-              className="flex min-h-[44px] items-center gap-1.5 px-4 rounded-full text-xs font-bold transition-colors"
+              className="flex min-h-[44px] items-center gap-1.5 px-2.5 sm:px-4 rounded-full text-xs font-bold transition-colors"
               style={{
                 backgroundColor: theme === 'light' ? 'var(--brand-primary)' : 'transparent',
                 color: theme === 'light' ? 'var(--brand-primary-text)' : 'var(--text-secondary)',
@@ -211,7 +217,7 @@ function LoginFormContent() {
               onClick={() => setTheme('dark')}
               aria-pressed={theme === 'dark'}
               aria-label="المظهر الليلي"
-              className="flex min-h-[44px] items-center gap-1.5 px-4 rounded-full text-xs font-bold transition-colors"
+              className="flex min-h-[44px] items-center gap-1.5 px-2.5 sm:px-4 rounded-full text-xs font-bold transition-colors"
               style={{
                 backgroundColor: theme === 'dark' ? 'var(--brand-primary)' : 'transparent',
                 color: theme === 'dark' ? 'var(--brand-primary-text)' : 'var(--text-secondary)',
@@ -224,7 +230,7 @@ function LoginFormContent() {
               onClick={() => setTheme('luxury')}
               aria-pressed={theme === 'luxury'}
               aria-label="المظهر الملكي القبطي"
-              className="flex min-h-[44px] items-center gap-1.5 px-4 rounded-full text-xs font-bold transition-colors"
+              className="flex min-h-[44px] items-center gap-1.5 px-2.5 sm:px-4 rounded-full text-xs font-bold transition-colors"
               style={{
                 backgroundColor: theme === 'luxury' ? 'var(--brand-primary)' : 'transparent',
                 color: theme === 'luxury' ? 'var(--brand-primary-text)' : 'var(--text-secondary)',
@@ -237,7 +243,7 @@ function LoginFormContent() {
 
           <Link
             href="/bible"
-            className="flex min-h-[44px] items-center gap-1.5 px-4 rounded-full text-xs font-bold transition-colors bg-[var(--bg-input)] hover:bg-[var(--bg-card-hover)] border border-[var(--border-card)]"
+            className="flex min-h-[44px] items-center gap-1.5 px-2.5 sm:px-4 rounded-full text-xs font-bold transition-colors bg-[var(--bg-input)] hover:bg-[var(--bg-card-hover)] border border-[var(--border-card)]"
           >
             <BookOpen className="w-4 h-4 text-[var(--brand-gold)]" aria-hidden="true" />
             <span className="hidden sm:inline">تصفح الكتاب المقدس</span>
@@ -384,7 +390,7 @@ function LoginFormContent() {
 
               <Link
                 href="/bible"
-                className="app-btn-secondary w-full py-3 px-4 flex items-center justify-center gap-2 text-sm text-center block"
+                className="app-btn-secondary w-full py-3 px-4 flex items-center justify-center gap-2 text-sm text-center"
               >
                 <BookOpen className="w-4 h-4 text-gold" />
                 <span>تصفح الكتاب المقدس والتفاسير (عام)</span>

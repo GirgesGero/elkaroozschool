@@ -99,7 +99,16 @@ export default function TraineesDirectoryPage() {
         if (userProfile) {
           const prof = userProfile as Profile;
           setProfile(prof);
-          const defaultGroup = prof.role_id === 'admin' ? 0 : (prof.group_id || 0);
+          if (prof.role_id === 'trainee') {
+            router.replace('/');
+            return;
+          }
+          if (prof.role_id !== 'admin' && prof.role_id !== 'supervisor' && !prof.group_id) {
+            setTrainees([]);
+            setLoading(false);
+            return;
+          }
+          const defaultGroup = prof.role_id === 'admin' || prof.role_id === 'supervisor' ? 0 : (prof.group_id || 0);
           setSelectedGroupId(defaultGroup);
           await loadTrainees(prof, defaultGroup);
         } else {
@@ -127,24 +136,27 @@ export default function TraineesDirectoryPage() {
     const supabase = createClient();
     const newActiveState = !trainee.is_active;
 
-    const { error } = await supabase
-      .from('profiles')
-      .update({ is_active: newActiveState })
-      .eq('id', trainee.id);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ is_active: newActiveState })
+        .eq('id', trainee.id);
 
-    if (error) {
-      setNotice(explainDbError(error));
-    } else {
-      setTrainees((prev) =>
-        prev.map((t) => (t.id === trainee.id ? { ...t, is_active: newActiveState } : t))
-      );
-      setNotice(
-        newActiveState
-          ? `تم إعادة تفعيل حساب المتدرب ${trainee.full_name} بنجاح.`
-          : `تم إيقاف حساب المتدرب ${trainee.full_name}.`
-      );
+      if (error) {
+        setNotice(explainDbError(error));
+      } else {
+        setTrainees((prev) =>
+          prev.map((t) => (t.id === trainee.id ? { ...t, is_active: newActiveState } : t))
+        );
+        setNotice(
+          newActiveState
+            ? `تم إعادة تفعيل حساب المتدرب ${trainee.full_name} بنجاح.`
+            : `تم إيقاف حساب المتدرب ${trainee.full_name}.`
+        );
+      }
+    } finally {
+      setUpdating(false);
     }
-    setUpdating(false);
   };
 
   const openDrawer = (tId: string) => {
@@ -225,7 +237,7 @@ export default function TraineesDirectoryPage() {
             {canAddTrainee && (
               <button
                 onClick={() => setIsCreateModalOpen(true)}
-                className="px-3.5 py-1.5 rounded-xl bg-gold hover:bg-warning text-brand-on font-black text-xs transition-all shadow-md flex items-center gap-1.5"
+                className="min-h-tap px-3.5 py-1.5 rounded-xl bg-gold hover:bg-warning text-brand-on font-black text-xs transition-all shadow-md flex items-center gap-1.5"
               >
                 <UserPlus className="w-3.5 h-3.5" />
                 <span>إضافة متدرب جديد</span>
@@ -243,7 +255,7 @@ export default function TraineesDirectoryPage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="ابحث بالاسم، اسم المستخدم، أو رقم الهاتف..."
-              className="w-full bg-nav border border-line rounded-xl pr-10 pl-4 py-2 text-xs text-content placeholder-content-muted focus:outline-none focus:border-gold"
+              className="w-full min-h-tap bg-nav border border-line rounded-xl pr-10 pl-4 py-2 text-xs text-content placeholder-content-muted focus:outline-none focus:border-gold"
             />
           </div>
 
@@ -251,7 +263,7 @@ export default function TraineesDirectoryPage() {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value as any)}
-              className="bg-nav border border-line rounded-xl px-3 py-2 text-xs text-content-secondary focus:outline-none focus:border-gold"
+              className="w-full sm:w-auto min-h-tap bg-nav border border-line rounded-xl px-3 py-2 text-xs text-content-secondary focus:outline-none focus:border-gold"
             >
               <option value="all">جميع الحالات</option>
               <option value="active">الحسابات النشطة فقط</option>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
@@ -129,9 +129,11 @@ export default function GroupDetailsPage({ params }: PageProps) {
   const isGroupSecretariat = profile?.role_id === 'secretariat' && profile?.group_id === groupId;
   const isGroupServant = profile?.role_id === 'servant' && profile?.group_id === groupId;
   const canMarkAttendance = isAdminOrSuper || isGroupSecretariat;
+  const sessionRecordsReqRef = useRef(0);
 
   const loadSessionRecords = useCallback(async (sId: string) => {
     if (!sId) return;
+    const reqId = ++sessionRecordsReqRef.current;
     const supabase = createClient();
     const { data: records } = await supabase
       .from('attendance_records')
@@ -139,6 +141,8 @@ export default function GroupDetailsPage({ params }: PageProps) {
       .eq('session_id', sId)
       .is('deleted_at', null)
       .limit(500);
+
+    if (reqId !== sessionRecordsReqRef.current) return;
 
     const recMap: Record<string, AttendanceStatus> = {};
     if (records) {
@@ -206,6 +210,10 @@ export default function GroupDetailsPage({ params }: PageProps) {
         setSessions(sessList);
         setSelectedSessionId(sessList[0].id);
         loadSessionRecords(sessList[0].id);
+      } else {
+        setSessions([]);
+        setSelectedSessionId('');
+        setSessionRecords({});
       }
 
       if (currList) setCurriculums(currList);
@@ -216,6 +224,8 @@ export default function GroupDetailsPage({ params }: PageProps) {
   }, [loadSessionRecords]);
 
   useEffect(() => {
+    if (groupId === 0) return;
+
     async function init() {
       try {
         const supabase = createClient();
@@ -235,8 +245,9 @@ export default function GroupDetailsPage({ params }: PageProps) {
           setProfile(prof);
 
           // Security check: If not Admin/Super and trying to access other group, enforce isolation
-          if (prof.role_id !== 'admin' && prof.group_id !== groupId) {
-            router.push(`/groups/${prof.group_id}`);
+          if (prof.role_id !== 'admin' && prof.role_id !== 'supervisor' && prof.group_id !== groupId) {
+            if (prof.group_id) router.replace(`/groups/${prof.group_id}`);
+            else router.replace('/groups');
             return;
           }
 
@@ -273,10 +284,14 @@ export default function GroupDetailsPage({ params }: PageProps) {
     traineeId: string,
     status: AttendanceStatus,
     source: 'QR' | 'MANUAL' = 'MANUAL'
-  ) => {
-    if (!canMarkAttendance || !selectedSessionId || !profile) return;
+  ): Promise<{ success: boolean; message: string }> => {
+    if (!canMarkAttendance || !selectedSessionId || !profile) {
+      return { success: false, message: 'غير مصرح أو لم يتم تحديد جلسة.' };
+    }
     const currentSession = sessions.find((s) => s.id === selectedSessionId);
-    if (!currentSession) return;
+    if (!currentSession) {
+      return { success: false, message: 'الجلسة غير محددة.' };
+    }
 
     setUpdatingAttendance(true);
     setNotice(null);
@@ -310,10 +325,14 @@ export default function GroupDetailsPage({ params }: PageProps) {
       // Refresh group summary in background
       const { data: sumData } = await supabase.rpc('get_group_operational_summary', { p_group_id: groupId });
       if (sumData) setSummary(sumData);
+      return { success: true, message: '' };
     } catch (err) {
-      setNotice({ type: 'error', text: explainDbError(err) });
+      const msg = explainDbError(err);
+      setNotice({ type: 'error', text: msg });
+      return { success: false, message: msg };
+    } finally {
+      setUpdatingAttendance(false);
     }
-    setUpdatingAttendance(false);
   };
 
   const handleCreateSession = async () => {
@@ -466,6 +485,8 @@ export default function GroupDetailsPage({ params }: PageProps) {
   };
 
   const currentSession = sessions.find((s) => s.id === selectedSessionId);
+  const isSessionWindowOpen = Boolean(currentSession && AttendanceService.isWithinWindow(currentSession));
+  const canRecordCurrentSession = canMarkAttendance && isSessionWindowOpen;
 
   const filteredTrainees = trainees.filter((t) => {
     const matchSearch =
@@ -522,7 +543,7 @@ export default function GroupDetailsPage({ params }: PageProps) {
       />
 
       {/* Group Operational Sub-Header */}
-      <div className="sticky top-15 z-30 bg-canvas/95 border-b border-gold/20 backdrop-blur-xl">
+      <div className="sticky top-14 z-30 bg-canvas/95 border-b border-gold/20 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             {isAdminOrSuper && (
@@ -658,7 +679,7 @@ export default function GroupDetailsPage({ params }: PageProps) {
       </div>
 
       {/* Main Container */}
-      <main className="max-w-7xl mx-auto px-4 py-6 flex-1 w-full space-y-6">
+      <main className="max-w-7xl mx-auto px-4 py-6 pb-28 md:pb-12 flex-1 w-full space-y-6">
         {/* Notice Banner */}
         {notice && (
           <div
@@ -1180,12 +1201,12 @@ export default function GroupDetailsPage({ params }: PageProps) {
                     {/* Session Dropdown Selector & Controls */}
                     <div className="flex items-center gap-2 flex-wrap">
                       {sessions.length > 0 && (
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-content-muted">جلسة:</span>
+                        <div className="flex items-center gap-2 w-full sm:w-auto max-w-full">
+                          <span className="text-xs text-content-muted shrink-0">جلسة:</span>
                           <select
                             value={selectedSessionId}
                             onChange={(e) => handleSessionChange(e.target.value)}
-                            className="bg-canvas border border-gold/40 rounded-xl px-3 py-2 text-xs font-bold text-gold focus:outline-none focus:border-gold"
+                            className="w-full sm:w-auto max-w-full min-h-tap bg-canvas border border-gold/40 rounded-xl px-3 py-2 text-xs font-bold text-gold focus:outline-none focus:border-gold"
                           >
                             {sessions.map((s) => (
                               <option key={s.id} value={s.id}>
@@ -1221,7 +1242,7 @@ export default function GroupDetailsPage({ params }: PageProps) {
                         <>
                           <button
                             onClick={() => setIsQRScannerOpen(true)}
-                            disabled={!selectedSessionId || currentSession?.status === 'LOCKED'}
+                            disabled={!selectedSessionId || !canRecordCurrentSession}
                             className="px-3.5 py-2 rounded-xl bg-gold hover:bg-warning disabled:opacity-40 disabled:hover:bg-gold text-brand-on font-black text-xs transition-all shadow-md flex items-center gap-1.5"
                           >
                             <QrCode className="w-3.5 h-3.5" />
@@ -1243,48 +1264,61 @@ export default function GroupDetailsPage({ params }: PageProps) {
                     </div>
                   </div>
 
-                  {/* Filter Pills: All, Present, Absent, Late */}
-                  <div className="flex items-center gap-2 pt-2 border-t border-line overflow-x-auto">
-                    <button
-                      onClick={() => setAttendanceStatusFilter('all')}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors ${
-                        attendanceStatusFilter === 'all'
-                          ? 'bg-card text-content'
-                          : 'bg-nav text-content-muted hover:text-content'
-                      }`}
-                    >
-                      الكل ({trainees.length})
-                    </button>
-                    <button
-                      onClick={() => setAttendanceStatusFilter('PRESENT')}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors ${
-                        attendanceStatusFilter === 'PRESENT'
-                          ? 'bg-success text-content'
-                          : 'bg-success/10 text-success border border-success/20'
-                      }`}
-                    >
-                      حاضر
-                    </button>
-                    <button
-                      onClick={() => setAttendanceStatusFilter('ABSENT')}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors ${
-                        attendanceStatusFilter === 'ABSENT'
-                          ? 'bg-danger text-content'
-                          : 'bg-danger/10 text-danger border border-danger/20'
-                      }`}
-                    >
-                      غائب (الافتقاد)
-                    </button>
-                    <button
-                      onClick={() => setAttendanceStatusFilter('LATE')}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors ${
-                        attendanceStatusFilter === 'LATE'
-                          ? 'bg-warning text-content'
-                          : 'bg-warning/10 text-warning border border-warning/20'
-                      }`}
-                    >
-                      متأخر
-                    </button>
+                  {/* Filter Pills: All, Present, Absent, Late & Search */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-line">
+                    <div className="flex items-center gap-2 overflow-x-auto">
+                      <button
+                        onClick={() => setAttendanceStatusFilter('all')}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors whitespace-nowrap ${
+                          attendanceStatusFilter === 'all'
+                            ? 'bg-card text-content'
+                            : 'bg-nav text-content-muted hover:text-content'
+                        }`}
+                      >
+                        الكل ({trainees.length})
+                      </button>
+                      <button
+                        onClick={() => setAttendanceStatusFilter('PRESENT')}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors whitespace-nowrap ${
+                          attendanceStatusFilter === 'PRESENT'
+                            ? 'bg-success text-content'
+                            : 'bg-success/10 text-success border border-success/20'
+                        }`}
+                      >
+                        حاضر
+                      </button>
+                      <button
+                        onClick={() => setAttendanceStatusFilter('ABSENT')}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors whitespace-nowrap ${
+                          attendanceStatusFilter === 'ABSENT'
+                            ? 'bg-danger text-content'
+                            : 'bg-danger/10 text-danger border border-danger/20'
+                        }`}
+                      >
+                        غائب (الافتقاد)
+                      </button>
+                      <button
+                        onClick={() => setAttendanceStatusFilter('LATE')}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors whitespace-nowrap ${
+                          attendanceStatusFilter === 'LATE'
+                            ? 'bg-warning text-content'
+                            : 'bg-warning/10 text-warning border border-warning/20'
+                        }`}
+                      >
+                        متأخر
+                      </button>
+                    </div>
+
+                    <div className="relative w-full sm:w-64">
+                      <Search className="w-4 h-4 text-content-muted absolute right-3 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        placeholder="بحث في قائمة الحضور..."
+                        value={traineeSearch}
+                        onChange={(e) => setTraineeSearch(e.target.value)}
+                        className="w-full min-h-tap bg-canvas border border-line rounded-xl pr-9 pl-3 py-1.5 text-xs text-content placeholder:text-content-muted focus:outline-none focus:border-gold"
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -1323,8 +1357,8 @@ export default function GroupDetailsPage({ params }: PageProps) {
                             <>
                               <button
                                 onClick={() => handleMarkAttendance(t.id, 'PRESENT')}
-                                disabled={updatingAttendance || currentSession?.status === 'LOCKED'}
-                                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                                disabled={updatingAttendance || !canRecordCurrentSession}
+                                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all disabled:opacity-50 ${
                                   status === 'PRESENT'
                                     ? 'bg-success text-content shadow-md shadow-emerald-500/20'
                                     : 'bg-nav text-content-muted hover:bg-success/20 hover:text-success'
@@ -1334,8 +1368,8 @@ export default function GroupDetailsPage({ params }: PageProps) {
                               </button>
                               <button
                                 onClick={() => handleMarkAttendance(t.id, 'ABSENT')}
-                                disabled={updatingAttendance || currentSession?.status === 'LOCKED'}
-                                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                                disabled={updatingAttendance || !canRecordCurrentSession}
+                                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all disabled:opacity-50 ${
                                   status === 'ABSENT'
                                     ? 'bg-danger text-content shadow-md shadow-rose-500/20'
                                     : 'bg-nav text-content-muted hover:bg-danger/20 hover:text-danger'
@@ -1345,8 +1379,8 @@ export default function GroupDetailsPage({ params }: PageProps) {
                               </button>
                               <button
                                 onClick={() => handleMarkAttendance(t.id, 'LATE')}
-                                disabled={updatingAttendance || currentSession?.status === 'LOCKED'}
-                                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                                disabled={updatingAttendance || !canRecordCurrentSession}
+                                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all disabled:opacity-50 ${
                                   status === 'LATE'
                                     ? 'bg-warning text-content shadow-md shadow-amber-500/20'
                                     : 'bg-nav text-content-muted hover:bg-warning/20 hover:text-warning'
@@ -1507,7 +1541,7 @@ export default function GroupDetailsPage({ params }: PageProps) {
       {/* Modal 1: Create Attendance Session */}
       {isCreateSessionOpen && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in">
-          <div className="w-full max-w-md bg-canvas border border-gold/40 rounded-3xl p-6 space-y-5 shadow-2xl shadow-black">
+          <div className="w-full max-w-md max-h-[90dvh] overflow-y-auto bg-canvas border border-gold/40 rounded-3xl p-6 space-y-5 shadow-2xl shadow-black">
             <div className="flex items-center justify-between border-b border-line pb-3">
               <h3 className="text-base font-black text-content flex items-center gap-2">
                 <Calendar className="w-5 h-5 text-gold" />
@@ -1569,7 +1603,7 @@ export default function GroupDetailsPage({ params }: PageProps) {
       {/* Modal 2: Appoint Secretariat */}
       {isAppointSecOpen && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in">
-          <div className="w-full max-w-md bg-canvas border border-info/40 rounded-3xl p-6 space-y-5 shadow-2xl shadow-black">
+          <div className="w-full max-w-md max-h-[90dvh] overflow-y-auto bg-canvas border border-info/40 rounded-3xl p-6 space-y-5 shadow-2xl shadow-black">
             <div className="flex items-center justify-between border-b border-line pb-3">
               <h3 className="text-base font-black text-content flex items-center gap-2">
                 <Shield className="w-5 h-5 text-purple-400" />
@@ -1648,7 +1682,7 @@ export default function GroupDetailsPage({ params }: PageProps) {
       {/* Modal 3: Assign / Transfer Servant to Group */}
       {isAssignServantOpen && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in">
-          <div className="w-full max-w-md bg-canvas border border-gold/40 rounded-3xl p-6 space-y-5 shadow-2xl shadow-black">
+          <div className="w-full max-w-md max-h-[90dvh] overflow-y-auto bg-canvas border border-gold/40 rounded-3xl p-6 space-y-5 shadow-2xl shadow-black">
             <div className="flex items-center justify-between border-b border-line pb-3">
               <h3 className="text-base font-black text-content flex items-center gap-2">
                 <Briefcase className="w-5 h-5 text-info" />
@@ -1752,12 +1786,7 @@ export default function GroupDetailsPage({ params }: PageProps) {
         sessionDate={sessions.find((s) => s.id === selectedSessionId)?.session_date}
         trainees={trainees}
         onRecordAttendance={async (traineeId, status) => {
-          try {
-            await handleMarkAttendance(traineeId, status, 'QR');
-            return { success: true, message: '' };
-          } catch (err: any) {
-            return { success: false, message: err?.message || 'فشل في حفظ الحضور.' };
-          }
+          return await handleMarkAttendance(traineeId, status, 'QR');
         }}
       />
 

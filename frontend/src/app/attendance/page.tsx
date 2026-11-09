@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -77,51 +77,34 @@ export default function AttendancePage() {
   // Trainee Drawer
   const [selectedTraineeId, setSelectedTraineeId] = useState<string | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const sessionLoadSeqRef = useRef(0);
 
   const isAdminOrSuper = profile?.role_id === 'admin';
 
-  const loadSessionsAndTrainees = async (targetGroupId: number) => {
-    setLoading(true);
-    const supabase = createClient();
-
-    const { data: sessList } = await supabase
-      .from('attendance_sessions')
-      .select('id,group_id,session_date,status')
-      .eq('group_id', targetGroupId)
-      .order('session_date', { ascending: false })
-      .limit(100);
-
-    if (sessList && sessList.length > 0) {
-      setSessions(sessList);
-      setSelectedSessionId(sessList[0].id);
-      loadSessionTrainees(sessList[0].id, targetGroupId);
-    } else {
-      setSessions([]);
-      setSelectedSessionId('');
-      setTraineeRows([]);
-    }
-    setLoading(false);
-  };
-
-  const loadSessionTrainees = async (sId: string, gId: number) => {
+  const loadSessionTrainees = useCallback(async (sId: string, gId: number, seqId?: number) => {
     if (!sId) return;
+    const reqId = seqId ?? ++sessionLoadSeqRef.current;
     const supabase = createClient();
 
-    const { data: trainees } = await supabase
-      .from('profiles')
-      .select('id,full_name,username,phone')
-      .eq('group_id', gId)
-      .eq('role_id', 'trainee')
-      .eq('is_active', true)
-      .order('full_name', { ascending: true })
-      .limit(500);
+    const [{ data: trainees }, { data: records }] = await Promise.all([
+      supabase
+        .from('profiles')
+        .select('id,full_name,username,phone')
+        .eq('group_id', gId)
+        .eq('role_id', 'trainee')
+        .eq('is_active', true)
+        .is('deleted_at', null)
+        .order('full_name', { ascending: true })
+        .limit(500),
+      supabase
+        .from('attendance_records')
+        .select('trainee_id, status')
+        .eq('session_id', sId)
+        .is('deleted_at', null)
+        .limit(500),
+    ]);
 
-    const { data: records } = await supabase
-      .from('attendance_records')
-      .select('trainee_id, status')
-      .eq('session_id', sId)
-      .is('deleted_at', null)
-      .limit(500);
+    if (reqId !== sessionLoadSeqRef.current) return;
 
     const recordMap = new Map();
     if (records) {
@@ -141,55 +124,95 @@ export default function AttendancePage() {
     } else {
       setRawTrainees([]);
     }
-  };
+  }, []);
+
+  const loadSessionsAndTrainees = useCallback(
+    async (targetGroupId: number) => {
+      const reqId = ++sessionLoadSeqRef.current;
+      setLoading(true);
+      try {
+        const supabase = createClient();
+
+        const { data: sessList } = await supabase
+          .from('attendance_sessions')
+          .select('id,group_id,session_date,status')
+          .eq('group_id', targetGroupId)
+          .is('deleted_at', null)
+          .order('session_date', { ascending: false })
+          .limit(100);
+
+        if (reqId !== sessionLoadSeqRef.current) return;
+
+        if (sessList && sessList.length > 0) {
+          setSessions(sessList);
+          setSelectedSessionId(sessList[0].id);
+          await loadSessionTrainees(sessList[0].id, targetGroupId, reqId);
+        } else {
+          setSessions([]);
+          setSelectedSessionId('');
+          setTraineeRows([]);
+        }
+      } finally {
+        if (reqId === sessionLoadSeqRef.current) {
+          setLoading(false);
+        }
+      }
+    },
+    [loadSessionTrainees]
+  );
 
   useEffect(() => {
     async function init() {
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      try {
+        const supabase = createClient();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
 
-      if (!user) {
-        router.push('/login');
-        return;
-      }
-
-      const { data: userProfile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-
-      if (userProfile) {
-        const prof = userProfile as Profile;
-        setProfile(prof);
-        const defaultGroup = prof.group_id || 1;
-        setSelectedGroupId(defaultGroup);
-
-        if (prof.role_id === 'trainee') {
-          const { data: summary } = await supabase.rpc('get_trainee_attendance_summary', {
-            p_trainee_id: prof.id,
-          });
-          if (summary) setPersonalSummary(summary);
-
-          const { data: records } = await supabase
-            .from('attendance_records')
-            .select('*, attendance_sessions(session_date)')
-            .eq('trainee_id', prof.id)
-            .is('deleted_at', null)
-            .order('recorded_at', { ascending: false });
-
-          if (records) setPersonalRecords(records);
-          setLoading(false);
-        } else {
-          loadSessionsAndTrainees(defaultGroup);
+        if (!user) {
+          router.push('/login');
+          return;
         }
+
+        const { data: userProfile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+
+        if (userProfile) {
+          const prof = userProfile as Profile;
+          setProfile(prof);
+          const defaultGroup = prof.group_id || 1;
+          setSelectedGroupId(defaultGroup);
+
+          if (prof.role_id === 'trainee') {
+            const { data: summary } = await supabase.rpc('get_trainee_attendance_summary', {
+              p_trainee_id: prof.id,
+            });
+            if (summary) setPersonalSummary(summary);
+
+            const { data: records } = await supabase
+              .from('attendance_records')
+              .select('*, attendance_sessions(session_date)')
+              .eq('trainee_id', prof.id)
+              .is('deleted_at', null)
+              .order('recorded_at', { ascending: false });
+
+            if (records) setPersonalRecords(records);
+          } else {
+            await loadSessionsAndTrainees(defaultGroup);
+          }
+        }
+      } catch (err) {
+        setNotice(explainDbError(err));
+      } finally {
+        setLoading(false);
       }
     }
 
     init();
-  }, [router]);
+  }, [router, loadSessionsAndTrainees]);
 
   const handleGroupChange = (newGroupId: number) => {
     setSelectedGroupId(newGroupId);
@@ -203,19 +226,24 @@ export default function AttendancePage() {
 
   const currentSession = sessions.find((s) => s.id === selectedSessionId);
   const isSessionLocked = currentSession?.status === 'LOCKED';
+  const isAuthorized = Boolean(
+    profile && (isAdminOrSuper || (profile.role_id === 'secretariat' && profile.group_id === selectedGroupId))
+  );
+  const isWindowOpen = Boolean(currentSession && AttendanceService.isWithinWindow(currentSession));
+  const canRecordSession = isAuthorized && !isSessionLocked && isWindowOpen;
 
   const handleMarkAttendance = async (
     traineeId: string,
     status: AttendanceStatus,
     source: 'QR' | 'MANUAL' = 'MANUAL'
-  ) => {
-    if (!currentSession || !profile) return;
+  ): Promise<{ success: boolean; message: string }> => {
+    if (!currentSession || !profile) {
+      return { success: false, message: 'الجلسة غير محددة.' };
+    }
 
     setSaving(true);
     setNotice(null);
     const supabase = createClient();
-
-    const isAuthorized = isAdminOrSuper || (profile.role_id === 'secretariat' && profile.group_id === selectedGroupId);
 
     try {
       await AttendanceService.record(
@@ -245,8 +273,11 @@ export default function AttendancePage() {
       setNotice(status === 'ABSENT'
         ? 'تم رصد الغياب وإرسال إشعار الافتقاد التلقائي للمتدرب ولخدام الفرقة.'
         : `تم تحديث حالة الحضور بنجاح (${source === 'QR' ? 'عبر رمز QR' : 'يدوياً'}).`);
+      return { success: true, message: '' };
     } catch (error) {
-      setNotice(explainDbError(error));
+      const msg = explainDbError(error);
+      setNotice(msg);
+      return { success: false, message: msg };
     } finally {
       setSaving(false);
     }
@@ -348,8 +379,15 @@ export default function AttendancePage() {
           </div>
         )}
 
+        {loading && (
+          <div className="py-20 flex flex-col items-center justify-center gap-3 text-content-muted">
+            <Loader2 className="w-8 h-8 animate-spin text-gold" />
+            <p className="text-sm">جاري تحميل بيانات الحضور والافتقاد...</p>
+          </div>
+        )}
+
         {/* --- VIEW 1: TRAINEE PERSONAL SUMMARY --- */}
-        {profile?.role_id === 'trainee' && (
+        {!loading && profile?.role_id === 'trainee' && (
           <div className="space-y-6">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
               <div className="bg-nav border border-line p-4 rounded-xl text-center">
@@ -434,19 +472,19 @@ export default function AttendancePage() {
         )}
 
         {/* --- VIEW 2: STAFF & SECRETARIAT & ADMIN VIEW --- */}
-        {profile?.role_id !== 'trainee' && (
+        {!loading && profile && profile.role_id !== 'trainee' && (
           <div className="space-y-6">
             {/* Session Selector & Stats Bar */}
             <div className="bg-nav border border-line rounded-2xl p-5 space-y-4 shadow-lg">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div>
+                <div className="w-full sm:w-auto max-w-full">
                   <label className="block text-xs font-bold text-content-muted mb-1.5">
                     اختر جلسة الجمعة لرصد الحضور:
                   </label>
                   <select
                     value={selectedSessionId}
                     onChange={(e) => handleSessionChange(e.target.value)}
-                    className="bg-nav border border-line text-gold text-sm rounded-xl px-4 py-2.5 focus:outline-none focus:border-gold font-bold"
+                    className="w-full sm:w-auto max-w-full min-h-tap bg-nav border border-line text-gold text-sm rounded-xl px-4 py-2.5 focus:outline-none focus:border-gold font-bold"
                   >
                     {sessions.map((sess) => (
                       <option key={sess.id} value={sess.id}>
@@ -457,15 +495,17 @@ export default function AttendancePage() {
                 </div>
 
                 <div className="flex items-center gap-2.5 flex-wrap">
-                  <button
-                    onClick={() => setIsQRScannerOpen(true)}
-                    disabled={!selectedSessionId || isSessionLocked}
-                    className="px-4 py-2.5 rounded-xl bg-gold hover:bg-warning disabled:opacity-40 disabled:hover:bg-gold text-brand-on text-xs font-black transition-all shadow-md flex items-center gap-2"
-                  >
-                    <QrCode className="w-4 h-4" />
-                    <span>مسح رمز QR</span>
-                    <Sparkles className="w-3.5 h-3.5" />
-                  </button>
+                  {isAuthorized && (
+                    <button
+                      onClick={() => setIsQRScannerOpen(true)}
+                      disabled={!selectedSessionId || !canRecordSession}
+                      className="min-h-tap px-4 py-2.5 rounded-xl bg-gold hover:bg-warning disabled:opacity-40 disabled:hover:bg-gold text-brand-on text-xs font-black transition-all shadow-md flex items-center gap-2"
+                    >
+                      <QrCode className="w-4 h-4" />
+                      <span>مسح رمز QR</span>
+                      <Sparkles className="w-3.5 h-3.5" />
+                    </button>
+                  )}
 
                   {isSessionLocked && (
                     <div className="flex items-center gap-2 bg-canvas/50 border border-danger/60 text-danger px-3.5 py-2 rounded-xl text-xs font-semibold">
@@ -473,11 +513,25 @@ export default function AttendancePage() {
                       <span>الجلسة مغلقة نهائياً</span>
                     </div>
                   )}
+
+                  {!isSessionLocked && currentSession && !isWindowOpen && (
+                    <div className="flex items-center gap-2 bg-canvas/50 border border-warning/60 text-warning px-3.5 py-2 rounded-xl text-xs font-semibold">
+                      <Clock className="w-4 h-4" />
+                      <span>انتهت نافذة الرصد (قفل الخميس)</span>
+                    </div>
+                  )}
+
+                  {!isAuthorized && (
+                    <div className="flex items-center gap-2 bg-canvas/50 border border-line text-content-muted px-3.5 py-2 rounded-xl text-xs font-semibold">
+                      <Eye className="w-4 h-4" />
+                      <span>وضع العرض والمتابعة فقط</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
               {/* Live Count Pills (Clickable Filter) */}
-              <div className="grid grid-cols-4 gap-2 pt-3 border-t border-line text-center">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-3 border-t border-line text-center">
                 <button
                   onClick={() => setStatusFilter('all')}
                   className={`p-2.5 rounded-xl border transition-all ${
@@ -543,7 +597,7 @@ export default function AttendancePage() {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="بحث في القائمة..."
-                    className="w-full bg-nav border border-line rounded-xl pr-9 pl-3 py-1.5 text-xs text-content placeholder-content-muted focus:outline-none focus:border-gold"
+                    className="w-full min-h-tap bg-nav border border-line rounded-xl pr-9 pl-3 py-1.5 text-xs text-content placeholder-content-muted focus:outline-none focus:border-gold"
                   />
                 </div>
               </div>
@@ -571,11 +625,11 @@ export default function AttendancePage() {
                       </div>
 
                       {/* Action Buttons */}
-                      <div className="flex items-center gap-1.5 self-end sm:self-auto">
+                      <div className="flex flex-wrap items-center gap-1.5 self-end sm:self-auto">
                         <button
-                          disabled={isSessionLocked || saving}
+                          disabled={!canRecordSession || saving}
                           onClick={() => handleMarkAttendance(t.trainee_id, 'PRESENT')}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                          className={`min-h-tap px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
                             t.status === 'PRESENT'
                               ? 'bg-success text-content shadow-md shadow-emerald-500/20'
                               : 'bg-nav text-content-muted hover:bg-success/20 hover:text-success'
@@ -584,9 +638,9 @@ export default function AttendancePage() {
                           حاضر ✓
                         </button>
                         <button
-                          disabled={isSessionLocked || saving}
+                          disabled={!canRecordSession || saving}
                           onClick={() => handleMarkAttendance(t.trainee_id, 'ABSENT')}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                          className={`min-h-tap px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
                             t.status === 'ABSENT'
                               ? 'bg-danger text-content shadow-md shadow-rose-500/20'
                               : 'bg-nav text-content-muted hover:bg-danger/20 hover:text-danger'
@@ -595,9 +649,9 @@ export default function AttendancePage() {
                           غائب ✕
                         </button>
                         <button
-                          disabled={isSessionLocked || saving}
+                          disabled={!canRecordSession || saving}
                           onClick={() => handleMarkAttendance(t.trainee_id, 'LATE')}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                          className={`min-h-tap px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
                             t.status === 'LATE'
                               ? 'bg-warning text-content shadow-md shadow-amber-500/20'
                               : 'bg-nav text-content-muted hover:bg-warning/20 hover:text-warning'
@@ -608,7 +662,7 @@ export default function AttendancePage() {
 
                         <button
                           onClick={() => openDrawer(t.trainee_id)}
-                          className="p-2 rounded-xl bg-nav hover:bg-input text-content-secondary transition-colors"
+                          className="min-h-tap min-w-tap p-2 rounded-xl bg-nav hover:bg-input text-content-secondary transition-colors inline-flex items-center justify-center"
                           title="عرض ملف الطالب"
                         >
                           <Eye className="w-4 h-4" />
@@ -646,12 +700,7 @@ export default function AttendancePage() {
         sessionDate={currentSession?.session_date}
         trainees={rawTrainees}
         onRecordAttendance={async (traineeId, status) => {
-          try {
-            await handleMarkAttendance(traineeId, status, 'QR');
-            return { success: true, message: '' };
-          } catch (err: any) {
-            return { success: false, message: err?.message || 'فشل في حفظ الحضور.' };
-          }
+          return await handleMarkAttendance(traineeId, status, 'QR');
         }}
       />
 

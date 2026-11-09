@@ -44,6 +44,7 @@ export default function TraineeCard({
       role="button"
       tabIndex={0}
       onKeyDown={(e) => {
+        if (e.target !== e.currentTarget) return;
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
           onClick(trainee.id);
@@ -72,7 +73,7 @@ export default function TraineeCard({
             {/* Halo Avatar Sanctuary Frame */}
             <div className="relative shrink-0">
               <div
-                className={`w-13 h-13 rounded-2xl p-0.5 border transition-all duration-300 flex items-center justify-center overflow-hidden ${
+                className={`w-[52px] h-[52px] rounded-2xl p-0.5 border transition-all duration-300 flex items-center justify-center overflow-hidden ${
                   trainee.is_active
                     ? 'border-gold/40 group-hover:border-gold bg-canvas/80 group-hover:shadow-md group-hover:shadow-gold/20'
                     : 'border-line bg-canvas/60'

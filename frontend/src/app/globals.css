@@ -16,7 +16,7 @@
 :root {
   --font-cairo: 'Cairo', 'Tajawal', 'Segoe UI', system-ui, sans-serif;
   --duration-smooth: 260ms;
-  --bar-height: 56px;
+  --bar-height: 68px;
 }
 
 /* ---------------- THEME 1: LIGHT (paper, default) ---------------- */
@@ -665,6 +665,12 @@
   .app-divider {
     border: 0;
     border-top: 1px solid var(--border-card);
+  }
+}
+
+@layer utilities {
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 }
 

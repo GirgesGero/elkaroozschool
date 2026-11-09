@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useState, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { explainDbError } from '@/lib/errors/db';
 import { getCurriculumUploadGroupId } from '@/lib/curriculum/display';
 import { phpApi } from '@/lib/api/php';
-import { Paperclip, Loader2, FileText, Music, Upload } from 'lucide-react';
+import { Paperclip, Loader2, FileText, Music } from 'lucide-react';
 import { createCurriculumDay, createCurriculumEntry, publishCurriculumDay, updateCurriculumDay, updateCurriculumEntry } from '@/lib/curriculum/management';
 import type { CurriculumDay, CurriculumEntry } from '@/types/curriculum';
 import type { Profile } from '@/types/database';
@@ -35,28 +35,27 @@ export default function CurriculumManagementPanel({ profile }: Props) {
   const [checkingAccess, setCheckingAccess] = useState(true);
   const [editingDayId, setEditingDayId] = useState<string | null>(null);
   const [editingDayTitle, setEditingDayTitle] = useState('');
-  const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
-  const [editingEntryTitle, setEditingEntryTitle] = useState('');
   const [uploadingEntryId, setUploadingEntryId] = useState<string | null>(null);
 
-  const load = async (targetGroup: 1 | 2 | 3 = activeGroupId) => {
+  const load = useCallback(async (targetGroup: 1 | 2 | 3 = activeGroupId) => {
     const [termResult, dayResult] = await Promise.all([
       supabase.from('terms').select('id,name_ar,academic_year').eq('group_id', targetGroup).is('deleted_at', null).order('created_at'),
       supabase.from('curriculum_days').select('*').eq('group_id', targetGroup).is('deleted_at', null).order('sort_order'),
     ]);
     if (termResult.error) setError(explainDbError(termResult.error));
     if (dayResult.error) setError(explainDbError(dayResult.error));
-    setTerms((termResult.data || []) as typeof terms);
+    setTerms((termResult.data || []) as Array<{ id: string; name_ar: string; academic_year: string }>);
     setDays((dayResult.data || []) as CurriculumDay[]);
     setTermId(termResult.data?.[0]?.id || '');
     setSelectedDay(null);
-  };
+    setEntries([]);
+  }, [activeGroupId, supabase]);
 
-  const loadEntries = async (dayId: string) => {
+  const loadEntries = useCallback(async (dayId: string) => {
     const { data, error: queryError } = await supabase.from('curriculum_entries').select('*').eq('day_id', dayId).is('deleted_at', null).order('sort_order');
     if (queryError) setError(explainDbError(queryError));
     setEntries((data || []) as CurriculumEntry[]);
-  };
+  }, [supabase]);
 
   useEffect(() => {
     let cancelled = false;
@@ -73,17 +72,18 @@ export default function CurriculumManagementPanel({ profile }: Props) {
       if (cancelled) return;
       setCanManage(allowed);
       setCheckingAccess(false);
-      if (allowed) void load(activeGroupId);
     };
     void resolveAccess();
     return () => { cancelled = true; };
-  }, [profile.id, profile.role_id]);
+  }, [profile.id, profile.role_id, supabase]);
 
   useEffect(() => {
     if (canManage) void load(activeGroupId);
-  }, [activeGroupId]);
+  }, [activeGroupId, canManage, load]);
 
-  useEffect(() => { if (selectedDay && canManage) void loadEntries(selectedDay); }, [selectedDay, canManage]);
+  useEffect(() => {
+    if (selectedDay && canManage) void loadEntries(selectedDay);
+  }, [selectedDay, canManage, loadEntries]);
 
   if (checkingAccess || !canManage) return null;
 
@@ -206,7 +206,20 @@ export default function CurriculumManagementPanel({ profile }: Props) {
       <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
         <div className="space-y-2">
           {days.filter((day) => !termId || day.term_id === termId).map((day) => (
-            <button key={day.id} onClick={() => { setSelectedDay(day.id); void loadEntries(day.id); }} className={`w-full rounded-2xl border p-3 text-start ${selectedDay === day.id ? 'border-gold bg-gold/10' : 'border-line bg-nav'}`}>
+            <div
+              key={day.id}
+              role="button"
+              tabIndex={0}
+              onClick={() => setSelectedDay(day.id)}
+              onKeyDown={(e) => {
+                if (e.target !== e.currentTarget) return;
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setSelectedDay(day.id);
+                }
+              }}
+              className={`w-full cursor-pointer rounded-2xl border p-3 text-start ${selectedDay === day.id ? 'border-gold bg-gold/10' : 'border-line bg-nav'}`}
+            >
               <span className="block text-sm font-black text-content">اليوم {day.day_number} · {day.title || 'بدون عنوان'}</span>
               <span className="mt-1 block text-[11px] text-content-muted">{day.status === 'PUBLISHED' ? 'منشور' : 'مسودة'} · ترتيب {day.sort_order}</span>
               {editingDayId === day.id ? (
@@ -217,7 +230,7 @@ export default function CurriculumManagementPanel({ profile }: Props) {
               ) : (
                 <span className="mt-2 block text-start text-[11px] font-bold text-gold underline" onClick={(event) => { event.stopPropagation(); setEditingDayId(day.id); setEditingDayTitle(day.title || ''); }}>تعديل اسم اليوم</span>
               )}
-            </button>
+            </div>
           ))}
         </div>
         <div className="space-y-3 rounded-2xl border border-line bg-nav p-4">

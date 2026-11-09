@@ -21,29 +21,34 @@ export default function GroupsIndexPage() {
 
   useEffect(() => {
     async function init() {
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      try {
+        const supabase = createClient();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
 
-      if (!user) {
-        router.push('/login');
-        return;
-      }
-
-      const { data: userProfile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-
-      if (userProfile) {
-        const prof = userProfile as Profile;
-        setProfile(prof);
-
-        // If regular user (Trainee/Servant/Secretariat), direct them to their group
-        if (!['admin'].includes(prof.role_id)) {
-          router.push(`/groups/${prof.group_id}`);
+        if (!user) {
+          router.push('/login');
           return;
         }
+
+        const { data: userProfile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+
+        if (userProfile) {
+          const prof = userProfile as Profile;
+          setProfile(prof);
+
+          // If regular user (Trainee/Servant/Secretariat) with a group, direct them to their group
+          if (prof.role_id !== 'admin' && prof.role_id !== 'supervisor' && prof.group_id) {
+            router.replace(`/groups/${prof.group_id}`);
+            return;
+          }
+        }
+      } catch (err) {
+        console.error('Groups init error:', err);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }
 
     init();

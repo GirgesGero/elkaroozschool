@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
@@ -39,7 +39,7 @@ export default function FeedPage() {
     reference: 'يشوع ٢٤: ١٥',
   });
 
-  const fetchSessionAndFeed = async () => {
+  const fetchSessionAndFeed = useCallback(async () => {
     setIsLoading(true);
     const supabase = createClient();
 
@@ -50,27 +50,28 @@ export default function FeedPage() {
         return;
       }
 
-      // Fetch user profile
-      const { data: userProfile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', session.user.id)
-        .single();
+      // Fetch user profile & Posts with reactions & author in parallel
+      const [{ data: userProfile }, { data: postsData }] = await Promise.all([
+        supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single(),
+        supabase
+          .from('feed_posts')
+          .select(`
+            *,
+            author:profiles!feed_posts_author_id_fkey(id, full_name, avatar_url, role_id),
+            post_comments(*, author:profiles!post_comments_author_id_fkey(id, full_name, avatar_url))
+          `)
+          .is('deleted_at', null)
+          .order('created_at', { ascending: false })
+          .limit(25),
+      ]);
 
       if (userProfile) {
         setProfile(userProfile);
       }
-
-      // Fetch Posts with reactions & author
-      const { data: postsData } = await supabase
-              .from('feed_posts')
-              .select(`
-                *,
-                author:profiles!feed_posts_author_id_fkey(id, full_name, avatar_url, role_id),
-                post_comments(*, author:profiles!post_comments_author_id_fkey(id, full_name, avatar_url))
-              `)
-              .order('created_at', { ascending: false })
-              .limit(25);
 
       if (postsData) {
         const formatted = postsData.map((p) => {
@@ -84,7 +85,16 @@ export default function FeedPage() {
               imgs = [p.images];
             }
           }
-          return { ...p, images: imgs };
+          const rawComments = p.comments || p.post_comments || [];
+          const activeComments = Array.isArray(rawComments)
+            ? rawComments.filter((c: any) => !c.deleted_at)
+            : [];
+          return {
+            ...p,
+            images: imgs,
+            comments: activeComments,
+            post_comments: activeComments,
+          };
         });
         setPosts(formatted);
       }
@@ -93,11 +103,11 @@ export default function FeedPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [router]);
 
   useEffect(() => {
     fetchSessionAndFeed();
-  }, [router]);
+  }, [fetchSessionAndFeed]);
 
   const handleOpenProfile = (id: string) => {
     setSelectedProfileId(id);
@@ -131,7 +141,7 @@ export default function FeedPage() {
       />
 
       {/* Main Responsive Grid Layout */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-5 py-4 pb-20 md:pb-8">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-5 py-4 pb-28 md:pb-12">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
           {/* RIGHT SIDEBAR (Desktop Only) */}
           <aside className="hidden lg:block lg:col-span-3 space-y-4 sticky top-20 h-fit">
@@ -162,7 +172,7 @@ export default function FeedPage() {
                 </span>
                 <button
                   onClick={() => handleOpenProfile(profile.id)}
-                  className="w-full mt-3 py-1.5 rounded-xl bg-nav hover:bg-gold hover:text-brand-on border border-line text-xs font-bold text-brand-on-secondary transition-all"
+                  className="w-full min-h-tap mt-3 py-1.5 rounded-xl bg-nav hover:bg-gold hover:text-brand-on border border-line text-xs font-bold text-brand-on-secondary transition-all"
                 >
                   عرض ملفي الشخصي
                 </button>
@@ -217,7 +227,7 @@ export default function FeedPage() {
           </aside>
 
           {/* CENTER FEED STREAM */}
-          <section className="lg:col-span-6 space-y-4">
+          <section className="lg:col-span-6 space-y-4 w-full max-w-3xl lg:max-w-4xl mx-auto">
             <div className="p-4 rounded-3xl bg-gradient-to-r from-[#0B1B3D]/80 via-canvas/80 to-brand/50 border border-gold/30 shadow-xl flex items-center justify-between gap-3">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-gold/20 border border-gold/40 text-gold flex items-center justify-center shrink-0">

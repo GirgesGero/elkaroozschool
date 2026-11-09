@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 export default function ResearchRedirect() {
   const router = useRouter();
   useEffect(() => {
-    router.replace('/books');
+    router.replace('/books?tab=researches');
   }, [router]);
 
   return null;

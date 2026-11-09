@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import MediaCollage from './MediaCollage';
 import { DeepLinkService, ShareService } from '@/lib/mobile';
@@ -68,6 +68,17 @@ export default function FeedPostCard({
   const [showMenu, setShowMenu] = useState(false);
   const [confirmDeleteStep, setConfirmDeleteStep] = useState(false);
   const [shareFeedback, setShareFeedback] = useState<string | null>(null);
+
+  useEffect(() => {
+    setReactions({
+      likes: post.reactions?.filter((r: any) => r.type === 'LIKE').length || 0,
+      loves: post.reactions?.filter((r: any) => r.type === 'LOVE').length || 0,
+      prays: post.reactions?.filter((r: any) => r.type === 'PRAY').length || 0,
+      userReaction:
+        (post.reactions?.find((r: any) => r.user_id === currentUser?.id)?.type as ReactionType) || null,
+    });
+    setComments(post.comments || []);
+  }, [post.reactions, post.comments, currentUser?.id]);
 
   const canDelete =
     currentUser?.role_id === 'admin' ||
@@ -293,7 +304,7 @@ export default function FeedPostCard({
       {/* Social Interactive Action Bar */}
       <div className="px-2 py-1.5 border-t border-line/80 grid grid-cols-3 gap-1 bg-canvas/50">
         <button
-          onClick={() => handleToggleReaction(reactions.userReaction === 'LOVE' ? 'LIKE' : 'LOVE')}
+          onClick={() => handleToggleReaction(reactions.userReaction || 'LOVE')}
           className={`flex items-center justify-center gap-2 py-2 rounded-2xl text-xs font-bold transition-all ${
             reactions.userReaction
               ? 'text-danger bg-danger/10 border border-danger/20'

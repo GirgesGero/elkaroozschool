@@ -50,7 +50,7 @@ export default function MediaCollage({ images }: MediaCollageProps) {
               fill
               unoptimized={!isNextImageOptimizable(images[0])}
               sizes="(max-width: 768px) 100vw, 650px"
-              className="object-cover group-hover:scale-102 transition-transform duration-300"
+              className="object-cover group-hover:scale-105 transition-transform duration-300"
             />
           </div>
         )}
@@ -132,7 +132,7 @@ export default function MediaCollage({ images }: MediaCollageProps) {
                   className="object-cover group-hover:scale-105 transition-transform duration-300"
                 />
                 {idx === 3 && count > 4 && (
-                  <div className="absolute inset-0 bg-black/60 flex items-center justify-center backdrop-blur-xs">
+                  <div className="absolute inset-0 bg-black/60 flex items-center justify-center backdrop-blur-sm">
                     <span className="text-xl font-black text-content">+{count - 3}</span>
                   </div>
                 )}

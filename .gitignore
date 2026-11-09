@@ -44,3 +44,21 @@ backend-api/storage/
 !backend-api/storage/index.html
 
 backups/
+
+# Live user data / credential hashes & local ETL scratch scripts - never commit
+database-mysql/supabase_live_data_dump.sql
+scripts/auth_users_live.json
+scripts/chunk1_*.json
+scripts/save_users_file.py
+scripts/save_chunk1.py
+scripts/fetch_chunk1.js
+scripts/populate_live_data.py
+scripts/master_etl_sync.py
+scripts/run_master_etl.py
+scripts/run_master_etl_v2.py
+scripts/sync_engine.py
+scripts/build_sqlite_database.py
+*.sqlite
+*.sqlite3
+
+

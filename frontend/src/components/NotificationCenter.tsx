@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import {
@@ -34,7 +34,7 @@ export interface NotificationItem {
 
 export default function NotificationCenter() {
   const router = useRouter();
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
@@ -56,60 +56,7 @@ export default function NotificationCenter() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  useEffect(() => {
-    let channel: any = null;
-
-    async function setupNotifications() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return;
-
-      setCurrentUserId(user.id);
-      fetchNotifications(user.id);
-
-      // Subscribe to Realtime channel for live notifications
-      channel = supabase
-        .channel(`user-notifications-${user.id}-${Date.now()}`)
-        .on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'notifications',
-            filter: `recipient_id=eq.${user.id}`,
-          },
-          (payload) => {
-            const newNotif = payload.new as NotificationItem;
-            if (!newNotif?.id) return;
-            setNotifications((prev) => {
-              if (prev.some((n) => n.id === newNotif.id)) return prev;
-              const updated = [newNotif, ...prev];
-              const unread = updated.filter((n) => !n.is_read).length;
-              setUnreadCount(unread);
-              void BadgeService.set(unread);
-              return updated;
-            });
-
-            PushNotificationService.showForegroundNotification({
-              title: newNotif.title,
-              body: newNotif.body,
-            });
-          }
-        )
-        .subscribe();
-    }
-
-    setupNotifications();
-
-    return () => {
-      if (channel) {
-        supabase.removeChannel(channel);
-      }
-    };
-  }, []);
-
-  const fetchNotifications = async (userId: string) => {
+  const fetchNotifications = useCallback(async (userId: string) => {
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -130,7 +77,72 @@ export default function NotificationCenter() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [supabase]);
+
+  useEffect(() => {
+    let cancelled = false;
+    let channel: any = null;
+
+    async function setupNotifications() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (cancelled || !user) return;
+
+      setCurrentUserId(user.id);
+      void fetchNotifications(user.id);
+
+      // Subscribe to Realtime channel for live notifications
+      const nextChannel = supabase
+        .channel(`user-notifications-${user.id}-${Date.now()}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'notifications',
+            filter: `recipient_id=eq.${user.id}`,
+          },
+          (payload) => {
+            if (cancelled) return;
+            const newNotif = payload.new as NotificationItem;
+            if (!newNotif?.id) return;
+            setNotifications((prev) => {
+              if (prev.some((n) => n.id === newNotif.id)) return prev;
+              return [newNotif, ...prev];
+            });
+            if (!newNotif.is_read) {
+              setUnreadCount((prev) => {
+                const next = prev + 1;
+                void BadgeService.set(next);
+                return next;
+              });
+            }
+
+            PushNotificationService.showForegroundNotification({
+              title: newNotif.title,
+              body: newNotif.body,
+            });
+          }
+        )
+        .subscribe();
+
+      if (cancelled) {
+        supabase.removeChannel(nextChannel);
+      } else {
+        channel = nextChannel;
+      }
+    }
+
+    void setupNotifications();
+
+    return () => {
+      cancelled = true;
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
+    };
+  }, [fetchNotifications, supabase]);
 
   const handleMarkAsRead = async (id: string, actionUrl?: string) => {
     // Optimistic update
@@ -230,7 +242,7 @@ export default function NotificationCenter() {
 
       {/* Notification Center Dropdown */}
       {isOpen && (
-        <div className="absolute left-0 mt-2 w-80 md:w-96 app-card-elevated shadow-2xl z-50 overflow-hidden font-sans border border-[var(--border-card)]">
+        <div className="fixed inset-x-3 top-[4.25rem] w-auto max-w-md sm:absolute sm:inset-x-auto sm:left-0 sm:top-auto sm:mt-2 sm:w-80 md:w-96 app-card-elevated shadow-2xl z-50 overflow-hidden font-sans border border-[var(--border-card)]">
           
           {/* Header */}
           <div className="p-4 border-b border-[var(--border-subtle)] flex items-center justify-between bg-[var(--bg-input)]">
@@ -259,7 +271,7 @@ export default function NotificationCenter() {
           <div className="flex items-center gap-1.5 p-2 bg-[var(--bg-card)] border-b border-[var(--border-subtle)] overflow-x-auto text-xs">
             <button
               onClick={() => setFilter('ALL')}
-              className={`px-3 py-1 rounded-full transition font-bold text-[11px] ${
+              className={`shrink-0 whitespace-nowrap px-3 py-1 rounded-full transition font-bold text-[11px] ${
                 filter === 'ALL'
                   ? 'bg-brand text-brand-on shadow-sm'
                   : 'text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)]'
@@ -269,7 +281,7 @@ export default function NotificationCenter() {
             </button>
             <button
               onClick={() => setFilter('PASTORAL')}
-              className={`px-3 py-1 rounded-full transition font-bold text-[11px] ${
+              className={`shrink-0 whitespace-nowrap px-3 py-1 rounded-full transition font-bold text-[11px] ${
                 filter === 'PASTORAL'
                   ? 'bg-danger/20 text-danger border border-danger/30'
                   : 'text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)]'
@@ -279,7 +291,7 @@ export default function NotificationCenter() {
             </button>
             <button
               onClick={() => setFilter('BIRTHDAY')}
-              className={`px-3 py-1 rounded-full transition font-bold text-[11px] ${
+              className={`shrink-0 whitespace-nowrap px-3 py-1 rounded-full transition font-bold text-[11px] ${
                 filter === 'BIRTHDAY'
                   ? 'bg-warning/20 text-warning border border-warning/30'
                   : 'text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)]'
@@ -289,7 +301,7 @@ export default function NotificationCenter() {
             </button>
             <button
               onClick={() => setFilter('DAILY_VERSE')}
-              className={`px-3 py-1 rounded-full transition font-bold text-[11px] ${
+              className={`shrink-0 whitespace-nowrap px-3 py-1 rounded-full transition font-bold text-[11px] ${
                 filter === 'DAILY_VERSE'
                   ? 'bg-success/20 text-success border border-success/30'
                   : 'text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)]'
@@ -300,7 +312,7 @@ export default function NotificationCenter() {
           </div>
 
           {/* Notifications List */}
-          <div className="max-h-[380px] overflow-y-auto divide-y divide-[var(--border-subtle)]">
+          <div className="max-h-[min(380px,65dvh)] overflow-y-auto divide-y divide-[var(--border-subtle)]">
             {loading ? (
               <div className="py-12 flex items-center justify-center text-[var(--text-muted)] gap-2">
                 <Loader2 className="w-5 h-5 animate-spin text-gold" />

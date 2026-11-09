@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
@@ -44,7 +44,7 @@ interface DailyVerseItem {
 
 export default function AdminNotificationsPage() {
   const router = useRouter();
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -70,11 +70,7 @@ export default function AdminNotificationsPage() {
   const [statusMsg, setStatusMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [dispatching, setDispatching] = useState(false);
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -121,7 +117,11 @@ export default function AdminNotificationsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [router, supabase]);
+
+  useEffect(() => {
+    void fetchData();
+  }, [fetchData]);
 
   const handleSavePastoralTemplate = async () => {
     // Defence in depth: the RLS policy already blocks non-admins, but fail
@@ -161,22 +161,6 @@ export default function AdminNotificationsPage() {
     }
   };
 
-
-  const handleDeleteVerse = async (id: string) => {
-    try {
-      const { error } = await supabase
-        .from('daily_verses')
-        .update({ deleted_at: new Date().toISOString() })
-        .eq('id', id);
-      if (error) throw error;
-
-      setStatusMsg({ type: 'success', text: 'تم حذف الآية بنجاح' });
-      fetchData();
-    } catch (err) {
-      setStatusMsg({ type: 'error', text: explainDbError(err) });
-    }
-  };
-
   const handleManualDispatchVerse = async () => {
     setDispatching(true);
     setStatusMsg(null);
@@ -192,7 +176,7 @@ export default function AdminNotificationsPage() {
           type: 'success',
           text: `تم توزيع آية اليوم (${data.reference}) بنجاح على ${data.recipients_count} مستخدم!`
         });
-        fetchData();
+        void fetchData();
       } else {
         setStatusMsg({ type: 'error', text: data?.message || 'تعذر إرسال الآية' });
       }
@@ -322,10 +306,10 @@ export default function AdminNotificationsPage() {
         )}
 
         {/* Tabs */}
-        <div className="flex items-center gap-2 border-b border-line pb-2">
+        <div className="flex items-center gap-2 border-b border-line pb-2 overflow-x-auto">
           <button
             onClick={() => setActiveTab('TEMPLATES')}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition ${
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold whitespace-nowrap shrink-0 transition ${
               activeTab === 'TEMPLATES'
                 ? 'bg-warning/10 border border-warning text-warning'
                 : 'bg-nav border border-line text-content-muted hover:text-content'
@@ -337,7 +321,7 @@ export default function AdminNotificationsPage() {
 
           <button
             onClick={() => setActiveTab('DAILY_VERSES')}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition ${
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold whitespace-nowrap shrink-0 transition ${
               activeTab === 'DAILY_VERSES'
                 ? 'bg-warning/10 border border-warning text-warning'
                 : 'bg-nav border border-line text-content-muted hover:text-content'
@@ -349,7 +333,7 @@ export default function AdminNotificationsPage() {
 
           <button
             onClick={() => setActiveTab('DISPATCH')}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition ${
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold whitespace-nowrap shrink-0 transition ${
               activeTab === 'DISPATCH'
                 ? 'bg-warning/10 border border-warning text-warning'
                 : 'bg-nav border border-line text-content-muted hover:text-content'
@@ -365,7 +349,7 @@ export default function AdminNotificationsPage() {
           <div className="space-y-6">
             {/* Pastoral / Absence Template — admin only (SRS 8.1) */}
             <div className="bg-nav border border-line rounded-2xl p-6 shadow-xl space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
                   <HeartHandshake className="w-5 h-5 text-danger" />
                   <h3 className="text-lg font-bold text-content">قالب رسالة الافتقاد الفوري (عند تسجيل الغياب)</h3>
@@ -412,7 +396,7 @@ export default function AdminNotificationsPage() {
 
             {/* Birthday Template */}
             <div className="bg-nav border border-line rounded-2xl p-6 shadow-xl space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
                   <Cake className="w-5 h-5 text-warning" />
                   <h3 className="text-lg font-bold text-content">قالب رسالة التهنئة بأعياد الميلاد السنوية</h3>
@@ -476,8 +460,7 @@ export default function AdminNotificationsPage() {
                       <th className="pb-3 pr-4">الترتيب</th>
                       <th className="pb-3">الشاهد</th>
                       <th className="pb-3">نص الآية</th>
-                      <th className="pb-3">الحالة في الدورة</th>
-                      <th className="pb-3 pl-4 text-center">إجراءات</th>
+                      <th className="pb-3 pl-4">الحالة في الدورة</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-line-subtle/60">
@@ -486,7 +469,7 @@ export default function AdminNotificationsPage() {
                         <td className="py-3.5 pr-4 font-mono text-xs text-content-muted">{idx + 1}</td>
                         <td className="py-3.5 font-bold text-warning text-xs">{v.reference}</td>
                         <td className="py-3.5 text-content text-xs max-w-md truncate">{v.verse_text}</td>
-                        <td className="py-3.5">
+                        <td className="py-3.5 pl-4">
                           <span
                             className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${
                               v.is_sent
@@ -496,15 +479,6 @@ export default function AdminNotificationsPage() {
                           >
                             {v.is_sent ? 'تم الإرسال' : 'في الانتظار'}
                           </span>
-                        </td>
-                        <td className="py-3.5 pl-4 text-center">
-                          <button
-                            onClick={() => handleDeleteVerse(v.id)}
-                            className="p-1.5 bg-danger/10 hover:bg-danger/20 text-danger rounded-lg border border-danger/30 transition"
-                            title="حذف الآية"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
                         </td>
                       </tr>
                     ))}

@@ -7,10 +7,12 @@ import SmartHeader from '@/components/SmartHeader';
 import SmartBottomNav from '@/components/SmartBottomNav';
 import GlobalSearchModal from '@/components/GlobalSearchModal';
 import UnifiedProfileModal from '@/components/UnifiedProfileModal';
+import GroupSelector from '@/components/GroupSelector';
 import {
   AlertCircle,
   FileCheck,
   GraduationCap,
+  Loader2,
   Save,
   Trophy,
 } from 'lucide-react';
@@ -36,6 +38,7 @@ interface TraineeGradeRow {
 export default function ExamsPage() {
   const router = useRouter();
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
   const [exam, setExam] = useState<ExamItem | null>(null);
   const [traineeGrades, setTraineeGrades] = useState<TraineeGradeRow[]>([]);
   const [personalGrade, setPersonalGrade] = useState<any>(null);
@@ -47,7 +50,9 @@ export default function ExamsPage() {
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
     async function init() {
+      setLoading(true);
       try {
         const supabase = createClient();
         const {
@@ -67,6 +72,7 @@ export default function ExamsPage() {
 
         if (userProfile) {
           const prof = userProfile as Profile;
+          if (cancelled) return;
           setProfile(prof);
 
           // Check the database-resolved permission; RLS enforces the user's group scope.
@@ -75,17 +81,30 @@ export default function ExamsPage() {
             const { data: perm } = await supabase.rpc('has_servant_permission', { perm_id: 'GRADE_EXAMS' });
             hasGradePerm = Boolean(perm);
           }
+          if (cancelled) return;
           setCanGrade(hasGradePerm);
 
-          // Fetch Exam for user's group (or first active exam if admin / no group)
-          let examQuery = supabase.from('exams').select('*').is('deleted_at', null);
-          if (prof.role_id !== 'admin' && prof.group_id) {
-            examQuery = examQuery.eq('group_id', prof.group_id);
-          }
-          const { data: activeExam } = await examQuery.limit(1).maybeSingle();
+          const canSwitchGroup = prof.role_id === 'admin' || prof.role_id === 'supervisor';
+          const effectiveGroupId = canSwitchGroup
+            ? (selectedGroupId || prof.group_id || 1)
+            : (prof.group_id || 1);
+
+          // Fetch Exam for the selected/user's group
+          const { data: activeExam } = await supabase
+            .from('exams')
+            .select('*')
+            .eq('group_id', effectiveGroupId)
+            .is('deleted_at', null)
+            .order('exam_date', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (cancelled) return;
 
           if (activeExam) {
             setExam(activeExam);
+            setPersonalGrade(null);
+            setTraineeGrades([]);
 
             if (prof.role_id === 'trainee') {
               // Fetch personal grade
@@ -95,7 +114,7 @@ export default function ExamsPage() {
                 .eq('exam_id', activeExam.id)
                 .eq('trainee_id', prof.id)
                 .maybeSingle();
-              if (grade) setPersonalGrade(grade);
+              if (!cancelled && grade) setPersonalGrade(grade);
             } else if (hasGradePerm) {
               // Load trainees belonging to the active exam's group (prevents mixing groups for admin)
               let traineesQuery = supabase
@@ -118,6 +137,8 @@ export default function ExamsPage() {
                 .select('trainee_id, numeric_score, appreciation_grade')
                 .eq('exam_id', activeExam.id);
 
+              if (cancelled) return;
+
               const gradeMap = new Map();
               if (grades) {
                 grades.forEach((g: any) =>
@@ -139,17 +160,29 @@ export default function ExamsPage() {
                 setTraineeGrades(rows);
               }
             }
+          } else {
+            setExam(null);
+            setPersonalGrade(null);
+            setTraineeGrades([]);
           }
         }
       } catch (err) {
-        setNotice(err instanceof Error ? err.message : 'تعذر تحميل بيانات الامتحانات.');
+        if (!cancelled) setNotice(err instanceof Error ? err.message : 'تعذر تحميل بيانات الامتحانات.');
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
 
     void init();
-  }, [router]);
+    return () => {
+      cancelled = true;
+    };
+  }, [router, selectedGroupId]);
+
+  const canSwitchGroup = profile?.role_id === 'admin' || profile?.role_id === 'supervisor';
+  const activeGroupId = canSwitchGroup
+    ? (selectedGroupId || exam?.group_id || profile?.group_id || 1)
+    : (exam?.group_id || profile?.group_id || 1);
 
   const handleScoreChange = (traineeId: string, scoreStr: string) => {
     setTraineeGrades((prev) =>
@@ -159,38 +192,46 @@ export default function ExamsPage() {
 
   const handleSaveGrade = async (traineeId: string, score: number) => {
     if (!exam) return;
+    const maxScore = exam.max_score || 100;
+    if (!Number.isFinite(score) || score < 0 || score > maxScore) {
+      setNotice(`يرجى إدخال درجة صحيحة بين 0 و ${maxScore}.`);
+      return;
+    }
     setSaving(true);
     setNotice(null);
     const supabase = createClient();
 
-    const { data, error } = await supabase
-      .from('exam_grades')
-      .upsert(
-        {
-          exam_id: exam.id,
-          group_id: exam.group_id,
-          trainee_id: traineeId,
-          numeric_score: score,
-          appreciation_grade: 'ضعيف', // Calculated server-side by trigger
-        },
-        { onConflict: 'exam_id,trainee_id' }
-      )
-      .select('appreciation_grade')
-      .single();
-
-    if (error) {
-      setNotice(`فشل حفظ الدرجة: ${error.message}`);
-    } else {
-      setTraineeGrades((prev) =>
-        prev.map((r) =>
-          r.trainee_id === traineeId
-            ? { ...r, numeric_score: score, appreciation_grade: data?.appreciation_grade || 'جيد' }
-            : r
+    try {
+      const { data, error } = await supabase
+        .from('exam_grades')
+        .upsert(
+          {
+            exam_id: exam.id,
+            group_id: exam.group_id,
+            trainee_id: traineeId,
+            numeric_score: score,
+            appreciation_grade: 'ضعيف', // Calculated server-side by trigger
+          },
+          { onConflict: 'exam_id,trainee_id' }
         )
-      );
-      setNotice('تم رصد وتحديث الدرجة وحساب التقدير بنجاح.');
+        .select('appreciation_grade')
+        .single();
+
+      if (error) {
+        setNotice(`فشل حفظ الدرجة: ${error.message}`);
+      } else {
+        setTraineeGrades((prev) =>
+          prev.map((r) =>
+            r.trainee_id === traineeId
+              ? { ...r, numeric_score: score, appreciation_grade: data?.appreciation_grade || 'جيد' }
+              : r
+          )
+        );
+        setNotice('تم رصد وتحديث الدرجة وحساب التقدير بنجاح.');
+      }
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   };
 
   return (
@@ -219,14 +260,14 @@ export default function ExamsPage() {
       {/* Main Content */}
       <main className="max-w-5xl w-full mx-auto px-4 py-6 flex-1 flex flex-col gap-6 pb-28 md:pb-12">
         {/* Banner */}
-        <div className="bg-gradient-to-r from-warning/60 via-canvas to-canvas border border-warning/40 rounded-2xl p-5 shadow-lg flex items-center justify-between">
+        <div className="bg-gradient-to-r from-warning/60 via-canvas to-canvas border border-warning/40 rounded-2xl p-5 shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 text-warning mb-1 text-xs font-semibold">
               <GraduationCap className="w-4 h-4" />
               <span>
-                {(exam?.group_id || profile?.group_id) === 1 && 'الفرقة الأولى'}
-                {(exam?.group_id || profile?.group_id) === 2 && 'الفرقة الثانية'}
-                {(exam?.group_id || profile?.group_id) === 3 && 'الفرقة الثالثة'}
+                {activeGroupId === 1 && 'الفرقة الأولى'}
+                {activeGroupId === 2 && 'الفرقة الثانية'}
+                {activeGroupId === 3 && 'الفرقة الثالثة'}
               </span>
             </div>
             <h1 className="text-xl font-bold text-content">التقييم الأكاديمي وامتحان التيرم</h1>
@@ -234,6 +275,13 @@ export default function ExamsPage() {
               امتحان واحد لكل تيرم دراسي، مع احتساب التقدير اللفظي آلياً على الخادم.
             </p>
           </div>
+          {canSwitchGroup && (
+            <GroupSelector
+              selectedGroupId={activeGroupId}
+              onSelectGroup={(gId) => setSelectedGroupId(gId)}
+              showAllOption={false}
+            />
+          )}
         </div>
 
         {notice && (
@@ -243,103 +291,116 @@ export default function ExamsPage() {
           </div>
         )}
 
-        {/* --- VIEW 1: TRAINEE PERSONAL EXAM RESULT --- */}
-        {profile?.role_id === 'trainee' && (
-          <div className="bg-nav border border-line rounded-2xl p-6 shadow-md">
-            <h3 className="font-bold text-lg text-content mb-4 flex items-center gap-2">
-              <FileCheck className="w-5 h-5 text-gold" />
-              <span>{exam?.title || 'نتيجة امتحان التيرم الأول'}</span>
-            </h3>
+        {loading ? (
+          <div className="py-20 flex flex-col items-center justify-center gap-3 text-content-muted">
+            <Loader2 className="w-8 h-8 animate-spin text-gold" />
+            <p className="text-sm">جاري تحميل بيانات الامتحانات...</p>
+          </div>
+        ) : !exam ? (
+          <div className="p-12 text-center text-xs text-content-muted bg-nav border border-line rounded-2xl shadow-md">
+            لا يوجد امتحان متاح لهذه الفرقة حالياً.
+          </div>
+        ) : (
+          <>
+            {/* --- VIEW 1: TRAINEE PERSONAL EXAM RESULT --- */}
+            {profile?.role_id === 'trainee' && (
+              <div className="bg-nav border border-line rounded-2xl p-6 shadow-md">
+                <h3 className="font-bold text-lg text-content mb-4 flex items-center gap-2">
+                  <FileCheck className="w-5 h-5 text-gold" />
+                  <span>{exam?.title || 'نتيجة امتحان التيرم الأول'}</span>
+                </h3>
 
-            {!personalGrade ? (
-              <div className="text-center py-8 text-content-muted text-xs bg-nav/50 rounded-xl border border-line/60">
-                لم يتم رصد نتيجة الامتحان حتى الآن.
+                {!personalGrade ? (
+                  <div className="text-center py-8 text-content-muted text-xs bg-nav/50 rounded-xl border border-line/60">
+                    لم يتم رصد نتيجة الامتحان حتى الآن.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="bg-nav border border-line p-5 rounded-xl text-center">
+                      <span className="text-xs text-content-muted block mb-1">الدرجة المحصلة</span>
+                      <span className="text-3xl font-bold text-content">
+                        {personalGrade.numeric_score} / {exam?.max_score || 100}
+                      </span>
+                    </div>
+
+                    <div className="bg-nav border border-line p-5 rounded-xl text-center">
+                      <span className="text-xs text-content-muted block mb-1">النسبة المئوية</span>
+                      <span className="text-3xl font-bold text-warning">
+                        {Math.round((personalGrade.numeric_score / (exam?.max_score || 100)) * 100)}%
+                      </span>
+                    </div>
+
+                    <div className="bg-nav border border-line p-5 rounded-xl text-center">
+                      <span className="text-xs text-content-muted block mb-1">التقدير المعتمد</span>
+                      <span className="text-2xl font-bold text-success">
+                        {personalGrade.appreciation_grade}
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="bg-nav border border-line p-5 rounded-xl text-center">
-                  <span className="text-xs text-content-muted block mb-1">الدرجة المحصلة</span>
-                  <span className="text-3xl font-bold text-content">
-                    {personalGrade.numeric_score} / {exam?.max_score || 100}
-                  </span>
+            )}
+
+            {/* --- VIEW 2: STAFF GRADE ENTRY TABLE --- */}
+            {profile?.role_id !== 'trainee' && canGrade && (
+              <div className="bg-nav border border-line rounded-2xl p-5 shadow-md">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-bold text-base text-content flex items-center gap-2">
+                    <Trophy className="w-5 h-5 text-warning" />
+                    <span>
+                      {exam?.title ? `${exam.title} — ` : ''}رصد وتصحيح درجات الامتحان (الدرجة العظمى: {exam?.max_score || 100})
+                    </span>
+                  </h3>
                 </div>
 
-                <div className="bg-nav border border-line p-5 rounded-xl text-center">
-                  <span className="text-xs text-content-muted block mb-1">النسبة المئوية</span>
-                  <span className="text-3xl font-bold text-warning">
-                    {Math.round((personalGrade.numeric_score / (exam?.max_score || 100)) * 100)}%
-                  </span>
-                </div>
-
-                <div className="bg-nav border border-line p-5 rounded-xl text-center">
-                  <span className="text-xs text-content-muted block mb-1">التقدير المعتمد</span>
-                  <span className="text-2xl font-bold text-success">
-                    {personalGrade.appreciation_grade}
-                  </span>
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[560px] text-right text-xs">
+                    <thead className="bg-nav/80 text-content-muted border-b border-line font-semibold">
+                      <tr>
+                        <th className="p-3">اسم المتدرب</th>
+                        <th className="p-3">اسم المستخدم</th>
+                        <th className="p-3 text-center">الدرجة الرقمية</th>
+                        <th className="p-3 text-center">التقدير المحسوب</th>
+                        <th className="p-3 text-center">إجراء</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-line-subtle/60">
+                      {traineeGrades.map((t) => (
+                        <tr key={t.trainee_id} className="hover:bg-nav/40 transition-colors">
+                          <td className="p-3 font-bold text-content text-sm">{t.full_name}</td>
+                          <td className="p-3 text-content-muted font-mono">@{t.username}</td>
+                          <td className="p-3 text-center">
+                            <input
+                              type="number"
+                              min="0"
+                              max={exam?.max_score || 100}
+                              value={t.numeric_score}
+                              onChange={(e) => handleScoreChange(t.trainee_id, e.target.value)}
+                              placeholder="0"
+                              className="w-20 min-h-tap bg-nav border border-line text-center text-content py-1.5 px-2 rounded-lg font-mono font-bold text-sm focus:outline-none focus:ring-2 focus:ring-warning"
+                            />
+                          </td>
+                          <td className="p-3 text-center font-bold text-success text-sm">
+                            {t.appreciation_grade || '—'}
+                          </td>
+                          <td className="p-3 text-center">
+                            <button
+                              disabled={saving || t.numeric_score === ''}
+                              onClick={() => handleSaveGrade(t.trainee_id, Number(t.numeric_score))}
+                              className="min-h-tap px-3 py-2 bg-warning hover:bg-warning text-content font-bold rounded-lg transition-colors inline-flex items-center gap-1 text-xs disabled:opacity-50"
+                            >
+                              <Save className="w-3.5 h-3.5" />
+                              <span>حفظ</span>
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             )}
-          </div>
-        )}
-
-        {/* --- VIEW 2: STAFF GRADE ENTRY TABLE --- */}
-        {profile?.role_id !== 'trainee' && canGrade && (
-          <div className="bg-nav border border-line rounded-2xl p-5 shadow-md">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-base text-content flex items-center gap-2">
-                <Trophy className="w-5 h-5 text-warning" />
-                <span>
-                  {exam?.title ? `${exam.title} — ` : ''}رصد وتصحيح درجات الامتحان (الدرجة العظمى: {exam?.max_score || 100})
-                </span>
-              </h3>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-right text-xs">
-                <thead className="bg-nav/80 text-content-muted border-b border-line font-semibold">
-                  <tr>
-                    <th className="p-3">اسم المتدرب</th>
-                    <th className="p-3">اسم المستخدم</th>
-                    <th className="p-3 text-center">الدرجة الرقمية</th>
-                    <th className="p-3 text-center">التقدير المحسوب</th>
-                    <th className="p-3 text-center">إجراء</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-line-subtle/60">
-                  {traineeGrades.map((t) => (
-                    <tr key={t.trainee_id} className="hover:bg-nav/40 transition-colors">
-                      <td className="p-3 font-bold text-content text-sm">{t.full_name}</td>
-                      <td className="p-3 text-content-muted font-mono">@{t.username}</td>
-                      <td className="p-3 text-center">
-                        <input
-                          type="number"
-                          min="0"
-                          max={exam?.max_score || 100}
-                          value={t.numeric_score}
-                          onChange={(e) => handleScoreChange(t.trainee_id, e.target.value)}
-                          placeholder="0"
-                          className="w-20 bg-nav border border-line text-center text-content py-1.5 px-2 rounded-lg font-mono font-bold text-sm focus:outline-none focus:ring-2 focus:ring-warning"
-                        />
-                      </td>
-                      <td className="p-3 text-center font-bold text-success text-sm">
-                        {t.appreciation_grade || '—'}
-                      </td>
-                      <td className="p-3 text-center">
-                        <button
-                          disabled={saving || t.numeric_score === ''}
-                          onClick={() => handleSaveGrade(t.trainee_id, Number(t.numeric_score))}
-                          className="p-2 bg-warning hover:bg-warning text-content font-bold rounded-lg transition-colors inline-flex items-center gap-1 text-xs disabled:opacity-50"
-                        >
-                          <Save className="w-3.5 h-3.5" />
-                          <span>حفظ</span>
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          </>
         )}
       </main>
 

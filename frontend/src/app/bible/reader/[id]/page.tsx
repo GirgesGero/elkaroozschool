@@ -48,24 +48,34 @@ export default function ArticleReaderPage() {
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
     if (articleId > 0) {
-      loadArticle(articleId);
-    }
-  }, [articleId]);
-
-  const loadArticle = async (id: number) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await getBibleArticle({ id });
-      setArticle(data);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    } catch (err: any) {
-      setError(err.message || 'فشل في تحميل المقال');
-    } finally {
+      const loadArticle = async (id: number) => {
+        setLoading(true);
+        setError(null);
+        try {
+          const data = await getBibleArticle({ id });
+          if (cancelled) return;
+          setArticle(data);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        } catch (err: any) {
+          if (cancelled) return;
+          setError(err.message || 'فشل في تحميل المقال');
+        } finally {
+          if (!cancelled) {
+            setLoading(false);
+          }
+        }
+      };
+      void loadArticle(articleId);
+    } else {
+      setError('معرف المقال غير صالح');
       setLoading(false);
     }
-  };
+    return () => {
+      cancelled = true;
+    };
+  }, [articleId]);
 
   const handleCopyLink = () => {
     if (typeof window !== 'undefined' && navigator.clipboard) {
@@ -181,15 +191,15 @@ export default function ArticleReaderPage() {
         </div>
 
         {/* Article Content */}
-        <article className="p-6 md:p-10 rounded-3xl bg-canvas border border-line/80 shadow-xl leading-loose text-content text-base md:text-lg font-normal mb-8 select-text">
+        <article className="p-4 sm:p-6 md:p-10 rounded-3xl bg-canvas border border-line/80 shadow-xl leading-loose text-content text-base md:text-lg font-normal mb-8 select-text overflow-hidden">
           <div 
-            className="bible-article-body space-y-4 prose prose-invert max-w-none prose-headings:text-content prose-p:text-content prose-a:text-gold"
+            className="bible-article-body space-y-4 prose prose-invert max-w-none prose-headings:text-content prose-p:text-content prose-a:text-gold overflow-x-auto break-words"
             dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
           />
         </article>
 
         {/* Navigation Prev / Next */}
-        <div className="flex items-center justify-between gap-4 pt-4 border-t border-line/80">
+        <div className="flex items-center justify-between flex-wrap gap-2 sm:gap-4 pt-4 border-t border-line/80">
           {article.prev_id ? (
             <button
               onClick={() => router.push(`/bible/reader/${article.prev_id}`)}

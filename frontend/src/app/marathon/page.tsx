@@ -79,6 +79,12 @@ export default function MarathonListPage() {
             .eq('is_active', true)
             .is('deleted_at', null);
 
+          if (prof.role_id !== 'admin' && prof.role_id !== 'supervisor' && !prof.group_id) {
+            setMarathons([]);
+            setLoading(false);
+            return;
+          }
+
           if (prof.role_id !== 'admin' && prof.group_id) {
             mQuery = mQuery.eq('group_id', prof.group_id);
           }
@@ -138,7 +144,7 @@ export default function MarathonListPage() {
 
             const enhanced: MarathonItem[] = mList.map((m: any) => {
               const pubSet = pubQByMarathon.get(m.id);
-              const questionsCount = pubQuestions
+              const questionsCount = (pubQuestions && pubQuestions.length > 0)
                 ? (pubSet ? pubSet.size : 0)
                 : (m.marathon_questions?.[0]?.count || 0);
               const sub = subByMarathon.get(m.id);
@@ -253,8 +259,8 @@ export default function MarathonListPage() {
                 key={m.id}
                 className="bg-nav border border-line rounded-2xl p-5 shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-5 hover:border-line transition-all"
               >
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
+                <div className="flex-1 w-full">
+                  <div className="flex items-center gap-2 flex-wrap mb-2">
                     <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-canvas/60 text-warning border border-warning/50">
                       100 درجة متساوية
                     </span>

@@ -72,6 +72,7 @@ export default function ServantProfileDrawer({
 
   useEffect(() => {
     if (!isOpen || !servantId) return;
+    let cancelled = false;
 
     async function loadServant() {
       setLoading(true);
@@ -81,6 +82,7 @@ export default function ServantProfileDrawer({
 
       // 1. Fetch Profile
       const { data: prof } = await supabase.from('profiles').select('*').eq('id', servantId).single();
+      if (cancelled) return;
 
       if (prof) {
         const p = prof as Profile;
@@ -95,6 +97,7 @@ export default function ServantProfileDrawer({
           .select('permission_id')
           .eq('profile_id', servantId);
 
+        if (cancelled) return;
         if (perms) {
           setPermissions(perms.map((item: any) => item.permission_id as DelegatedPermission));
         }
@@ -108,6 +111,7 @@ export default function ServantProfileDrawer({
           .eq('is_active', true)
           .maybeSingle();
 
+        if (cancelled) return;
         setIsSecretariat(!!sec);
 
         // 4. Group Trainees count
@@ -118,12 +122,16 @@ export default function ServantProfileDrawer({
           .eq('role_id', 'trainee')
           .eq('is_active', true);
 
+        if (cancelled) return;
         setGroupTraineesCount(count || 0);
       }
-      setLoading(false);
+      if (!cancelled) setLoading(false);
     }
 
-    loadServant();
+    void loadServant();
+    return () => {
+      cancelled = true;
+    };
   }, [isOpen, servantId]);
 
   const handleTogglePermission = (permId: DelegatedPermission) => {
@@ -179,11 +187,12 @@ export default function ServantProfileDrawer({
     try {
       if (isSecretariat) {
         // Remove Secretariat
-        await supabase
+        const { error } = await supabase
           .from('group_secretariat')
           .delete()
           .eq('profile_id', servantId)
           .eq('group_id', servant.group_id);
+        if (error) throw error;
 
         setIsSecretariat(false);
         setNotice({ type: 'success', text: 'تم إزالة صفة السكرتارية عن الخادم.' });
@@ -253,7 +262,7 @@ export default function ServantProfileDrawer({
         <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-br from-gold/10 to-transparent rounded-full blur-3xl pointer-events-none" />
 
         {/* Top Header */}
-        <div className="p-4 sm:p-5 bg-canvas/90 border-b border-gold/20 flex items-center justify-between sticky top-0 z-20 backdrop-blur-xl">
+        <div className="p-4 sm:p-5 bg-canvas/90 border-b border-gold/20 flex flex-wrap gap-2 items-center justify-between sticky top-0 z-20 backdrop-blur-xl">
           <div className="flex items-center gap-3">
             <button
               onClick={onClose}
@@ -338,7 +347,7 @@ export default function ServantProfileDrawer({
               {/* Servant Card */}
               <div className="bg-gradient-to-b from-canvas to-canvas border border-gold/30 rounded-3xl p-5 sm:p-6 relative overflow-hidden backdrop-blur-xl shadow-xl shadow-black/40">
                 <div className="flex items-center gap-4">
-                  <div className="relative w-18 h-18 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-tr from-gold/30 via-canvas to-gold/10 border-2 border-gold p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-lg shadow-gold/10">
+                  <div className="relative w-[72px] h-[72px] sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-tr from-gold/30 via-canvas to-gold/10 border-2 border-gold p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-lg shadow-gold/10">
                     {servant.avatar_url ? (
                       <Avatar src={servant.avatar_url} name={servant.full_name} size={80} />
                     ) : (
@@ -429,7 +438,7 @@ export default function ServantProfileDrawer({
 
               {/* Secretariat Management Action */}
               {isAdminOrSuper && (
-                <div className="bg-canvas/70 border border-info/30 rounded-3xl p-5 flex items-center justify-between gap-4">
+                <div className="bg-canvas/70 border border-info/30 rounded-3xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <div>
                     <span className="font-black text-sm text-content block">عضوية سكرتارية الفرقة</span>
                     <span className="text-xs text-content-muted mt-0.5 block">

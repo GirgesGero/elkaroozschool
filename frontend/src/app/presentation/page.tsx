@@ -32,7 +32,7 @@ export default function Presentation() {
       </div>
 
       {/* Top Bar Navigation */}
-      <header className="relative z-10 flex items-center justify-between pb-6 border-b border-line/60">
+      <header className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6 border-b border-line/60">
         <div className="flex items-center gap-3">
           <div className="relative w-10 h-10 rounded-2xl bg-card border border-gold/40 flex items-center justify-center shadow-md overflow-hidden">
             <Image src="/logo.png" alt="شعار مدرسة الكاروز" width={28} height={28} className="object-contain" />
@@ -43,7 +43,7 @@ export default function Presentation() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 w-full sm:w-auto justify-end flex-wrap">
           <Link
             href="/bible"
             className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-content hover:text-gold border border-line bg-nav/80 hover:border-gold/40 transition-all shadow-sm"
@@ -73,7 +73,7 @@ export default function Presentation() {
             <span>برعاية وإشراف الآباء الأفاضل كهنة الكنيسة</span>
           </div>
 
-          <p className="text-xl sm:text-2xl font-serif font-black text-content leading-relaxed">
+          <p className="text-base sm:text-xl md:text-2xl font-serif font-black text-content leading-relaxed">
             «كُلُّ الْكِتَابِ هُوَ مُوحىً بِهِ مِنَ اللهِ، وَنَافِعٌ لِلتَّعْلِيمِ وَالتَّوْبِيخِ، لِلتَّقْوِيمِ وَالتَّأْدِيبِ الَّذِي فِي الْبِرِّ»
           </p>
           <p className="text-xs font-bold text-gold">— الرسالة الثانية إلى تيموثاوس 3: 16</p>

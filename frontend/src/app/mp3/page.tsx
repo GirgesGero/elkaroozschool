@@ -141,6 +141,7 @@ export default function Mp3Page() {
     } else {
       setCurrentTrack(track);
       setCurrentTime(0);
+      setDuration(track.duration_seconds || 0);
       if (audioRef.current) {
         audioRef.current.src = track.audio_url;
         playAudio(audioRef.current);
@@ -164,7 +165,7 @@ export default function Mp3Page() {
   };
 
   const formatTime = (secs: number) => {
-    if (isNaN(secs)) return '00:00';
+    if (!Number.isFinite(secs) || secs < 0) return '00:00';
     const m = Math.floor(secs / 60);
     const s = Math.floor(secs % 60);
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
@@ -252,7 +253,7 @@ export default function Mp3Page() {
       />
 
       {/* Main Container */}
-      <main className="max-w-5xl w-full mx-auto px-4 py-6 flex-1 flex flex-col gap-6 pb-36 md:pb-20">
+      <main className="max-w-5xl w-full mx-auto px-4 py-6 flex-1 flex flex-col gap-6 pb-48 md:pb-24">
         {/* Banner */}
         <div className="bg-nav border border-line rounded-2xl p-5 shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
@@ -313,7 +314,7 @@ export default function Mp3Page() {
                       : 'bg-nav/60 border-line/80 text-content-secondary hover:bg-nav/60 hover:border-line'
                   }`}
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
                     <button
                       className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${
                         isCurrent && isPlaying
@@ -414,7 +415,7 @@ export default function Mp3Page() {
 
       {/* --- BOTTOM STICKY AUDIO PLAYER BAR --- */}
       {currentTrack && (
-        <div className="fixed bottom-16 md:bottom-0 inset-x-0 bg-nav/95 border-t border-line p-3.5 backdrop-blur-md z-40 shadow-2xl">
+        <div className="fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] md:bottom-0 inset-x-0 bg-nav/95 border-t border-line p-3.5 backdrop-blur-md z-30 shadow-2xl">
           <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
             <div className="flex items-center gap-3 w-full sm:w-auto">
               <button
@@ -424,7 +425,7 @@ export default function Mp3Page() {
                 {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 translate-x-[-1px]" />}
               </button>
 
-              <div className="truncate">
+              <div className="min-w-0 flex-1">
                 <h4 className="font-bold text-xs sm:text-sm text-content truncate max-w-xs sm:max-w-md">
                   {currentTrack.title}
                 </h4>

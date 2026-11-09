@@ -75,6 +75,11 @@ require_once $appRoot . '/src/Controllers/ImportController.php';
 require_once $appRoot . '/src/Controllers/ExportController.php';
 require_once $appRoot . '/src/Controllers/BibleController.php';
 require_once $appRoot . '/src/Controllers/SystemResetController.php';
+require_once $appRoot . '/src/Database/MySQL.php';
+require_once $appRoot . '/src/Auth/MySQLAuthService.php';
+require_once $appRoot . '/src/Controllers/AuthApiController.php';
+require_once $appRoot . '/src/Controllers/DataApiController.php';
+require_once $appRoot . '/src/Controllers/RpcApiController.php';
 require_once $appRoot . '/src/Middleware/RateLimitMiddleware.php';
 
 use App\Middleware\CorsMiddleware;
@@ -133,6 +138,44 @@ try {
         // user who mistypes a few times. 30/min per IP.
         RateLimitMiddleware::check('auth', 30, 60);
         (new \App\Controllers\AuthController())->verifySession();
+    }
+
+    // Optional Self-Hosted DB/Auth API (disabled by default when using Supabase Cloud)
+    elseif (getenv('ENABLE_SELF_HOSTED_DB_API') === 'true' && $path === '/auth/login' && $requestMethod === 'POST') {
+        RateLimitMiddleware::check('auth_login', 15, 60);
+        (new \App\Controllers\AuthApiController())->login();
+    }
+    elseif (getenv('ENABLE_SELF_HOSTED_DB_API') === 'true' && $path === '/auth/refresh' && $requestMethod === 'POST') {
+        RateLimitMiddleware::check('auth_refresh', 30, 60);
+        (new \App\Controllers\AuthApiController())->refresh();
+    }
+    elseif (getenv('ENABLE_SELF_HOSTED_DB_API') === 'true' && $path === '/auth/logout' && $requestMethod === 'POST') {
+        (new \App\Controllers\AuthApiController())->logout();
+    }
+    elseif (getenv('ENABLE_SELF_HOSTED_DB_API') === 'true' && $path === '/auth/me' && $requestMethod === 'GET') {
+        $claims = \App\Middleware\JwtAuthMiddleware::authenticate();
+        (new \App\Controllers\AuthApiController())->me($claims);
+    }
+    elseif (getenv('ENABLE_SELF_HOSTED_DB_API') === 'true' && $path === '/auth/change-password' && $requestMethod === 'POST') {
+        $claims = \App\Middleware\JwtAuthMiddleware::authenticate();
+        (new \App\Controllers\AuthApiController())->changePassword($claims);
+    }
+
+    // Optional Native Data API (disabled by default when using Supabase Cloud)
+    elseif (getenv('ENABLE_SELF_HOSTED_DB_API') === 'true' && preg_match('#^/data/([a-zA-Z0-9_]+)(?:/([a-zA-Z0-9_-]+))?$#', $path, $matches)) {
+        $table = $matches[1];
+        $id = $matches[2] ?? null;
+        $claims = \App\Middleware\JwtAuthMiddleware::authenticate();
+        RateLimitMiddleware::check('data_' . $table, 120, 60);
+        (new \App\Controllers\DataApiController())->handle($table, $requestMethod, $claims, $id);
+    }
+
+    // Optional Native RPC API (disabled by default when using Supabase Cloud)
+    elseif (getenv('ENABLE_SELF_HOSTED_DB_API') === 'true' && preg_match('#^/rpc/([a-zA-Z0-9_]+)$#', $path, $matches) && $requestMethod === 'POST') {
+        $functionName = $matches[1];
+        $claims = \App\Middleware\JwtAuthMiddleware::authenticate();
+        RateLimitMiddleware::check('rpc_' . $functionName, 120, 60);
+        (new \App\Controllers\RpcApiController())->handle($functionName, $claims);
     }
 
     // Storage File Management

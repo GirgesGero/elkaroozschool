@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, Suspense } from 'react';
+import { useEffect, useRef, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -117,6 +117,8 @@ interface VerseCommentary {
 function BiblePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const initialBookParamRef = useRef(searchParams.get('book'));
+  const lastUrlQueryRef = useRef<string | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
@@ -229,7 +231,7 @@ function BiblePageContent() {
       if (testList && testList.length > 0) setTestaments(testList);
       if (bookList && bookList.length > 0) {
         setBooks(bookList);
-        const bookParam = searchParams.get('book');
+        const bookParam = initialBookParamRef.current;
         let matchedBook: BibleBook | undefined;
         if (bookParam) {
           matchedBook = bookList.find(
@@ -251,12 +253,14 @@ function BiblePageContent() {
       setLoading(false);
     }
 
-    loadTestamentsAndBooks();
+    void loadTestamentsAndBooks();
   }, []);
 
   // 2. Load Chapter Verses with Word Breakdown (Supports both live DB & offline static dataset)
   useEffect(() => {
-    if (!selectedBookId || !selectedChapter) return;
+    if (!selectedBookId || !selectedChapter || books.length === 0) return;
+
+    let cancelled = false;
 
     async function loadChapter() {
       setLoadingVerses(true);
@@ -272,6 +276,8 @@ function BiblePageContent() {
           p_chapter_number: selectedChapter,
         });
 
+        if (cancelled) return;
+
         if (!error && vList && Array.isArray(vList) && vList.length > 0) {
           setVerses((vList as BibleVerse[]) || []);
           setLoadingVerses(false);
@@ -281,9 +287,12 @@ function BiblePageContent() {
         // Fallback below
       }
 
+      if (cancelled) return;
+
       // 2. Fallback to complete offline static encyclopedia dataset
       try {
         const article = await getBibleArticle({ book: bookName, chapter: selectedChapter });
+        if (cancelled) return;
         if (article) {
           setChapterArticle(article);
           if (article.content) {
@@ -294,13 +303,13 @@ function BiblePageContent() {
               const vNum = parseInt(match[1], 10);
               const textClean = match[2].replace(/<[^>]*>/g, '').trim();
               parsedVerses.push({
-                id: vNum,
+                id: -vNum,
                 verse_number: vNum,
                 text_ar: textClean,
                 source_url: article.slug || '',
                 commentaries_count: 0,
                 words: textClean.split(/\s+/).filter(Boolean).map((w, i) => ({
-                  id: vNum * 10000 + i + 1,
+                  id: -(vNum * 10000 + i + 1),
                   word_position: i + 1,
                   word_text: w,
                   has_commentary: false,
@@ -315,14 +324,21 @@ function BiblePageContent() {
           setVerses([]);
         }
       } catch (err) {
+        if (cancelled) return;
         console.error('Failed to load chapter from offline dataset:', err);
         setVerses([]);
       } finally {
-        setLoadingVerses(false);
+        if (!cancelled) {
+          setLoadingVerses(false);
+        }
       }
     }
 
-    loadChapter();
+    void loadChapter();
+
+    return () => {
+      cancelled = true;
+    };
   }, [selectedBookId, selectedChapter, books]);
 
   // 3. Handle Word Click -> Fetch Contextual Commentary + Dictionary
@@ -361,6 +377,12 @@ function BiblePageContent() {
   // 4. Handle Verse Commentary Click
   const handleVerseCommentaryClick = async (verse: BibleVerse) => {
     setSelectedVerseForCommentary(verse);
+    if (verse.id <= 0) {
+      // Synthetic offline fallback verse ID: avoid querying bible_commentaries with a chapter-relative verse number
+      setVerseCommentaries([]);
+      setLoadingCommentary(false);
+      return;
+    }
     setLoadingCommentary(true);
     try {
       const supabase = createClient();
@@ -416,13 +438,18 @@ function BiblePageContent() {
 
     if (changed) {
       const q = params.toString();
+      lastUrlQueryRef.current = `${q}|${books.length > 0 ? '1' : '0'}`;
       const newUrl = q ? `/bible?${q}` : '/bible';
       router.replace(newUrl, { scroll: false });
     }
-  }, [viewMode, selectedBookId, selectedChapter, router, searchParams]);
+  }, [viewMode, selectedBookId, selectedChapter, books.length, router, searchParams]);
 
   // Read URL searchParams when browser navigates
   useEffect(() => {
+    const syncKey = `${searchParams.toString()}|${books.length > 0 ? '1' : '0'}`;
+    if (lastUrlQueryRef.current === syncKey) return;
+    lastUrlQueryRef.current = syncKey;
+
     const modeParam = searchParams.get('mode');
     if (modeParam === 'reader' && viewMode !== 'reader') {
       setViewMode('reader');
@@ -448,7 +475,7 @@ function BiblePageContent() {
     if (chapterParam && chapterParam > 0 && chapterParam !== selectedChapter) {
       setSelectedChapter(chapterParam);
     }
-  }, [searchParams, books]);
+  }, [searchParams, books, viewMode, selectedBookId, selectedChapter]);
 
   // 5. Handle Global Bible Search — uses static offline encyclopedia (no RPC)
   const handleSearch = async (e: React.FormEvent) => {
@@ -558,11 +585,11 @@ function BiblePageContent() {
           </div>
 
           <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap">
-            <div className="flex p-1 bg-canvas rounded-2xl border border-line">
+            <div className="flex p-1 bg-canvas rounded-2xl border border-line w-full sm:w-auto">
               <button
                 type="button"
                 onClick={() => setViewMode('hub')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                className={`flex items-center flex-1 sm:flex-initial justify-center gap-2 px-2.5 sm:px-4 py-2 rounded-xl text-[11px] sm:text-xs font-bold transition-all ${
                   viewMode === 'hub'
                     ? 'bg-gold text-brand-on shadow-md font-black'
                     : 'text-content-secondary hover:text-content'
@@ -573,7 +600,7 @@ function BiblePageContent() {
               <button
                 type="button"
                 onClick={() => setViewMode('reader')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                className={`flex items-center flex-1 sm:flex-initial justify-center gap-2 px-2.5 sm:px-4 py-2 rounded-xl text-[11px] sm:text-xs font-bold transition-all ${
                   viewMode === 'reader'
                     ? 'bg-gold text-brand-on shadow-md font-black'
                     : 'text-content-secondary hover:text-content'
@@ -807,8 +834,6 @@ function BiblePageContent() {
                         <span>التفاسير ({verse.commentaries_count})</span>
                       </button>
                     </div>
-
-
                   </div>
 
                   {/* Interactive Word Breakdown */}
@@ -848,7 +873,7 @@ function BiblePageContent() {
         {/* --- INTERACTIVE WORD DETAILS MODAL --- */}
         {selectedWordId !== null && (
           <div role="dialog" aria-modal="true" aria-label="شرح الكلمة" onClick={() => { setSelectedWordId(null); setWordDetails(null); }} className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-            <div onClick={(e) => e.stopPropagation()} className="bg-nav border border-line rounded-2xl max-w-lg w-full p-6 shadow-2xl max-h-[85vh] flex flex-col">
+            <div onClick={(e) => e.stopPropagation()} className="bg-nav border border-line rounded-2xl max-w-lg w-full p-4 sm:p-6 shadow-2xl max-h-[85dvh] flex flex-col">
               <div className="flex items-center justify-between pb-3 border-b border-line mb-4">
                 <div className="flex items-center gap-2">
                   <Sparkles className="w-5 h-5 text-warning" aria-hidden="true" />
@@ -940,7 +965,7 @@ function BiblePageContent() {
         {/* --- VERSE FULL COMMENTARY PANEL --- */}
         {selectedVerseForCommentary && (
           <div role="dialog" aria-modal="true" aria-label="تفسير الاية" onClick={() => setSelectedVerseForCommentary(null)} className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
-            <div onClick={(e) => e.stopPropagation()} className="bg-nav border border-line rounded-2xl max-w-2xl w-full p-6 shadow-2xl max-h-[85vh] flex flex-col">
+            <div onClick={(e) => e.stopPropagation()} className="bg-nav border border-line rounded-2xl max-w-2xl w-full p-4 sm:p-6 shadow-2xl max-h-[85dvh] flex flex-col">
               <div className="flex items-center justify-between pb-3 border-b border-line mb-4">
                 <div>
                   <h3 className="font-bold text-base text-content">
@@ -995,7 +1020,7 @@ function BiblePageContent() {
         {/* --- GLOBAL SEARCH RESULTS MODAL --- */}
         {showSearchModal && (
           <div role="dialog" aria-modal="true" aria-label="نتائج البحث" onClick={() => setShowSearchModal(false)} className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
-            <div onClick={(e) => e.stopPropagation()} className="bg-nav border border-line rounded-2xl max-w-2xl w-full p-6 shadow-2xl max-h-[85vh] flex flex-col">
+            <div onClick={(e) => e.stopPropagation()} className="bg-nav border border-line rounded-2xl max-w-2xl w-full p-4 sm:p-6 shadow-2xl max-h-[85dvh] flex flex-col">
               <div className="flex items-center justify-between pb-3 border-b border-line mb-4">
                 <h3 className="font-bold text-base text-content">
                   نتائج البحث عن: «{searchQuery}» ({searchResults.length})
@@ -1021,7 +1046,7 @@ function BiblePageContent() {
                       className="bg-nav p-3.5 rounded-xl border border-line hover:border-warning/60 cursor-pointer transition-all space-y-1.5"
                     >
                       <span className="font-bold text-warning text-xs">
-                        سفر {sr.book_name} — الإصحاح {sr.chapter_number} : الآية {sr.verse_number}
+                        سفر {sr.book_name} — الإصحاح {sr.chapter_number}{sr.verse_number > 0 ? ` : الآية ${sr.verse_number}` : ''}
                       </span>
                       <p className="text-content text-sm leading-relaxed">{sr.text_ar}</p>
                     </div>

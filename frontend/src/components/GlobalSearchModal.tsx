@@ -32,6 +32,7 @@ export default function GlobalSearchModal({
   const [query, setQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'all' | 'people' | 'groups' | 'books' | 'posts'>('all');
   const [isLoading, setIsLoading] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
   const [results, setResults] = useState<{
     people: any[];
     groups: any[];
@@ -47,6 +48,8 @@ export default function GlobalSearchModal({
   useEffect(() => {
     if (!isOpen) {
       setQuery('');
+      setActiveTab('all');
+      setHasSearched(false);
       setResults({ people: [], groups: [], books: [], posts: [] });
     }
   }, [isOpen]);
@@ -64,11 +67,13 @@ export default function GlobalSearchModal({
     if (!sanitized || sanitized.length < 2) {
       searchSeqRef.current += 1;
       setIsLoading(false);
+      setHasSearched(false);
       setResults({ people: [], groups: [], books: [], posts: [] });
       return;
     }
 
     const seq = ++searchSeqRef.current;
+    setHasSearched(false);
 
     const timer = setTimeout(async () => {
       setIsLoading(true);
@@ -107,6 +112,7 @@ export default function GlobalSearchModal({
           books: booksRes.data || [],
           posts: postsRes.data || [],
         });
+        setHasSearched(true);
       } catch (err) {
         console.error('Search error:', err);
       } finally {
@@ -158,7 +164,7 @@ export default function GlobalSearchModal({
         <div className="flex items-center gap-2 p-2.5 bg-canvas border-b border-line overflow-x-auto text-xs font-bold scrollbar-none">
           <button
             onClick={() => setActiveTab('all')}
-            className={`px-3 py-1 rounded-xl transition-all ${
+            className={`shrink-0 whitespace-nowrap px-3 py-1 rounded-xl transition-all ${
               activeTab === 'all'
                 ? 'bg-gold text-brand-on font-black'
                 : 'text-content-muted hover:text-content'
@@ -168,7 +174,7 @@ export default function GlobalSearchModal({
           </button>
           <button
             onClick={() => setActiveTab('people')}
-            className={`px-3 py-1 rounded-xl transition-all ${
+            className={`shrink-0 whitespace-nowrap px-3 py-1 rounded-xl transition-all ${
               activeTab === 'people'
                 ? 'bg-gold text-brand-on font-black'
                 : 'text-content-muted hover:text-content'
@@ -178,7 +184,7 @@ export default function GlobalSearchModal({
           </button>
           <button
             onClick={() => setActiveTab('groups')}
-            className={`px-3 py-1 rounded-xl transition-all ${
+            className={`shrink-0 whitespace-nowrap px-3 py-1 rounded-xl transition-all ${
               activeTab === 'groups'
                 ? 'bg-gold text-brand-on font-black'
                 : 'text-content-muted hover:text-content'
@@ -188,7 +194,7 @@ export default function GlobalSearchModal({
           </button>
           <button
             onClick={() => setActiveTab('books')}
-            className={`px-3 py-1 rounded-xl transition-all ${
+            className={`shrink-0 whitespace-nowrap px-3 py-1 rounded-xl transition-all ${
               activeTab === 'books'
                 ? 'bg-gold text-brand-on font-black'
                 : 'text-content-muted hover:text-content'
@@ -198,7 +204,7 @@ export default function GlobalSearchModal({
           </button>
           <button
             onClick={() => setActiveTab('posts')}
-            className={`px-3 py-1 rounded-xl transition-all ${
+            className={`shrink-0 whitespace-nowrap px-3 py-1 rounded-xl transition-all ${
               activeTab === 'posts'
                 ? 'bg-gold text-brand-on font-black'
                 : 'text-content-muted hover:text-content'
@@ -227,7 +233,7 @@ export default function GlobalSearchModal({
             </div>
           )}
 
-          {!isLoading && query && totalResults === 0 && (
+          {!isLoading && hasSearched && query && totalResults === 0 && (
             <div className="py-16 text-center text-content-muted">
               <p className="text-sm font-bold text-content-secondary">لا توجد نتائج مطابقة لـ &quot;{query}&quot;</p>
               <p className="text-xs text-content-muted mt-1">تأكد من كتابة الكلمات بشكل صحيح</p>
@@ -350,7 +356,10 @@ export default function GlobalSearchModal({
                 {results.posts.map((post) => (
                   <div
                     key={post.id}
-                    onClick={() => onClose()}
+                    onClick={() => {
+                      router.push(post.group_id ? `/groups/${post.group_id}` : '/');
+                      onClose();
+                    }}
                     className="p-3 rounded-2xl bg-canvas border border-line text-right cursor-pointer hover:border-gold/40 transition-colors"
                   >
                     <p className="text-xs text-content line-clamp-2">{post.content}</p>

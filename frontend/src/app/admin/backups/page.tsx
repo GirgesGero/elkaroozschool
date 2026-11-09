@@ -60,6 +60,7 @@ export default function AdminBackupsPage() {
   const [restorePassword, setRestorePassword] = useState('');
   const [restoreMode, setRestoreMode] = useState<'FULL' | 'DATABASE_ONLY' | 'FILES_ONLY'>('FULL');
   const [restoring, setRestoring] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [operationMsg, setOperationMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   // The database only stores archive metadata (name, size, checksum). Restoring needs
@@ -143,12 +144,16 @@ export default function AdminBackupsPage() {
     setOperationMsg(null);
 
     try {
+      const { data: { session: freshSession } } = await supabase.auth.getSession();
+      const activeSession = freshSession || session;
+      if (freshSession) setSession(freshSession);
+
       // The archive is produced by the PHP backend: it snapshots the storage tree,
       // exports the database, and writes a real AES-256 ZIP whose sha256 it computes.
       // Nothing about that file is invented in the browser, and a success message is
       // only shown once the backend has actually returned a created archive.
       const result = await phpApi<BackupCreateResult>('/backup/create', {
-        session,
+        session: activeSession,
         body: {
           encryption_password: backupPassword,
           storage_option: storageOption === 'HOSTINGER' ? 'HOSTINGER' : 'DOWNLOAD_ONLY',
@@ -215,10 +220,15 @@ export default function AdminBackupsPage() {
   };
 
   const handleDeleteBackup = async () => {
-    if (!selectedBackupForDelete) return;
+    if (!selectedBackupForDelete || deleting) return;
+    setDeleting(true);
     try {
+      const { data: { session: freshSession } } = await supabase.auth.getSession();
+      const activeSession = freshSession || session;
+      if (freshSession) setSession(freshSession);
+
       const result = await phpApi<{ file_removed_from_disk?: boolean }>('/backup/delete', {
-        session,
+        session: activeSession,
         body: { backup_id: selectedBackupForDelete.id },
       });
 
@@ -232,6 +242,8 @@ export default function AdminBackupsPage() {
       await fetchBackups();
     } catch (err) {
       setOperationMsg({ type: 'error', text: err instanceof PhpApiError ? err.message : explainDbError(err) });
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -255,6 +267,10 @@ export default function AdminBackupsPage() {
     setOperationMsg(null);
 
     try {
+      const { data: { session: freshSession } } = await supabase.auth.getSession();
+      const activeSession = freshSession || session;
+      if (freshSession) setSession(freshSession);
+
       // The backend re-opens the archive, re-validates it, takes a safety backup, and
       // rolls the whole thing back on any failure. Passing the user's own password is
       // unavoidable: the archive is AES encrypted with a key the server never stored.
@@ -266,7 +282,7 @@ export default function AdminBackupsPage() {
       form.append('truncate_mode', 'MERGE');
 
       const result = await phpApi<{ mode?: string; rolled_back?: boolean }>('/restore/execute', {
-        session,
+        session: activeSession,
         formData: form,
         timeoutMs: 600_000,
       });
@@ -367,7 +383,7 @@ export default function AdminBackupsPage() {
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <Link
               href="/admin/imports"
               className="flex items-center gap-2 bg-nav hover:bg-input border border-line text-content px-4 py-2.5 rounded-xl text-sm font-medium transition"
@@ -433,7 +449,7 @@ export default function AdminBackupsPage() {
                 <label className="block text-sm font-medium text-content-secondary mb-2">
                   وجهة حفظ النسخة الاحتياطية *
                 </label>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <button
                     type="button"
                     onClick={() => setStorageOption('HOSTINGER')}
@@ -510,7 +526,7 @@ export default function AdminBackupsPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-right text-sm">
+              <table className="w-full min-w-[760px] text-right text-sm">
                 <thead>
                   <tr className="border-b border-line text-content-muted font-medium">
                     <th className="pb-3 pr-4">اسم الملف</th>
@@ -525,9 +541,11 @@ export default function AdminBackupsPage() {
                 <tbody className="divide-y divide-line-subtle/60">
                   {backups.map((b) => (
                     <tr key={b.id} className="hover:bg-nav/40 transition">
-                      <td className="py-4 pr-4 font-mono text-content text-xs md:text-sm font-semibold flex items-center gap-2">
-                        <FileArchive className="w-4 h-4 text-warning flex-shrink-0" />
-                        {b.filename}
+                      <td className="py-4 pr-4 font-mono text-content text-xs md:text-sm font-semibold">
+                        <div className="flex items-center gap-2">
+                          <FileArchive className="w-4 h-4 text-warning flex-shrink-0" />
+                          {b.filename}
+                        </div>
                       </td>
                       <td className="py-4 text-content-secondary font-mono text-xs">
                         {(b.file_size_bytes / (1024 * 1024)).toFixed(2)} MB
@@ -625,17 +643,19 @@ export default function AdminBackupsPage() {
               <div className="flex items-center justify-end gap-3 pt-2">
                 <button
                   type="button"
+                  disabled={deleting}
                   onClick={() => setSelectedBackupForDelete(null)}
-                  className="px-4 py-2 bg-nav hover:bg-input text-content-secondary rounded-xl text-sm font-medium transition"
+                  className="px-4 py-2 bg-nav hover:bg-input text-content-secondary rounded-xl text-sm font-medium transition disabled:opacity-50"
                 >
                   إلغاء
                 </button>
                 <button
                   type="button"
+                  disabled={deleting}
                   onClick={handleDeleteBackup}
-                  className="px-6 py-2 bg-danger hover:bg-danger text-content rounded-xl text-sm font-bold transition shadow-lg shadow-red-900/30"
+                  className="px-6 py-2 bg-danger hover:bg-danger text-content rounded-xl text-sm font-bold transition shadow-lg shadow-red-900/30 disabled:opacity-50"
                 >
-                  تأكيد الحذف
+                  {deleting ? 'جاري الحذف...' : 'تأكيد الحذف'}
                 </button>
               </div>
             </div>
@@ -645,7 +665,7 @@ export default function AdminBackupsPage() {
         {/* Restore Confirmation Modal */}
         {selectedBackupForRestore && (
           <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-nav border border-warning/40 rounded-2xl max-w-lg w-full p-6 space-y-6 shadow-2xl">
+            <div className="bg-nav border border-warning/40 rounded-2xl max-w-lg w-full max-h-[90dvh] overflow-y-auto p-4 sm:p-6 space-y-6 shadow-2xl">
               <div className="flex items-center gap-3 text-warning">
                 <Layers className="w-6 h-6 flex-shrink-0" />
                 <h3 className="text-lg font-bold text-content">معاينة الاستعادة الآمنة والذرية</h3>

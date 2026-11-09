@@ -7,6 +7,7 @@ import SmartHeader from '@/components/SmartHeader';
 import SmartBottomNav from '@/components/SmartBottomNav';
 import GlobalSearchModal from '@/components/GlobalSearchModal';
 import UnifiedProfileModal from '@/components/UnifiedProfileModal';
+import GroupSelector from '@/components/GroupSelector';
 import {
   AlertTriangle,
   RefreshCw,
@@ -45,6 +46,7 @@ interface LectureItem {
   title: string;
   description: string | null;
   audio_url?: string | null;
+  lecturer_id?: string | null;
   lecturer?: {
     full_name: string;
     title: string;
@@ -78,6 +80,7 @@ interface TermItem {
 export default function CurriculumPage() {
   const router = useRouter();
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
   const [selectedTermId, setSelectedTermId] = useState<string>('');
   const [terms, setTerms] = useState<TermItem[]>([]);
   const [days, setDays] = useState<CurriculumDay[]>([]);
@@ -112,7 +115,10 @@ export default function CurriculumPage() {
         if (cancelled) return;
         setProfile(nextProfile);
 
-        const effectiveGroupId = nextProfile.group_id || 1;
+        const canSwitchGroup = nextProfile.role_id === 'admin' || nextProfile.role_id === 'supervisor';
+        const effectiveGroupId = canSwitchGroup
+          ? (selectedGroupId || nextProfile.group_id || 1)
+          : (nextProfile.group_id || 1);
 
         const [termResult, curriculumResult, dayResult, entryResult, lectureResult] = await Promise.all([
           supabase.from('terms').select('id,name_ar,academic_year').eq('group_id', effectiveGroupId).is('deleted_at', null).order('created_at').limit(100),
@@ -125,9 +131,10 @@ export default function CurriculumPage() {
         const queryError = getCurriculumQueryError([termResult, curriculumResult, dayResult, entryResult, lectureResult]);
         if (queryError) throw queryError;
 
-        const lecturerIds = [...new Set(((entryResult.data || []) as CurriculumEntry[])
-          .map((entry) => entry.lecturer_id)
-          .filter((id): id is string => Boolean(id)))];
+        const lecturerIds = [...new Set([
+          ...((entryResult.data || []) as CurriculumEntry[]).map((entry) => entry.lecturer_id),
+          ...(lectureResult.data || []).map((l: any) => l.lecturer_id),
+        ].filter((id): id is string => Boolean(id)))];
         let lecturerRows: LecturerItem[] = [];
         if (lecturerIds.length > 0) {
           const lecturerResult = await supabase.from('lecturers').select('id,full_name,title,avatar_url').in('id', lecturerIds);
@@ -153,8 +160,12 @@ export default function CurriculumPage() {
     }
     void loadData();
     return () => { cancelled = true; };
-  }, [router, reloadVersion]);
+  }, [router, reloadVersion, selectedGroupId]);
 
+  const canSwitchGroup = profile?.role_id === 'admin' || profile?.role_id === 'supervisor';
+  const activeGroupId = canSwitchGroup
+    ? (selectedGroupId || profile?.group_id || 1)
+    : (profile?.group_id || 1);
   const selectedTerm = selectedTermId || terms[0]?.id || '';
   const selectedDays = days.filter((day) => day.term_id === selectedTerm);
   const selectedEntries = entries.filter((entry) => selectedDays.some((day) => day.id === entry.day_id));
@@ -186,23 +197,25 @@ export default function CurriculumPage() {
       />
 
       {loadError && (
-        <div role="alert" className="mx-auto mt-4 flex w-full max-w-5xl items-center justify-between gap-3 rounded-2xl border border-danger/30 bg-danger/10 p-4 text-sm text-danger">
-          <span className="flex items-center gap-2"><AlertTriangle className="h-4 w-4 shrink-0" />{loadError}</span>
-          <button type="button" onClick={() => setReloadVersion((version) => version + 1)} className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl border border-danger/30 px-3 font-bold">
-            <RefreshCw className="h-4 w-4" /> إعادة المحاولة
-          </button>
+        <div className="mx-auto mt-4 w-full max-w-5xl px-4">
+          <div role="alert" className="flex w-full flex-wrap items-center justify-between gap-3 rounded-2xl border border-danger/30 bg-danger/10 p-4 text-sm text-danger">
+            <span className="flex items-center gap-2"><AlertTriangle className="h-4 w-4 shrink-0" />{loadError}</span>
+            <button type="button" onClick={() => setReloadVersion((version) => version + 1)} className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl border border-danger/30 px-3 font-bold">
+              <RefreshCw className="h-4 w-4" /> إعادة المحاولة
+            </button>
+          </div>
         </div>
       )}
 
       {/* Main Container */}
       <main className="max-w-5xl w-full mx-auto px-4 py-6 flex-1 flex flex-col gap-6 pb-28 md:pb-12">
         {/* Banner */}
-        <div className="bg-gradient-to-r from-info/60 via-canvas to-canvas border border-info/40 rounded-2xl p-5 shadow-lg flex items-center justify-between">
+        <div className="bg-gradient-to-r from-info/60 via-canvas to-canvas border border-info/40 rounded-2xl p-5 shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 text-info mb-1 text-xs font-semibold">
               <GraduationCap className="w-4 h-4" />
               <span>
-                {getCurriculumGroupLabel(profile?.group_id ?? 0)}
+                {getCurriculumGroupLabel(activeGroupId)}
               </span>
             </div>
             <h1 className="text-xl font-bold text-content">الخطة الأكاديمية والمحاضرات الأسبوعية</h1>
@@ -210,12 +223,19 @@ export default function CurriculumPage() {
               محاضرتان كل يوم جمعة مع إمكانية الاستماع للتسجيل الصوتي وتحميل المذكرات.
             </p>
           </div>
+          {canSwitchGroup && (
+            <GroupSelector
+              selectedGroupId={activeGroupId}
+              onSelectGroup={(gId) => setSelectedGroupId(gId)}
+              showAllOption={false}
+            />
+          )}
         </div>
 
         {/* Dynamic terms: no fixed first/second term assumption. */}
         <div className="flex flex-wrap items-center gap-3">
           {terms.map((term, index) => {
-            const active = selectedTermId === term.id;
+            const active = selectedTerm === term.id;
             return (
               <button
                 key={term.id}
@@ -255,14 +275,14 @@ export default function CurriculumPage() {
               {selectedCurriculums.map((curr) => (
                 <div
                   key={curr.id}
-                  className="bg-nav/80 border border-line rounded-xl p-4 flex items-center justify-between hover:border-line transition-colors"
+                  className="bg-nav/80 border border-line rounded-xl p-4 flex items-center justify-between gap-3 hover:border-line transition-colors"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-canvas/50 border border-line-subtle/40 flex items-center justify-center text-info">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className="w-10 h-10 rounded-lg bg-canvas/50 border border-line-subtle/40 flex items-center justify-center text-info shrink-0">
                       <FileText className="w-5 h-5" />
                     </div>
-                    <div>
-                      <h4 className="font-bold text-sm text-content">{curr.title}</h4>
+                    <div className="min-w-0 flex-1">
+                      <h4 className="font-bold text-sm text-content truncate">{curr.title}</h4>
                       <span className="text-[11px] text-content-muted">{curr.file_type} • {Math.round(curr.file_size_bytes / 1024)} KB</span>
                     </div>
                   </div>
@@ -271,7 +291,7 @@ export default function CurriculumPage() {
                       href={curr.file_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="p-2 rounded-lg bg-nav hover:bg-info text-content-secondary hover:text-content transition-colors"
+                      className="min-h-tap min-w-tap p-2 rounded-lg bg-nav hover:bg-info text-content-secondary hover:text-content transition-colors inline-flex items-center justify-center shrink-0"
                       title="تحميل المنهج"
                     >
                       <Download className="w-4 h-4" />
@@ -308,12 +328,13 @@ export default function CurriculumPage() {
                     {dayEntries.map((entry, index) => {
                       const legacyLecture = entry.lecture_id ? lectureById.get(entry.lecture_id) : undefined;
                       const audio = legacyLecture?.audio_url || (entry.content_metadata.legacy_audio_url as string | undefined);
-                      const lecturer = entry.lecturer_id ? lecturerById.get(entry.lecturer_id) : legacyLecture?.lecturer;
+                      const lecturerId = entry.lecturer_id || legacyLecture?.lecturer_id;
+                      const lecturer = (lecturerId ? lecturerById.get(lecturerId) : undefined) || legacyLecture?.lecturer;
                       return <div key={entry.id} className="flex flex-col justify-between rounded-lg border border-line bg-nav/80 p-3.5">
-                        <div><div className="mb-1.5 text-xs font-bold text-info">المحاضرة {index + 1}</div><h5 className="mb-2 text-sm font-bold text-content">{entry.title}</h5>{entry.description && <p className="mb-3 text-xs leading-6 text-content-secondary">{entry.description}</p>}
-                          {lecturer && <div className="mb-3 flex items-center gap-2 rounded-lg border border-line/60 bg-nav/60 p-2 text-xs text-content-secondary"><Avatar src={lecturer.avatar_url} name={lecturer.full_name} size={28} rounded="rounded-full" /><div><span className="block text-[10px] text-content-muted">{lecturer.title}</span><span className="font-semibold">{lecturer.full_name}</span></div></div>}
+                        <div className="min-w-0 flex-1"><div className="mb-1.5 text-xs font-bold text-info">المحاضرة {index + 1}</div><h5 className="mb-2 text-sm font-bold text-content">{entry.title}</h5>{entry.description && <p className="mb-3 text-xs leading-6 text-content-secondary">{entry.description}</p>}
+                          {lecturer && <div className="mb-3 flex items-center gap-2 rounded-lg border border-line/60 bg-nav/60 p-2 text-xs text-content-secondary"><Avatar src={lecturer.avatar_url} name={lecturer.full_name} size={28} rounded="rounded-full" /><div className="min-w-0 flex-1"><span className="block text-[10px] text-content-muted">{lecturer.title}</span><span className="font-semibold">{lecturer.full_name}</span></div></div>}
                         </div>
-                        {audio && isSafeHttpUrl(audio) ? <div className="flex items-center justify-between border-t border-line/80 pt-2"><span className="flex items-center gap-1.5 text-xs text-success"><Headphones className="h-4 w-4" />التسجيل متاح</span><a href={audio} target="_blank" rel="noopener noreferrer" className="rounded-lg border border-success/50 bg-canvas/60 px-3 py-1 text-xs text-success">استماع</a></div> : <span className="text-[11px] text-content-muted">لا يوجد تسجيل مرفق</span>}
+                        {audio && isSafeHttpUrl(audio) ? <div className="flex items-center justify-between border-t border-line/80 pt-2"><span className="flex items-center gap-1.5 text-xs text-success"><Headphones className="h-4 w-4" />التسجيل متاح</span><a href={audio} target="_blank" rel="noopener noreferrer" className="min-h-tap min-w-tap inline-flex items-center justify-center rounded-lg border border-success/50 bg-canvas/60 px-3 py-1 text-xs text-success">استماع</a></div> : <span className="text-[11px] text-content-muted">لا يوجد تسجيل مرفق</span>}
                       </div>;
                     })}
                   </div>

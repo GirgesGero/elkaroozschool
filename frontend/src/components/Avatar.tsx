@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 const OPTIMIZED_IMAGE_HOSTS = new Set([
   'kgqgnqjkrghvktymbimz.supabase.co',
@@ -65,6 +65,9 @@ export default function Avatar({
   rounded?: string;
 }) {
   const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    setFailed(false);
+  }, [src]);
   const initial = (name || '؟').trim().charAt(0) || '؟';
   const usable = typeof src === 'string' && src.trim().length > 0 && !failed;
 
@@ -89,8 +92,8 @@ export default function Avatar({
   const isDataUrl = trimmedSrc.startsWith('data:');
 
   if (isDataUrl) {
-    // eslint-disable-next-line @next/next/no-img-element
     return (
+      /* eslint-disable-next-line @next/next/no-img-element */
       <img
         src={trimmedSrc}
         alt={name || 'صورة شخصية'}

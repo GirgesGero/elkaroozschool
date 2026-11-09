@@ -64,7 +64,13 @@ export default function BooksAndResearchPage() {
   const [selectedProfileId, setSelectedProfileId] = useState(null as string | null);
 
   // Active Tab: 'books' | 'researches' | 'favorites'
-  const [activeTab, setActiveTab] = useState<'books' | 'researches' | 'favorites'>('books');
+  const [activeTab, setActiveTab] = useState<'books' | 'researches' | 'favorites'>(() => {
+    if (typeof window !== 'undefined') {
+      const tabParam = new URLSearchParams(window.location.search).get('tab');
+      if (tabParam === 'favorites' || tabParam === 'researches') return tabParam;
+    }
+    return 'books';
+  });
   const [categories, setCategories] = useState<CategoryItem[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
@@ -86,6 +92,13 @@ export default function BooksAndResearchPage() {
   const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const tabParam = new URLSearchParams(window.location.search).get('tab');
+      if (tabParam === 'favorites' || tabParam === 'researches' || tabParam === 'books') {
+        setActiveTab(tabParam);
+      }
+    }
+
     async function init() {
       try {
         const supabase = createClient();
@@ -213,7 +226,9 @@ export default function BooksAndResearchPage() {
     }
 
     setItems((prev) =>
-      prev.map((it) => (it.id === item.id ? { ...it, is_favorite: !it.is_favorite } : it))
+      prev.map((it) =>
+        it.id === item.id && it.type === item.type ? { ...it, is_favorite: !it.is_favorite } : it
+      )
     );
   };
 
@@ -304,10 +319,10 @@ export default function BooksAndResearchPage() {
         <div className="bg-nav border border-line rounded-2xl p-5 shadow-lg flex flex-col gap-4">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             {/* Tabs */}
-            <div className="flex bg-nav p-1 rounded-xl border border-line">
+            <div className="flex bg-nav p-1 rounded-xl border border-line w-full sm:w-auto overflow-x-auto">
               <button
                 onClick={() => setActiveTab('books')}
-                className={`py-2 px-4 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                className={`py-2 px-2.5 sm:px-4 rounded-lg text-xs font-bold transition-all flex flex-1 sm:flex-initial justify-center whitespace-nowrap items-center gap-1.5 ${
                   activeTab === 'books'
                     ? 'bg-karooz-crimson text-content shadow'
                     : 'text-content-muted hover:text-content'
@@ -318,7 +333,7 @@ export default function BooksAndResearchPage() {
               </button>
               <button
                 onClick={() => setActiveTab('researches')}
-                className={`py-2 px-4 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                className={`py-2 px-2.5 sm:px-4 rounded-lg text-xs font-bold transition-all flex flex-1 sm:flex-initial justify-center whitespace-nowrap items-center gap-1.5 ${
                   activeTab === 'researches'
                     ? 'bg-karooz-crimson text-content shadow'
                     : 'text-content-muted hover:text-content'
@@ -329,7 +344,7 @@ export default function BooksAndResearchPage() {
               </button>
               <button
                 onClick={() => setActiveTab('favorites')}
-                className={`py-2 px-4 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                className={`py-2 px-2.5 sm:px-4 rounded-lg text-xs font-bold transition-all flex flex-1 sm:flex-initial justify-center whitespace-nowrap items-center gap-1.5 ${
                   activeTab === 'favorites'
                     ? 'bg-warning text-content shadow'
                     : 'text-content-muted hover:text-content'
@@ -413,7 +428,7 @@ export default function BooksAndResearchPage() {
           ) : (
             filteredItems.map((item) => (
               <div
-                key={item.id}
+                key={`${item.type}_${item.id}`}
                 className="bg-nav border border-line rounded-2xl p-4 shadow-md flex flex-col justify-between hover:border-line transition-all group"
               >
                 <div>
@@ -478,14 +493,14 @@ export default function BooksAndResearchPage() {
         {/* --- IN-APP READER MODAL (NO DOWNLOAD BUTTON) --- */}
         {readingItem && (
           <div className="fixed inset-0 z-50 bg-black/95 flex flex-col p-4">
-            <div className="flex items-center justify-between pb-3 border-b border-line max-w-5xl w-full mx-auto">
-              <div className="flex items-center gap-3">
-                <BookOpen className="w-5 h-5 text-warning" />
-                <h3 className="font-bold text-sm text-content">{readingItem.title}</h3>
+            <div className="flex items-center justify-between gap-3 pb-3 border-b border-line max-w-5xl w-full mx-auto">
+              <div className="flex items-center gap-3 min-w-0 flex-1">
+                <BookOpen className="w-5 h-5 text-warning shrink-0" />
+                <h3 className="font-bold text-sm text-content truncate">{readingItem.title}</h3>
               </div>
               <button
                 onClick={() => setReadingItem(null)}
-                className="text-content-muted hover:text-content p-1"
+                className="text-content-muted hover:text-content p-1 shrink-0"
               >
                 <X className="w-6 h-6" />
               </button>
@@ -512,7 +527,7 @@ export default function BooksAndResearchPage() {
         {/* --- ADD ITEM MODAL (Staff/Admin) --- */}
         {showAddModal && (
           <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-nav border border-line rounded-2xl max-w-md w-full p-6 shadow-2xl">
+            <div className="bg-nav border border-line rounded-2xl max-w-md w-full max-h-[90dvh] overflow-y-auto p-6 shadow-2xl">
               <h3 className="text-base font-bold text-content mb-4">
                 إضافة {activeTab === 'researches' ? 'بحث دراسي' : 'كتاب جديد'}
               </h3>

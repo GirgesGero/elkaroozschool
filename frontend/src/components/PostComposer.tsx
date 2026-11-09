@@ -153,7 +153,7 @@ export default function PostComposer({ currentUser, onPostCreated }: PostCompose
 
         {/* Error Notice */}
         {errorMsg && (
-          <div className="my-2.5 pr-12">
+          <div className="my-2.5 sm:pr-12">
             <div className="rounded-xl border border-danger/40 bg-danger/10 px-3 py-2 text-xs font-bold text-danger">
               {errorMsg}
             </div>
@@ -162,7 +162,7 @@ export default function PostComposer({ currentUser, onPostCreated }: PostCompose
 
         {/* Staged Images Previews */}
         {images.length > 0 && (
-          <div className="flex flex-wrap gap-2 my-3 pr-12">
+          <div className="flex flex-wrap gap-2 my-3 sm:pr-12">
             {images.map((img, idx) => (
               <div key={idx} className="relative w-20 h-20 rounded-2xl overflow-hidden border border-gold/40 group">
                 <Image
@@ -187,7 +187,7 @@ export default function PostComposer({ currentUser, onPostCreated }: PostCompose
 
         {/* Image URL Input Form */}
         {showImageInput && (
-          <div className="flex items-center gap-2 my-2 pr-12">
+          <div className="flex items-center gap-2 my-2 sm:pr-12">
             <input
               type="url"
               value={imageUrl}
@@ -213,8 +213,8 @@ export default function PostComposer({ currentUser, onPostCreated }: PostCompose
         )}
 
         {/* Bottom toolbar */}
-        <div className="flex items-center justify-between border-t border-line/80 pt-3 mt-2 pr-12">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-3 mt-2 border-t border-line-subtle sm:pr-12">
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
             <input
               type="file"
               ref={fileInputRef}
