@@ -114,11 +114,143 @@ interface VerseCommentary {
   };
 }
 
+const DEFAULT_TESTAMENTS: Testament[] = [
+  { id: 1, code: 'OT', name_ar: 'العهد القديم' },
+  { id: 2, code: 'NT', name_ar: 'العهد الجديد' },
+];
+
+const CANONICAL_BIBLE_BOOKS: Array<{ testament_id: number; code: string; name_ar: string; chapters_count: number }> = [
+  { testament_id: 1, code: 'GEN', name_ar: 'التكوين', chapters_count: 50 },
+  { testament_id: 1, code: 'EXO', name_ar: 'الخروج', chapters_count: 40 },
+  { testament_id: 1, code: 'LEV', name_ar: 'اللاويين', chapters_count: 27 },
+  { testament_id: 1, code: 'NUM', name_ar: 'العدد', chapters_count: 36 },
+  { testament_id: 1, code: 'DEU', name_ar: 'التثنية', chapters_count: 34 },
+  { testament_id: 1, code: 'JOS', name_ar: 'يشوع', chapters_count: 24 },
+  { testament_id: 1, code: 'JDG', name_ar: 'القضاة', chapters_count: 21 },
+  { testament_id: 1, code: 'RUT', name_ar: 'راعوث', chapters_count: 4 },
+  { testament_id: 1, code: '1SA', name_ar: 'صموئيل الأول', chapters_count: 31 },
+  { testament_id: 1, code: '2SA', name_ar: 'صموئيل الثاني', chapters_count: 24 },
+  { testament_id: 1, code: '1KI', name_ar: 'الملوك الأول', chapters_count: 22 },
+  { testament_id: 1, code: '2KI', name_ar: 'الملوك الثاني', chapters_count: 25 },
+  { testament_id: 1, code: '1CH', name_ar: 'أخبار الأيام الأول', chapters_count: 29 },
+  { testament_id: 1, code: '2CH', name_ar: 'أخبار الأيام الثاني', chapters_count: 36 },
+  { testament_id: 1, code: 'EZR', name_ar: 'عزرا', chapters_count: 10 },
+  { testament_id: 1, code: 'NEH', name_ar: 'نحميا', chapters_count: 13 },
+  { testament_id: 1, code: 'TOB', name_ar: 'طوبيا', chapters_count: 14 },
+  { testament_id: 1, code: 'JDT', name_ar: 'يهوديت', chapters_count: 16 },
+  { testament_id: 1, code: 'EST', name_ar: 'أستير وتتمة أستير', chapters_count: 16 },
+  { testament_id: 1, code: '1MA', name_ar: 'المكابيين الأول', chapters_count: 16 },
+  { testament_id: 1, code: '2MA', name_ar: 'المكابيين الثاني', chapters_count: 15 },
+  { testament_id: 1, code: 'JOB', name_ar: 'أيوب', chapters_count: 42 },
+  { testament_id: 1, code: 'PSA', name_ar: 'المزامير', chapters_count: 151 },
+  { testament_id: 1, code: 'PRO', name_ar: 'الأمثال', chapters_count: 31 },
+  { testament_id: 1, code: 'ECC', name_ar: 'الجامعة', chapters_count: 12 },
+  { testament_id: 1, code: 'SNG', name_ar: 'نشيد الأنشاد', chapters_count: 8 },
+  { testament_id: 1, code: 'WIS', name_ar: 'حكمة سليمان', chapters_count: 19 },
+  { testament_id: 1, code: 'SIR', name_ar: 'يشوع بن سيراخ', chapters_count: 51 },
+  { testament_id: 1, code: 'ISA', name_ar: 'إشعياء', chapters_count: 66 },
+  { testament_id: 1, code: 'JER', name_ar: 'إرميا', chapters_count: 52 },
+  { testament_id: 1, code: 'LAM', name_ar: 'مراثي إرميا', chapters_count: 5 },
+  { testament_id: 1, code: 'BAR', name_ar: 'باروخ ورسالة إرميا', chapters_count: 6 },
+  { testament_id: 1, code: 'EZK', name_ar: 'حزقيال', chapters_count: 48 },
+  { testament_id: 1, code: 'DAN', name_ar: 'دانيال وتتمة دانيال', chapters_count: 14 },
+  { testament_id: 1, code: 'HOS', name_ar: 'هوشع', chapters_count: 14 },
+  { testament_id: 1, code: 'JOL', name_ar: 'يوئيل', chapters_count: 3 },
+  { testament_id: 1, code: 'AMO', name_ar: 'عاموس', chapters_count: 9 },
+  { testament_id: 1, code: 'OBA', name_ar: 'عوبديا', chapters_count: 1 },
+  { testament_id: 1, code: 'JON', name_ar: 'يونان', chapters_count: 4 },
+  { testament_id: 1, code: 'MIC', name_ar: 'ميخا', chapters_count: 7 },
+  { testament_id: 1, code: 'NAM', name_ar: 'ناحوم', chapters_count: 3 },
+  { testament_id: 1, code: 'HAB', name_ar: 'حبقوق', chapters_count: 3 },
+  { testament_id: 1, code: 'ZEP', name_ar: 'صفنيا', chapters_count: 3 },
+  { testament_id: 1, code: 'HAG', name_ar: 'حجي', chapters_count: 2 },
+  { testament_id: 1, code: 'ZEC', name_ar: 'زكريا', chapters_count: 14 },
+  { testament_id: 1, code: 'MAL', name_ar: 'ملاخي', chapters_count: 4 },
+  { testament_id: 2, code: 'MAT', name_ar: 'إنجيل متى', chapters_count: 28 },
+  { testament_id: 2, code: 'MRK', name_ar: 'إنجيل مرقس', chapters_count: 16 },
+  { testament_id: 2, code: 'LUK', name_ar: 'إنجيل لوقا', chapters_count: 24 },
+  { testament_id: 2, code: 'JHN', name_ar: 'إنجيل يوحنا', chapters_count: 21 },
+  { testament_id: 2, code: 'ACT', name_ar: 'أعمال الرسل', chapters_count: 28 },
+  { testament_id: 2, code: 'ROM', name_ar: 'رسالة بولس الرسول إلى أهل رومية', chapters_count: 16 },
+  { testament_id: 2, code: '1CO', name_ar: 'رسالة بولس الرسول الأولى إلى أهل كورنثوس', chapters_count: 16 },
+  { testament_id: 2, code: '2CO', name_ar: 'رسالة بولس الرسول الثانية إلى أهل كورنثوس', chapters_count: 13 },
+  { testament_id: 2, code: 'GAL', name_ar: 'رسالة بولس الرسول إلى أهل غلاطية', chapters_count: 6 },
+  { testament_id: 2, code: 'EPH', name_ar: 'رسالة بولس الرسول إلى أهل أفسس', chapters_count: 6 },
+  { testament_id: 2, code: 'PHP', name_ar: 'رسالة بولس الرسول إلى أهل فيلبي', chapters_count: 4 },
+  { testament_id: 2, code: 'COL', name_ar: 'رسالة بولس الرسول إلى أهل كولوسي', chapters_count: 4 },
+  { testament_id: 2, code: '1TH', name_ar: 'رسالة بولس الرسول الأولى إلى أهل تسالونيكي', chapters_count: 5 },
+  { testament_id: 2, code: '2TH', name_ar: 'رسالة بولس الرسول الثانية إلى أهل تسالونيكي', chapters_count: 3 },
+  { testament_id: 2, code: '1TI', name_ar: 'رسالة بولس الرسول الأولى إلى تيموثاوس', chapters_count: 6 },
+  { testament_id: 2, code: '2TI', name_ar: 'رسالة بولس الرسول الثانية إلى تيموثاوس', chapters_count: 4 },
+  { testament_id: 2, code: 'TIT', name_ar: 'رسالة بولس الرسول إلى تيطس', chapters_count: 3 },
+  { testament_id: 2, code: 'PHM', name_ar: 'رسالة بولس الرسول إلى فليمون', chapters_count: 1 },
+  { testament_id: 2, code: 'HEB', name_ar: 'رسالة بولس الرسول إلى العبرانيين', chapters_count: 13 },
+  { testament_id: 2, code: 'JAS', name_ar: 'رسالة يعقوب الرسول', chapters_count: 5 },
+  { testament_id: 2, code: '1PE', name_ar: 'رسالة بطرس الرسول الأولى', chapters_count: 5 },
+  { testament_id: 2, code: '2PE', name_ar: 'رسالة بطرس الرسول الثانية', chapters_count: 3 },
+  { testament_id: 2, code: '1JN', name_ar: 'رسالة يوحنا الرسول الأولى', chapters_count: 5 },
+  { testament_id: 2, code: '2JN', name_ar: 'رسالة يوحنا الرسول الثانية', chapters_count: 1 },
+  { testament_id: 2, code: '3JN', name_ar: 'رسالة يوحنا الرسول الثالثة', chapters_count: 1 },
+  { testament_id: 2, code: 'JUD', name_ar: 'رسالة يهوذا الرسول', chapters_count: 1 },
+  { testament_id: 2, code: 'REV', name_ar: 'رؤيا يوحنا اللاهوتي', chapters_count: 22 },
+];
+
+function formatBookDisplayName(name?: string): string {
+  if (!name) return '';
+  const trimmed = name.trim();
+  if (/^(سفر|إنجيل|انجيل|رسالة|أعمال|اعمال|رؤيا)\b/.test(trimmed)) {
+    return trimmed;
+  }
+  return `سفر ${trimmed}`;
+}
+
+function mergeWithCanonicalBooks(dbBooks: BibleBook[] | null | undefined): BibleBook[] {
+  const existing = Array.isArray(dbBooks) ? [...dbBooks] : [];
+  if (existing.length === 0) {
+    return CANONICAL_BIBLE_BOOKS.map((b, idx) => ({
+      id: idx + 1,
+      testament_id: b.testament_id,
+      code: b.code,
+      name_ar: b.name_ar,
+      chapters_count: b.chapters_count,
+    }));
+  }
+
+  const byCode = new globalThis.Map(existing.map((b) => [b.code.toUpperCase(), b]));
+  const byName = new globalThis.Map(
+    existing.map((b) => [b.name_ar.replace(/^سفر\s+/, '').trim(), b])
+  );
+  let nextSyntheticId = Math.max(...existing.map((b) => b.id), 100) + 1;
+
+  const merged: BibleBook[] = [];
+  for (const canon of CANONICAL_BIBLE_BOOKS) {
+    const cleanCanonName = canon.name_ar.replace(/^سفر\s+/, '').trim();
+    const match = byCode.get(canon.code.toUpperCase()) || byName.get(cleanCanonName);
+    if (match) {
+      merged.push({
+        ...match,
+        chapters_count: Math.max(match.chapters_count || 1, canon.chapters_count),
+      });
+    } else {
+      merged.push({
+        id: nextSyntheticId++,
+        testament_id: canon.testament_id,
+        code: canon.code,
+        name_ar: canon.name_ar,
+        chapters_count: canon.chapters_count,
+      });
+    }
+  }
+  return merged;
+}
+
 function BiblePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialBookParamRef = useRef(searchParams.get('book'));
   const lastUrlQueryRef = useRef<string | null>(null);
+  const loadedChapterKeyRef = useRef<string | null>(null);
+  const chapterReqSeqRef = useRef(0);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
@@ -146,6 +278,13 @@ function BiblePageContent() {
 
   const initialChapter = parseInt(searchParams.get('chapter') || '1', 10) || 1;
   const [selectedChapter, setSelectedChapter] = useState<number>(initialChapter);
+
+  const viewModeRef = useRef(viewMode);
+  viewModeRef.current = viewMode;
+  const selectedBookIdRef = useRef(selectedBookId);
+  selectedBookIdRef.current = selectedBookId;
+  const selectedChapterRef = useRef(selectedChapter);
+  selectedChapterRef.current = selectedChapter;
 
   const [verses, setVerses] = useState<BibleVerse[]>([]);
   const [chapterArticle, setChapterArticle] = useState<BibleArticle | null>(null);
@@ -210,44 +349,54 @@ function BiblePageContent() {
   // 1. Initial Load: Testaments & Books & User
   useEffect(() => {
     async function loadTestamentsAndBooks() {
-      const supabase = createClient();
+      let fetchedTestaments: Testament[] | null = null;
+      let fetchedBooks: BibleBook[] | null = null;
 
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: pData } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-        if (pData) setProfile(pData as Profile);
+      try {
+        const supabase = createClient();
+
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: pData } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+          if (pData) setProfile(pData as Profile);
+        }
+
+        const [{ data: testList }, { data: bookList }] = await Promise.all([
+          supabase.from('bible_testaments').select('*').order('order_index'),
+          supabase.from('bible_books').select('*').order('order_index'),
+        ]);
+
+        fetchedTestaments = testList as Testament[] | null;
+        fetchedBooks = bookList as BibleBook[] | null;
+      } catch {
+        // Fallback to canonical static list below
       }
 
-      const { data: testList } = await supabase
-        .from('bible_testaments')
-        .select('*')
-        .order('order_index');
+      setTestaments(
+        fetchedTestaments && fetchedTestaments.length > 0
+          ? fetchedTestaments
+          : DEFAULT_TESTAMENTS
+      );
 
-      const { data: bookList } = await supabase
-        .from('bible_books')
-        .select('*')
-        .order('order_index');
+      const finalBooks = mergeWithCanonicalBooks(fetchedBooks);
+      setBooks(finalBooks);
 
-      if (testList && testList.length > 0) setTestaments(testList);
-      if (bookList && bookList.length > 0) {
-        setBooks(bookList);
-        const bookParam = initialBookParamRef.current;
-        let matchedBook: BibleBook | undefined;
-        if (bookParam) {
-          matchedBook = bookList.find(
-            (b) =>
-              String(b.id) === bookParam ||
-              b.code === bookParam ||
-              b.name_ar === bookParam
-          );
-        }
-        if (matchedBook) {
-          setSelectedBookId(matchedBook.id);
-          setSelectedTestamentId(matchedBook.testament_id);
-        } else {
-          setSelectedBookId(bookList[0].id);
-          setSelectedTestamentId(bookList[0].testament_id);
-        }
+      const bookParam = initialBookParamRef.current;
+      let matchedBook: BibleBook | undefined;
+      if (bookParam) {
+        matchedBook = finalBooks.find(
+          (b) =>
+            String(b.id) === bookParam ||
+            b.code.toLowerCase() === bookParam.toLowerCase() ||
+            b.name_ar === bookParam
+        );
+      }
+      if (matchedBook) {
+        setSelectedBookId(matchedBook.id);
+        setSelectedTestamentId(matchedBook.testament_id);
+      } else if (finalBooks.length > 0) {
+        setSelectedBookId(finalBooks[0].id);
+        setSelectedTestamentId(finalBooks[0].testament_id);
       }
 
       setLoading(false);
@@ -258,9 +407,15 @@ function BiblePageContent() {
 
   // 2. Load Chapter Verses with Word Breakdown (Supports both live DB & offline static dataset)
   useEffect(() => {
-    if (!selectedBookId || !selectedChapter || books.length === 0) return;
+    if (viewMode !== 'reader' || !selectedBookId || !selectedChapter || books.length === 0) return;
+
+    const chapterKey = `${selectedBookId}:${selectedChapter}`;
+    if (loadedChapterKeyRef.current === chapterKey) return;
+    loadedChapterKeyRef.current = chapterKey;
 
     let cancelled = false;
+    let finished = false;
+    const reqId = ++chapterReqSeqRef.current;
 
     async function loadChapter() {
       setLoadingVerses(true);
@@ -268,39 +423,46 @@ function BiblePageContent() {
       const book = books.find((b) => b.id === selectedBookId);
       const bookName = book?.name_ar || '';
 
-      // 1. Try Supabase RPC first if available
-      try {
-        const supabase = createClient();
-        const { data: vList, error } = await supabase.rpc('get_chapter_verses_with_words', {
-          p_book_id: selectedBookId,
-          p_chapter_number: selectedChapter,
-        });
+      let rpcVerses: BibleVerse[] = [];
+      // Only Genesis 1 (book_id = 1, chapter_number = 1) has word-level records in Supabase bible_verses
+      if (selectedBookId === 1 && selectedChapter === 1) {
+        try {
+          const supabase = createClient();
+          const { data: vList, error } = await supabase.rpc('get_chapter_verses_with_words', {
+            p_book_id: selectedBookId,
+            p_chapter_number: selectedChapter,
+          });
 
-        if (cancelled) return;
+          if (cancelled || reqId !== chapterReqSeqRef.current) return;
 
-        if (!error && vList && Array.isArray(vList) && vList.length > 0) {
-          setVerses((vList as BibleVerse[]) || []);
-          setLoadingVerses(false);
-          return;
+          if (!error && vList && Array.isArray(vList) && vList.length > 0) {
+            rpcVerses = vList as BibleVerse[];
+          }
+        } catch {
+          // Fallback to static encyclopedia below
         }
-      } catch {
-        // Fallback below
       }
 
-      if (cancelled) return;
+      if (cancelled || reqId !== chapterReqSeqRef.current) return;
 
-      // 2. Fallback to complete offline static encyclopedia dataset
+      // Load full chapter from complete offline static encyclopedia dataset
       try {
         const article = await getBibleArticle({ book: bookName, chapter: selectedChapter });
-        if (cancelled) return;
+        if (cancelled || reqId !== chapterReqSeqRef.current) return;
         if (article) {
           setChapterArticle(article);
           if (article.content) {
             const pattern = /<p class="verse-p"><span class="verse-num">(\d+)<\/span>\s*(.*?)<\/p>/g;
             const parsedVerses: BibleVerse[] = [];
+            const rpcByVerseNum = new globalThis.Map(rpcVerses.map((rv) => [rv.verse_number, rv]));
             let match;
             while ((match = pattern.exec(article.content)) !== null) {
               const vNum = parseInt(match[1], 10);
+              const rpcMatch = rpcByVerseNum.get(vNum);
+              if (rpcMatch) {
+                parsedVerses.push(rpcMatch);
+                continue;
+              }
               const textClean = match[2].replace(/<[^>]*>/g, '').trim();
               parsedVerses.push({
                 id: -vNum,
@@ -316,19 +478,24 @@ function BiblePageContent() {
                 })),
               });
             }
-            setVerses(parsedVerses);
+            setVerses(parsedVerses.length > 0 ? parsedVerses : rpcVerses);
           } else {
-            setVerses([]);
+            setVerses(rpcVerses);
           }
         } else {
-          setVerses([]);
+          setVerses(rpcVerses);
         }
       } catch (err) {
-        if (cancelled) return;
-        console.error('Failed to load chapter from offline dataset:', err);
-        setVerses([]);
+        if (cancelled || reqId !== chapterReqSeqRef.current) return;
+        if (rpcVerses.length > 0) {
+          setVerses(rpcVerses);
+        } else {
+          console.error('Failed to load chapter from offline dataset:', err);
+          setVerses([]);
+        }
       } finally {
-        if (!cancelled) {
+        if (!cancelled && reqId === chapterReqSeqRef.current) {
+          finished = true;
           setLoadingVerses(false);
         }
       }
@@ -338,8 +505,11 @@ function BiblePageContent() {
 
     return () => {
       cancelled = true;
+      if (!finished && loadedChapterKeyRef.current === chapterKey) {
+        loadedChapterKeyRef.current = null;
+      }
     };
-  }, [selectedBookId, selectedChapter, books]);
+  }, [viewMode, selectedBookId, selectedChapter, books]);
 
   // 3. Handle Word Click -> Fetch Contextual Commentary + Dictionary
   const handleWordClick = async (word: VerseWord) => {
@@ -405,7 +575,8 @@ function BiblePageContent() {
 
   // Synchronize state (mode, book, chapter) to URL searchParams
   useEffect(() => {
-    const params = new URLSearchParams(searchParams.toString());
+    const rawSearch = typeof window !== 'undefined' ? window.location.search : '';
+    const params = new URLSearchParams(rawSearch);
     let changed = false;
 
     if (viewMode === 'reader') {
@@ -438,22 +609,27 @@ function BiblePageContent() {
 
     if (changed) {
       const q = params.toString();
-      lastUrlQueryRef.current = `${q}|${books.length > 0 ? '1' : '0'}`;
+      lastUrlQueryRef.current = q;
       const newUrl = q ? `/bible?${q}` : '/bible';
-      router.replace(newUrl, { scroll: false });
+      const currentUrl = typeof window !== 'undefined'
+        ? `${window.location.pathname}${window.location.search}`
+        : '';
+      if (currentUrl !== newUrl) {
+        router.replace(newUrl, { scroll: false });
+      }
     }
-  }, [viewMode, selectedBookId, selectedChapter, books.length, router, searchParams]);
+  }, [viewMode, selectedBookId, selectedChapter, router]);
 
-  // Read URL searchParams when browser navigates
+  // Read URL searchParams when browser navigates (Back/Forward or external link)
   useEffect(() => {
-    const syncKey = `${searchParams.toString()}|${books.length > 0 ? '1' : '0'}`;
-    if (lastUrlQueryRef.current === syncKey) return;
-    lastUrlQueryRef.current = syncKey;
+    const nextQuery = new URLSearchParams(searchParams.toString()).toString();
+    if (lastUrlQueryRef.current === nextQuery) return;
+    lastUrlQueryRef.current = nextQuery;
 
     const modeParam = searchParams.get('mode');
-    if (modeParam === 'reader' && viewMode !== 'reader') {
+    if (modeParam === 'reader' && viewModeRef.current !== 'reader') {
       setViewMode('reader');
-    } else if (modeParam !== 'reader' && viewMode !== 'hub' && !modeParam) {
+    } else if (modeParam !== 'reader' && viewModeRef.current !== 'hub' && !modeParam) {
       setViewMode('hub');
     }
 
@@ -462,20 +638,20 @@ function BiblePageContent() {
       const matched = books.find(
         (b) =>
           String(b.id) === bookParam ||
-          b.code === bookParam ||
+          b.code.toLowerCase() === bookParam.toLowerCase() ||
           b.name_ar === bookParam
       );
-      if (matched && matched.id !== selectedBookId) {
+      if (matched && matched.id !== selectedBookIdRef.current) {
         setSelectedBookId(matched.id);
         setSelectedTestamentId(matched.testament_id);
       }
     }
 
     const chapterParam = parseInt(searchParams.get('chapter') || '', 10);
-    if (chapterParam && chapterParam > 0 && chapterParam !== selectedChapter) {
+    if (chapterParam && chapterParam > 0 && chapterParam !== selectedChapterRef.current) {
       setSelectedChapter(chapterParam);
     }
-  }, [searchParams, books, viewMode, selectedBookId, selectedChapter]);
+  }, [searchParams, books]);
 
   // 5. Handle Global Bible Search — uses static offline encyclopedia (no RPC)
   const handleSearch = async (e: React.FormEvent) => {
@@ -725,7 +901,7 @@ function BiblePageContent() {
             >
               {filteredBooks.map((b) => (
                 <option key={b.id} value={b.id}>
-                  سفر {b.name_ar}
+                  {formatBookDisplayName(b.name_ar)}
                 </option>
               ))}
             </select>
@@ -782,7 +958,7 @@ function BiblePageContent() {
         <div className="bg-nav border border-line rounded-2xl p-6 shadow-md space-y-6">
           <div className="text-center pb-4 border-b border-line">
             <h2 className="text-xl font-bold text-gold">
-              سفر {currentBook?.name_ar} — الإصحاح {selectedChapter}
+              {formatBookDisplayName(currentBook?.name_ar)} — الإصحاح {selectedChapter}
             </h2>
           </div>
 

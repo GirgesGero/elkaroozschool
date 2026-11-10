@@ -24,4 +24,30 @@ describe('encyclopedia section navigation regression contract', () => {
     expect(source).toContain('setArticles([]);');
     expect(source).toContain('loadSectionArticles(sec.id, 1);');
   });
+
+  it('prevents URL-to-state effect from fighting state-to-URL effect in section browser', () => {
+    expect(source).toContain('}, [selectedSection, currentPage, categoryCode, router]);');
+    expect(source).toContain('}, [searchParams, sections, loadSectionArticles]);');
+  });
+});
+
+describe('bible reader and encyclopedia hub navigation regression contract', () => {
+  const biblePageSource = readFileSync(resolve(process.cwd(), 'src/app/bible/page.tsx'), 'utf8');
+  const selectorSource = readFileSync(resolve(process.cwd(), 'src/components/Bible/TenSectionSelector.tsx'), 'utf8');
+
+  it('prevents infinite get_chapter_verses_with_words loops by decoupling URL-to-state and state-to-URL effects', () => {
+    expect(biblePageSource).toContain('}, [viewMode, selectedBookId, selectedChapter, router]);');
+    expect(biblePageSource).toContain('}, [searchParams, books]);');
+    expect(biblePageSource).not.toContain('}, [searchParams, books, viewMode, selectedBookId, selectedChapter]);');
+  });
+
+  it('loads chapter verses only in reader mode and deduplicates chapter keys', () => {
+    expect(biblePageSource).toContain("if (viewMode !== 'reader' || !selectedBookId || !selectedChapter || books.length === 0) return;");
+    expect(biblePageSource).toContain('loadedChapterKeyRef.current');
+  });
+
+  it('toggles accordion groups in TenSectionSelector without hijacking page navigation', () => {
+    expect(selectorSource).toContain('onClick={() => toggleGroup(group.id)}');
+    expect(selectorSource).not.toContain('onClick={() => { toggleGroup(group.id); onSelectCategory?.(group.id); }}');
+  });
 });

@@ -9,6 +9,7 @@ import {
   type BibleSection,
   type BibleSectionArticleSummary 
 } from '@/lib/api/bible';
+import { ENCYCLOPEDIA_SECTIONS } from '@/lib/bible/encyclopedia-sections';
 import { ArrowRight, BookOpen, ChevronLeft, Loader2, Search, Grid, List, ChevronRight, FileText } from 'lucide-react';
 import SmartHeader from '@/components/SmartHeader';
 import SmartBottomNav from '@/components/SmartBottomNav';
@@ -43,6 +44,10 @@ function SectionBrowserContent() {
   const sectionRequestRef = useRef(0);
   const loadedKeyRef = useRef<string | null>(null);
   const lastHandledQueryRef = useRef<string | null>(null);
+  const selectedSectionRef = useRef<BibleSection | null>(null);
+  selectedSectionRef.current = selectedSection;
+  const currentPageRef = useRef<number>(initialPage);
+  currentPageRef.current = currentPage;
 
   useEffect(() => {
     async function loadUserProfile() {
@@ -106,6 +111,14 @@ function SectionBrowserContent() {
         initialSection = directMatch;
       } else {
         categorySections = await getBibleSections(categoryCode);
+        if (categorySections.length === 0) {
+          const encGroup = ENCYCLOPEDIA_SECTIONS.find((g) => g.id === categoryCode);
+          if (encGroup) {
+            categorySections = encGroup.sectionCodes
+              .map((code) => allSections.find((s) => s.code === code))
+              .filter((s): s is BibleSection => Boolean(s));
+          }
+        }
         if (categorySections.length > 0) {
           initialSection = categorySections[0];
         }
@@ -157,7 +170,8 @@ function SectionBrowserContent() {
   // Synchronize selectedSection and currentPage to URL searchParams
   useEffect(() => {
     if (!selectedSection) return;
-    const urlParams = new URLSearchParams(searchParams.toString());
+    const rawSearch = typeof window !== 'undefined' ? window.location.search : '';
+    const urlParams = new URLSearchParams(rawSearch);
     let changed = false;
 
     const currentSectionCode = selectedSection.code || String(selectedSection.id);
@@ -190,19 +204,23 @@ function SectionBrowserContent() {
     if (currentUrl !== newUrl) {
       router.replace(newUrl, { scroll: false });
     }
-  }, [selectedSection, currentPage, categoryCode, router, searchParams]);
+  }, [selectedSection, currentPage, categoryCode, router]);
 
   // Listen to searchParams changes for browser back/forward navigation
   useEffect(() => {
+    if (sections.length === 0) return;
+    const nextQuery = new URLSearchParams(searchParams.toString()).toString();
+    if (lastHandledQueryRef.current === nextQuery) return;
+    lastHandledQueryRef.current = nextQuery;
+
+    const activeSec = selectedSectionRef.current;
+    const activePage = currentPageRef.current;
     const secParam = searchParams.get('section');
-    if (secParam && sections.length > 0) {
+    if (secParam) {
       const targetSec = sections.find(
         (s) => s.code === secParam || String(s.id) === secParam
       );
-      if (targetSec && targetSec.id !== selectedSection?.id) {
-        const nextQuery = new URLSearchParams(searchParams.toString()).toString();
-        if (lastHandledQueryRef.current === nextQuery) return;
-        lastHandledQueryRef.current = nextQuery;
+      if (targetSec && targetSec.id !== activeSec?.id) {
         setSelectedSection(targetSec);
         const p = parseInt(searchParams.get('page') || '1', 10) || 1;
         setCurrentPage(p);
@@ -216,15 +234,15 @@ function SectionBrowserContent() {
     }
 
     const pParam = parseInt(searchParams.get('page') || '1', 10) || 1;
-    if (pParam !== currentPage && selectedSection) {
+    if (pParam !== activePage && activeSec) {
       setCurrentPage(pParam);
-      const pageKey = `${selectedSection.id}:${pParam}`;
+      const pageKey = `${activeSec.id}:${pParam}`;
       if (loadedKeyRef.current !== pageKey) {
         loadedKeyRef.current = pageKey;
-        loadSectionArticles(selectedSection.id, pParam);
+        loadSectionArticles(activeSec.id, pParam);
       }
     }
-  }, [searchParams, sections, selectedSection, currentPage, loadSectionArticles]);
+  }, [searchParams, sections, loadSectionArticles]);
 
   const handleSelectSection = (sec: BibleSection) => {
     if (selectedSection?.id === sec.id && currentPage === 1) return;
