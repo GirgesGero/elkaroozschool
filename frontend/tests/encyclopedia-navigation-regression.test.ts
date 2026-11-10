@@ -70,7 +70,7 @@ describe('encyclopedia article sanitation and formatting contract', () => {
 
   it('sanitizes binary corrupted image payloads into clean archival notice cards', () => {
     expect(readerSource).toContain('function isBinaryContent(content: string)');
-    expect(readerSource).toContain('Software: Microsoft Office');
+    expect(readerSource).toContain('Microsoft Office');
     expect(readerSource).toContain('archival-notice-card');
   });
 

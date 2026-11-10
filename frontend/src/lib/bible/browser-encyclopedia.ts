@@ -371,8 +371,13 @@ export async function getCategoriesAndSections(): Promise<BibleCategory[]> {
 
 function isBinaryContent(content: string): boolean {
   if (!content || typeof content !== 'string') return false;
-  if (content.startsWith('GIF8') || content.startsWith('\xFF\xD8\xFF') || content.startsWith('\x89PNG')) return true;
-  if (content.includes('Software: Microsoft Office') || content.includes('\u0000JFIF') || content.includes('JFIF\u0000')) return true;
+  if (/GIF8[79]a/i.test(content)) return true;
+  if (/JFIF/i.test(content)) return true;
+  if (/Software:\s*Microsoft Office/i.test(content)) return true;
+  if (content.startsWith('\xFF\xD8\xFF') || content.startsWith('\x89PNG')) return true;
+  if (content.includes('\u0000')) return true;
+  const fffdCount = (content.match(/[\uFFFD]/g) || []).length;
+  if (fffdCount > 5) return true;
   let badChars = 0;
   const sample = content.slice(0, 500);
   for (let i = 0; i < sample.length; i++) {
@@ -381,7 +386,7 @@ function isBinaryContent(content: string): boolean {
       badChars++;
     }
   }
-  return badChars > 15;
+  return badChars > 10;
 }
 
 /** Section -> article summaries. Small index files (~20 KB gz each). */
