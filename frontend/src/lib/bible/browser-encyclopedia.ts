@@ -369,6 +369,21 @@ export async function getCategoriesAndSections(): Promise<BibleCategory[]> {
   return cats.map((c) => ({ ...c, sections: byCat.get(c.id) ?? [] }));
 }
 
+function isBinaryContent(content: string): boolean {
+  if (!content || typeof content !== 'string') return false;
+  if (content.startsWith('GIF8') || content.startsWith('\xFF\xD8\xFF') || content.startsWith('\x89PNG')) return true;
+  if (content.includes('Software: Microsoft Office') || content.includes('\u0000JFIF') || content.includes('JFIF\u0000')) return true;
+  let badChars = 0;
+  const sample = content.slice(0, 500);
+  for (let i = 0; i < sample.length; i++) {
+    const code = sample.charCodeAt(i);
+    if (code === 0xFFFD || code === 0 || (code < 32 && code !== 9 && code !== 10 && code !== 13)) {
+      badChars++;
+    }
+  }
+  return badChars > 15;
+}
+
 /** Section -> article summaries. Small index files (~20 KB gz each). */
 async function getSectionItems(secCode: string): Promise<any[]> {
   let items = sectionIndexCache.get(secCode);
@@ -376,7 +391,8 @@ async function getSectionItems(secCode: string): Promise<any[]> {
     const path = `indexes/sections/${secCode}.json.gz`;
     try {
       const data = await gz(path);
-      items = Array.isArray(data) ? data : [];
+      const rawList = Array.isArray(data) ? data : [];
+      items = rawList.filter((it: BibleSectionArticleSummary) => it.id !== 1 && !/avatony/i.test(it.title || '') && !/avatony/i.test(it.slug || ''));
     } catch {
       items = [];
     }
@@ -602,8 +618,12 @@ async function resolveArticleId(lookup: {
   ch?: number;
 }): Promise<number | null> {
   if (lookup.id !== undefined && lookup.id !== null && lookup.id !== '') {
-    return Number(lookup.id);
+    const num = Number(lookup.id);
+    if (num === 1 || Number.isNaN(num)) return null;
+    return num;
   }
+  if (lookup.slug && /avatony/i.test(lookup.slug)) return null;
+  if (lookup.path && /avatony/i.test(lookup.path)) return null;
   const slugMap = await getSlugMap();
   if (lookup.slug && slugMap[lookup.slug]) return slugMap[lookup.slug];
   if (lookup.path && slugMap[lookup.path]) return slugMap[lookup.path];
@@ -638,7 +658,7 @@ export async function getArticle(lookup: {
   ch?: number;
 }): Promise<BibleArticle | null> {
   const articleId = await resolveArticleId(lookup);
-  if (articleId === null) return null;
+  if (articleId === null || articleId === 1) return null;
 
   const map = await getArticleMap();
   const entry = map[String(articleId)];
@@ -654,6 +674,10 @@ export async function getArticle(lookup: {
   if (idx === -1) return null;
 
   const art = chunk.articles[idx];
+  if (Number(art.id) === 1 || /avatony/i.test(art.title || '') || /avatony/i.test(art.slug || '')) {
+    return null;
+  }
+
   const [secs, cats] = await Promise.all([getSections(), getCategories()]);
   const section = secs.find((s) => s.id === Number(art.section_id));
   const category = section
@@ -664,9 +688,26 @@ export async function getArticle(lookup: {
   const prev = idx > 0 ? chunk.articles[idx - 1] : null;
   const next = idx < chunk.articles.length - 1 ? chunk.articles[idx + 1] : null;
 
+  const rawContent = art.content || '';
+  const safeContent = isBinaryContent(rawContent)
+    ? `<div class="archival-notice-card my-8 p-6 md:p-8 rounded-3xl bg-amber-500/5 border border-amber-500/20 text-center">
+  <div class="inline-flex items-center justify-center w-14 h-14 mb-4 rounded-2xl bg-amber-500/10 text-amber-500 text-3xl shadow-inner">
+    📜
+  </div>
+  <h3 class="text-xl font-bold text-amber-200 mb-2">${art.title || 'وثيقة أرشيفية'}</h3>
+  <p class="text-content-secondary leading-relaxed text-sm md:text-base max-w-lg mx-auto mb-4">
+    هذه المادة عبارة عن مخطط توضيحي أو وثيقة أرشيفية ملحقة ضمن النسخة التوثيقية للموسوعة الكنسية.
+  </p>
+  <div class="inline-block px-3 py-1 rounded-lg bg-canvas/60 border border-line text-content-muted text-xs font-mono" dir="ltr">
+    ${art.slug || ''}
+  </div>
+</div>`
+    : rawContent;
+
   return {
     ...art,
     id: Number(art.id),
+    content: safeContent,
     section_id: Number(art.section_id),
     chapter_num: Number(art.chapter_num),
     total_chapters: Number(art.total_chapters),
@@ -674,8 +715,8 @@ export async function getArticle(lookup: {
     section_code: section?.code,
     category_title: category?.title,
     category_code: category?.code,
-    prev_id: prev ? Number(prev.id) : null,
-    next_id: next ? Number(next.id) : null,
+    prev_id: prev && Number(prev.id) !== 1 ? Number(prev.id) : null,
+    next_id: next && Number(next.id) !== 1 ? Number(next.id) : null,
   };
 }
 
@@ -945,6 +986,7 @@ export async function searchBible(
 
   const results: BibleSearchResult[] = [];
   for (const id of pageIds) {
+    if (id === 1) continue;
     const entry = articleMap[String(id)];
     if (!entry) continue;
     const sec = secById.get(entry.s);
@@ -972,7 +1014,7 @@ export async function searchBible(
       }
     }
 
-    if (!title) continue;
+    if (!title || /avatony/i.test(title) || /avatony/i.test(slug)) continue;
     results.push({
       id,
       section_id: entry.s,

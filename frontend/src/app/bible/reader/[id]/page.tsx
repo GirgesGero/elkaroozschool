@@ -12,6 +12,120 @@ import UnifiedProfileModal from '@/components/UnifiedProfileModal';
 import BibleSearchModal from '@/components/Bible/BibleSearchModal';
 import type { Profile } from '@/types/database';
 
+function isBinaryContent(content: string): boolean {
+  if (!content || typeof content !== 'string') return false;
+  if (content.startsWith('GIF8') || content.startsWith('\xFF\xD8\xFF') || content.startsWith('\x89PNG')) return true;
+  if (content.includes('Software: Microsoft Office') || content.includes('\u0000JFIF') || content.includes('JFIF\u0000')) return true;
+  let badChars = 0;
+  const sample = content.slice(0, 500);
+  for (let i = 0; i < sample.length; i++) {
+    const code = sample.charCodeAt(i);
+    if (code === 0xFFFD || code === 0 || (code < 32 && code !== 9 && code !== 10 && code !== 13)) {
+      badChars++;
+    }
+  }
+  return badChars > 15;
+}
+
+function formatArticleProse(html: string, title?: string, slug?: string): string {
+  if (!html || typeof html !== 'string') return '';
+
+  if (isBinaryContent(html)) {
+    return `<div class="archival-notice-card my-8 p-6 md:p-8 rounded-3xl bg-amber-500/5 border border-amber-500/20 text-center">
+  <div class="inline-flex items-center justify-center w-14 h-14 mb-4 rounded-2xl bg-amber-500/10 text-amber-500 text-3xl shadow-inner">
+    📜
+  </div>
+  <h3 class="text-xl font-bold text-amber-200 mb-2">${title || 'وثيقة أرشيفية'}</h3>
+  <p class="text-content-secondary leading-relaxed text-sm md:text-base max-w-lg mx-auto mb-4">
+    هذه المادة عبارة عن مخطط توضيحي أو وثيقة أرشيفية ملحقة ضمن النسخة التوثيقية للموسوعة الكنسية.
+  </p>
+  <div class="inline-block px-3 py-1 rounded-lg bg-canvas/60 border border-line text-content-muted text-xs font-mono" dir="ltr">
+    ${slug || ''}
+  </div>
+</div>`;
+  }
+
+  // 1. Remove legacy web ad residues / broken image artifacts
+  let cleaned = html
+    .replace(/<p class="verse-p">\s*Image:[\s\S]*?<\/p>/gi, '')
+    .replace(/<p class="verse-p">\s*صورة في\s*:?[\s\S]*?<\/p>/gi, '')
+    .replace(/<p class="verse-p">\s*Arabic Bible Search[\s\S]*?<\/p>/gi, '')
+    .replace(/<p class="verse-p">\s*البحث في الإنجيل[\s\S]*?<\/p>/gi, '');
+
+  // 2. Remove legacy inline attributes that squeeze tables and text
+  cleaned = cleaned
+    .replace(/width=["']\d+%?["']/gi, '')
+    .replace(/height=["']\d+%?["']/gi, '')
+    .replace(/align=["'](right|left|center)["']/gi, '')
+    .replace(/style=["'][^"']*(float|width\s*:\s*\d+)[^"']*["']/gi, '');
+
+  // 3. Reconstitute fragmented verse-p blocks without verse numbers into cohesive paragraphs
+  cleaned = cleaned.replace(/(?:<p class="verse-p">(?!<span class=["']verse-num["']>)([\s\S]*?)<\/p>\s*)+/gi, (match) => {
+    const pRegex = /<p class="verse-p">([\s\S]*?)<\/p>/gi;
+    let pMatch: RegExpExecArray | null;
+    const pieces: string[] = [];
+    while ((pMatch = pRegex.exec(match)) !== null) {
+      const text = pMatch[1].trim();
+      if (text) pieces.push(text);
+    }
+    if (pieces.length === 0) return '';
+
+    const paragraphs: string[] = [];
+    let currentParagraph = '';
+
+    for (let i = 0; i < pieces.length; i++) {
+      const piece = pieces[i];
+
+      // Orphan punctuation attach to previous
+      if (/^[.,؛:!?()\]]+$/.test(piece) || /^[.,؛:!?)]/.test(piece)) {
+        currentParagraph = (currentParagraph.trim() + piece).trim();
+        continue;
+      }
+
+      const isExplicitHeader = (piece.length <= 40 && (piece.startsWith('✦') || piece.endsWith(':')));
+
+      if (isExplicitHeader && currentParagraph.length > 0) {
+        paragraphs.push(currentParagraph.trim());
+        currentParagraph = '';
+      }
+
+      if (!currentParagraph) {
+        currentParagraph = piece;
+      } else {
+        const prevTrim = currentParagraph.trim();
+        const endsWithTerminal = /[.!?؛]$/.test(prevTrim);
+        
+        if (endsWithTerminal && currentParagraph.length > 300 && (piece.startsWith('-') || piece.startsWith('•') || piece.length > 50)) {
+          paragraphs.push(currentParagraph.trim());
+          currentParagraph = piece;
+        } else {
+          currentParagraph += ' ' + piece;
+        }
+      }
+
+      if (isExplicitHeader) {
+        paragraphs.push(currentParagraph.trim());
+        currentParagraph = '';
+      }
+    }
+
+    if (currentParagraph.trim()) {
+      paragraphs.push(currentParagraph.trim());
+    }
+
+    return paragraphs
+      .map(p => {
+        if (p.length <= 40 && (p.startsWith('✦') || p.endsWith(':'))) {
+          return `<h3 class="text-lg md:text-xl font-bold text-amber-300 mt-6 mb-3">${p}</h3>`;
+        }
+        return `<p class="bible-prose-p mb-4 text-justify leading-loose">${p}</p>`;
+      })
+      .join('\n');
+  });
+
+  return cleaned;
+}
+
 export default function ArticleReaderPage() {
   const params = useParams();
   const router = useRouter();
@@ -49,13 +163,17 @@ export default function ArticleReaderPage() {
 
   useEffect(() => {
     let cancelled = false;
-    if (articleId > 0) {
+    if (articleId > 1) {
       const loadArticle = async (id: number) => {
         setLoading(true);
         setError(null);
         try {
           const data = await getBibleArticle({ id });
           if (cancelled) return;
+          if (!data || data.id === 1 || /avatony/i.test(data.title || '') || /avatony/i.test(data.slug || '')) {
+            setError('المقال المطلوب غير متاح في الموسوعة');
+            return;
+          }
           setArticle(data);
           window.scrollTo({ top: 0, behavior: 'smooth' });
         } catch (err: any) {
@@ -69,7 +187,7 @@ export default function ArticleReaderPage() {
       };
       void loadArticle(articleId);
     } else {
-      setError('معرف المقال غير صالح');
+      setError('المقال المطلوب غير متاح في الموسوعة');
       setLoading(false);
     }
     return () => {
@@ -114,8 +232,9 @@ export default function ArticleReaderPage() {
     );
   }
 
+  const formattedContent = formatArticleProse(article.content || '', article.title, article.slug);
   const sanitizedHtml =
-    typeof window !== 'undefined' ? DOMPurify.sanitize(article.content || '') : '';
+    typeof window !== 'undefined' ? DOMPurify.sanitize(formattedContent) : '';
 
   return (
     <div className="min-h-screen bg-canvas" dir="rtl">
@@ -193,14 +312,14 @@ export default function ArticleReaderPage() {
         {/* Article Content */}
         <article className="p-4 sm:p-6 md:p-10 rounded-3xl bg-canvas border border-line/80 shadow-xl leading-loose text-content text-base md:text-lg font-normal mb-8 select-text overflow-hidden">
           <div 
-            className="bible-article-body space-y-4 prose prose-invert max-w-none prose-headings:text-content prose-p:text-content prose-a:text-gold overflow-x-auto break-words"
+            className="bible-article-body space-y-4 max-w-none overflow-x-auto break-words"
             dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
           />
         </article>
 
         {/* Navigation Prev / Next */}
         <div className="flex items-center justify-between flex-wrap gap-2 sm:gap-4 pt-4 border-t border-line/80">
-          {article.prev_id ? (
+          {article.prev_id && article.prev_id > 1 ? (
             <button
               onClick={() => router.push(`/bible/reader/${article.prev_id}`)}
               className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-nav/80 border border-line text-content-secondary hover:text-content hover:border-gold/40 transition-all text-xs font-bold"
@@ -219,7 +338,7 @@ export default function ArticleReaderPage() {
             فهرس الموسوعة
           </button>
 
-          {article.next_id ? (
+          {article.next_id && article.next_id > 1 ? (
             <button
               onClick={() => router.push(`/bible/reader/${article.next_id}`)}
               className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-nav/80 border border-line text-content-secondary hover:text-content hover:border-gold/40 transition-all text-xs font-bold"

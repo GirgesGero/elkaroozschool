@@ -51,3 +51,37 @@ describe('bible reader and encyclopedia hub navigation regression contract', () 
     expect(selectorSource).not.toContain('onClick={() => { toggleGroup(group.id); onSelectCategory?.(group.id); }}');
   });
 });
+
+describe('encyclopedia article sanitation and formatting contract', () => {
+  const browserSource = readFileSync(resolve(process.cwd(), 'src/lib/bible/browser-encyclopedia.ts'), 'utf8');
+  const readerSource = readFileSync(resolve(process.cwd(), 'src/app/bible/reader/[id]/page.tsx'), 'utf8');
+  const cssSource = readFileSync(resolve(process.cwd(), 'src/app/globals.css'), 'utf8');
+
+  it('permanently blocks AvaTony in browser encyclopedia loader and index queries', () => {
+    expect(browserSource).toContain('/avatony/i.test(it.title || \'\')');
+    expect(browserSource).toContain('if (num === 1 || Number.isNaN(num)) return null;');
+    expect(browserSource).toContain('if (articleId === null || articleId === 1) return null;');
+  });
+
+  it('blocks AvaTony in the article reader UI', () => {
+    expect(readerSource).toContain('if (articleId > 1)');
+    expect(readerSource).toContain('/avatony/i.test(data.title || \'\')');
+  });
+
+  it('sanitizes binary corrupted image payloads into clean archival notice cards', () => {
+    expect(readerSource).toContain('function isBinaryContent(content: string)');
+    expect(readerSource).toContain('Software: Microsoft Office');
+    expect(readerSource).toContain('archival-notice-card');
+  });
+
+  it('reconstitutes fragmented verse-p elements without verse numbers into readable paragraphs', () => {
+    expect(readerSource).toContain('function formatArticleProse');
+    expect(readerSource).toContain('bible-prose-p');
+  });
+
+  it('enforces responsive, full-width, justified typography in globals.css for bible-article-body', () => {
+    expect(cssSource).toContain('.bible-article-body');
+    expect(cssSource).toContain('.bible-article-body table');
+    expect(cssSource).toContain('text-justify: inter-word;');
+  });
+});

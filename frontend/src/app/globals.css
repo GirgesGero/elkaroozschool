@@ -666,6 +666,110 @@
     border: 0;
     border-top: 1px solid var(--border-card);
   }
+
+  /* =============================================================================
+     BIBLE & ENCYCLOPEDIA ARTICLE READER TYPOGRAPHY & LAYOUT
+     ========================================================================== */
+  .bible-article-body {
+    direction: rtl;
+    text-align: justify;
+    text-justify: inter-word;
+    font-family: var(--font-cairo), system-ui, sans-serif;
+    font-size: 1.125rem;
+    line-height: 2.2;
+    color: var(--text-primary);
+    word-break: break-word;
+    overflow-wrap: break-word;
+  }
+
+  .bible-article-body p,
+  .bible-article-body .bible-prose-p {
+    margin-bottom: 1.5rem;
+    line-height: 2.2;
+    font-size: 1.125rem;
+    text-align: justify;
+    text-justify: inter-word;
+    max-width: 100% !important;
+    float: none !important;
+    clear: both !important;
+  }
+
+  .bible-article-body .verse-p {
+    margin-bottom: 0.85rem;
+    line-height: 2.1;
+    font-size: 1.125rem;
+    display: block;
+    width: 100% !important;
+    max-width: 100% !important;
+    float: none !important;
+  }
+
+  .bible-article-body .verse-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.75rem;
+    height: 1.75rem;
+    padding: 0 0.4rem;
+    margin-left: 0.5rem;
+    border-radius: 0.5rem;
+    background-color: rgba(197, 160, 89, 0.15);
+    color: var(--brand-gold-text);
+    font-weight: 700;
+    font-size: 0.875rem;
+  }
+
+  /* Reset legacy fixed tables, table cells, and floats that squeeze text */
+  .bible-article-body table {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 1.5rem 0 !important;
+    display: table !important;
+    float: none !important;
+    clear: both !important;
+    border-collapse: collapse !important;
+  }
+
+  .bible-article-body tr {
+    width: 100% !important;
+  }
+
+  .bible-article-body td,
+  .bible-article-body th {
+    width: auto !important;
+    max-width: 100% !important;
+    float: none !important;
+    padding: 0.75rem 1rem !important;
+    line-height: 1.8 !important;
+  }
+
+  .bible-article-body .rmw-section-title {
+    margin-top: 2.25rem !important;
+    margin-bottom: 1.25rem !important;
+    font-size: 1.35rem !important;
+    font-weight: 800 !important;
+    color: var(--brand-gold-text) !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.5rem !important;
+  }
+
+  .bible-article-body .prayer-rubric {
+    padding: 1rem 1.25rem !important;
+    background: rgba(197, 160, 89, 0.08) !important;
+    border-right: 4px solid var(--brand-gold-bright) !important;
+    border-radius: 0.75rem !important;
+    margin: 1.5rem 0 !important;
+    font-size: 1.05rem !important;
+    line-height: 2 !important;
+    color: var(--text-secondary) !important;
+  }
+
+  .bible-article-body .archival-notice-card {
+    background-color: rgba(197, 160, 89, 0.06);
+    border: 1px solid rgba(197, 160, 89, 0.25);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  }
 }
 
 @layer utilities {
