@@ -148,6 +148,8 @@ export default function MediaCollage({ images }: MediaCollageProps) {
           {/* Close Button */}
           <button
             onClick={closeLightbox}
+            aria-label="إغلاق العرض"
+            title="إغلاق العرض"
             className="absolute top-4 right-4 p-2.5 rounded-full bg-nav/80 text-brand-on hover:bg-gold hover:text-brand-on transition-colors z-50"
           >
             <X className="w-6 h-6" />
@@ -158,12 +160,16 @@ export default function MediaCollage({ images }: MediaCollageProps) {
             <>
               <button
                 onClick={prevImage}
+                aria-label="الصورة السابقة"
+                title="الصورة السابقة"
                 className="absolute right-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-nav/70 text-brand-on hover:bg-gold hover:text-brand-on transition-colors z-50"
               >
                 <ChevronRight className="w-6 h-6" />
               </button>
               <button
                 onClick={nextImage}
+                aria-label="الصورة التالية"
+                title="الصورة التالية"
                 className="absolute left-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-nav/70 text-brand-on hover:bg-gold hover:text-brand-on transition-colors z-50"
               >
                 <ChevronLeft className="w-6 h-6" />

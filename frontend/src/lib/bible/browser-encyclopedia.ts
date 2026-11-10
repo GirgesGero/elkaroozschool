@@ -693,6 +693,23 @@ export async function getArticle(lookup: {
   const prev = idx > 0 ? chunk.articles[idx - 1] : null;
   const next = idx < chunk.articles.length - 1 ? chunk.articles[idx + 1] : null;
 
+  let prevId: number | null = prev && Number(prev.id) !== 1 ? Number(prev.id) : null;
+  let nextId: number | null = next && Number(next.id) !== 1 ? Number(next.id) : null;
+
+  // Cross-chunk boundary resolution: if at chunk edges, bridge to neighboring article in the same section
+  if (prevId === null && articleId > 2) {
+    const candidatePrev = map[String(articleId - 1)];
+    if (candidatePrev && candidatePrev.s === Number(art.section_id)) {
+      prevId = articleId - 1;
+    }
+  }
+  if (nextId === null) {
+    const candidateNext = map[String(articleId + 1)];
+    if (candidateNext && candidateNext.s === Number(art.section_id)) {
+      nextId = articleId + 1;
+    }
+  }
+
   const rawContent = art.content || '';
   const safeContent = isBinaryContent(rawContent)
     ? `<div class="archival-notice-card my-8 p-6 md:p-8 rounded-3xl bg-amber-500/5 border border-amber-500/20 text-center">
@@ -720,8 +737,8 @@ export async function getArticle(lookup: {
     section_code: section?.code,
     category_title: category?.title,
     category_code: category?.code,
-    prev_id: prev && Number(prev.id) !== 1 ? Number(prev.id) : null,
-    next_id: next && Number(next.id) !== 1 ? Number(next.id) : null,
+    prev_id: prevId,
+    next_id: nextId,
   };
 }
 

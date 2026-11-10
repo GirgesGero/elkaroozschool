@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { getBibleArticle, type BibleArticle } from '@/lib/api/bible';
@@ -11,6 +11,10 @@ import SmartBottomNav from '@/components/SmartBottomNav';
 import UnifiedProfileModal from '@/components/UnifiedProfileModal';
 import BibleSearchModal from '@/components/Bible/BibleSearchModal';
 import type { Profile } from '@/types/database';
+
+function escapeHtml(str: string): string {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
 
 function isBinaryContent(content: string): boolean {
   if (!content || typeof content !== 'string') return false;
@@ -36,16 +40,18 @@ function formatArticleProse(html: string, title?: string, slug?: string): string
   if (!html || typeof html !== 'string') return '';
 
   if (isBinaryContent(html)) {
+    const safeTitle = escapeHtml(title || 'وثيقة أرشيفية');
+    const safeSlug = escapeHtml(slug || '');
     return `<div class="archival-notice-card my-8 p-6 md:p-8 rounded-3xl bg-amber-500/5 border border-amber-500/20 text-center">
   <div class="inline-flex items-center justify-center w-14 h-14 mb-4 rounded-2xl bg-amber-500/10 text-amber-500 text-3xl shadow-inner">
     📜
   </div>
-  <h3 class="text-xl font-bold text-amber-200 mb-2">${title || 'وثيقة أرشيفية'}</h3>
+  <h3 class="text-xl font-bold text-amber-200 mb-2">${safeTitle}</h3>
   <p class="text-content-secondary leading-relaxed text-sm md:text-base max-w-lg mx-auto mb-4">
     هذه المادة عبارة عن مخطط توضيحي أو وثيقة أرشيفية ملحقة ضمن النسخة التوثيقية للموسوعة الكنسية.
   </p>
   <div class="inline-block px-3 py-1 rounded-lg bg-canvas/60 border border-line text-content-muted text-xs font-mono" dir="ltr">
-    ${slug || ''}
+    ${safeSlug}
   </div>
 </div>`;
   }
@@ -208,6 +214,12 @@ export default function ArticleReaderPage() {
     }
   };
 
+  const sanitizedHtml = useMemo(() => {
+    if (!article) return '';
+    const formatted = formatArticleProse(article.content || '', article.title, article.slug);
+    return typeof window !== 'undefined' ? DOMPurify.sanitize(formatted) : '';
+  }, [article]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-canvas flex items-center justify-center" dir="rtl">
@@ -236,10 +248,6 @@ export default function ArticleReaderPage() {
       </div>
     );
   }
-
-  const formattedContent = formatArticleProse(article.content || '', article.title, article.slug);
-  const sanitizedHtml =
-    typeof window !== 'undefined' ? DOMPurify.sanitize(formattedContent) : '';
 
   return (
     <div className="min-h-screen bg-canvas" dir="rtl">

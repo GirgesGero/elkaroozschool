@@ -375,6 +375,8 @@ export default function UnifiedProfileModal({
 
           <button
             onClick={onClose}
+            aria-label="إغلاق الملف الشخصي"
+            title="إغلاق الملف الشخصي"
             className="p-2 rounded-full bg-black/60 text-brand-on hover:bg-gold hover:text-brand-on transition-colors shadow-lg"
           >
             <X className="w-5 h-5" />

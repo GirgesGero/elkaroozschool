@@ -84,4 +84,15 @@ describe('encyclopedia article sanitation and formatting contract', () => {
     expect(cssSource).toContain('.bible-article-body table');
     expect(cssSource).toContain('text-justify: inter-word;');
   });
+
+  it('bridges chunk boundaries so previous/next navigation never dead-ends inside a section', () => {
+    expect(browserSource).toContain('if (prevId === null && articleId > 2)');
+    expect(browserSource).toContain('if (nextId === null)');
+    expect(browserSource).toContain('map[String(articleId + 1)]');
+  });
+
+  it('memoizes sanitized HTML in article reader to avoid re-parsing on unrelated state updates', () => {
+    expect(readerSource).toContain('useMemo');
+    expect(readerSource).toContain('function escapeHtml');
+  });
 });

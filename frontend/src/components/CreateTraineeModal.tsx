@@ -172,6 +172,8 @@ export default function CreateTraineeModal({
           <button
             onClick={onClose}
             disabled={saving}
+            aria-label="إغلاق النافذة"
+            title="إغلاق النافذة"
             className="p-2 rounded-xl bg-nav/80 hover:bg-nav text-content-muted hover:text-content border border-line transition-all"
           >
             <X className="w-4 h-4" />
