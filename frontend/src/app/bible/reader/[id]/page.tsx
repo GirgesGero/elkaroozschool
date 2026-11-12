@@ -10,7 +10,10 @@ import SmartHeader from '@/components/SmartHeader';
 import SmartBottomNav from '@/components/SmartBottomNav';
 import UnifiedProfileModal from '@/components/UnifiedProfileModal';
 import BibleSearchModal from '@/components/Bible/BibleSearchModal';
+import EnhancedArticleView from '@/components/bible/EnhancedArticleView';
+import BibleReadingToolbar from '@/components/Bible/BibleReadingToolbar';
 import type { Profile } from '@/types/database';
+import '@/styles/bible-article.css';
 
 function escapeHtml(str: string): string {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -285,13 +288,16 @@ export default function ArticleReaderPage() {
             <span title={article.title} className="text-content font-medium truncate max-w-[200px]">{article.title}</span>
           </div>
 
-          <button
-            onClick={handleCopyLink}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-nav border border-line text-content-secondary hover:text-content shrink-0 transition-all text-xs"
-          >
-            {copied ? <Check className="w-3.5 h-3.5 text-success" /> : <Copy className="w-3.5 h-3.5" />}
-            <span>{copied ? 'تم النسخ' : 'مشاركة'}</span>
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            <BibleReadingToolbar variant="inline" />
+            <button
+              onClick={handleCopyLink}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-nav border border-line text-content-secondary hover:text-content shrink-0 transition-all text-xs font-bold"
+            >
+              {copied ? <Check className="w-3.5 h-3.5 text-success" /> : <Copy className="w-3.5 h-3.5" />}
+              <span>{copied ? 'تم النسخ' : 'مشاركة'}</span>
+            </button>
+          </div>
         </div>
 
         {/* Article Header Card */}
@@ -322,13 +328,13 @@ export default function ArticleReaderPage() {
           </div>
         </div>
 
-        {/* Article Content */}
-        <article className="p-4 sm:p-6 md:p-10 rounded-3xl bg-canvas border border-line/80 shadow-xl leading-loose text-content text-base md:text-lg font-normal mb-8 select-text overflow-hidden">
-          <div 
-            className="bible-article-body space-y-4 max-w-none overflow-x-auto break-words"
-            dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
-          />
-        </article>
+        {/* Article Content - Enhanced View */}
+        <EnhancedArticleView
+          title={article.title}
+          content={sanitizedHtml}
+          hasToc={article.has_toc || false}
+          sectionCode={article.section_code || article.section_title || 'موسوعة الكتاب المقدس'}
+        />
 
         {/* Navigation Prev / Next */}
         <div className="flex items-center justify-between flex-wrap gap-2 sm:gap-4 pt-4 border-t border-line/80">

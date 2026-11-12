@@ -11,6 +11,7 @@ import GlobalSearchModal from '@/components/GlobalSearchModal';
 import UnifiedProfileModal from '@/components/UnifiedProfileModal';
 import TenSectionSelector from '@/components/Bible/TenSectionSelector';
 import BibleSearchModal from '@/components/Bible/BibleSearchModal';
+import BibleReadingToolbar from '@/components/Bible/BibleReadingToolbar';
 import ChurchBanner from '@/components/ChurchBanner';
 import {
   getBibleCategories,
@@ -761,6 +762,7 @@ function BiblePageContent() {
           </div>
 
           <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap">
+            <BibleReadingToolbar variant="inline" />
             <div className="flex p-1 bg-canvas rounded-2xl border border-line w-full sm:w-auto">
               <button
                 type="button"

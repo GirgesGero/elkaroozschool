@@ -35,7 +35,10 @@ Thumbs.db
 .vercel
 **/.vercel
 
-# Build artifacts & Deployment Packages
+# Local dataset backups
+*-backup-original/
+**/*-backup-original/
+
 *.zip
 *.tar.gz
 deploy-packages/

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo, Suspense } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { 
   getBibleCategories,
@@ -15,6 +15,7 @@ import SmartHeader from '@/components/SmartHeader';
 import SmartBottomNav from '@/components/SmartBottomNav';
 import BibleSearchModal from '@/components/Bible/BibleSearchModal';
 import UnifiedProfileModal from '@/components/UnifiedProfileModal';
+import BibleReadingToolbar from '@/components/Bible/BibleReadingToolbar';
 import { createClient } from '@/lib/supabase/client';
 import type { Profile } from '@/types/database';
 
@@ -30,6 +31,18 @@ function SectionBrowserContent() {
   const [selectedSection, setSelectedSection] = useState<BibleSection | null>(null);
   const [articles, setArticles] = useState<BibleSectionArticleSummary[]>([]);
   const [totalArticles, setTotalArticles] = useState(0);
+  const [filterQuery, setFilterQuery] = useState('');
+
+  const filteredArticles = useMemo(() => {
+    if (!filterQuery.trim()) return articles;
+    const q = filterQuery.trim().toLowerCase();
+    return articles.filter(
+      (a) =>
+        a.title.toLowerCase().includes(q) ||
+        (a.book && a.book.toLowerCase().includes(q)) ||
+        String(a.id).includes(q)
+    );
+  }, [articles, filterQuery]);
 
   const initialPage = parseInt(searchParams.get('page') || '1', 10) || 1;
   const [currentPage, setCurrentPage] = useState(initialPage);
@@ -290,13 +303,14 @@ function SectionBrowserContent() {
             </h1>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <BibleReadingToolbar variant="inline" />
             <button
               onClick={() => setIsSearchOpen(true)}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-nav/80 border border-line text-content-secondary hover:text-content hover:border-gold/40 transition-all text-sm"
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-nav/80 border border-line text-content-secondary hover:text-content hover:border-gold/40 transition-all text-xs font-bold"
             >
               <Search className="w-4 h-4 text-gold" />
-              <span className="hidden sm:inline">بحث في القسم</span>
+              <span className="hidden sm:inline">بحث عام</span>
             </button>
             <div className="flex items-center gap-1 border border-line rounded-xl p-1 bg-nav/60">
               <button
@@ -353,20 +367,39 @@ function SectionBrowserContent() {
           })}
         </div>
 
-        {/* Selected Section Header */}
+        {/* Selected Section Header with In-Section Filter */}
         {selectedSection && (
-          <div className="mb-6 flex items-center justify-between flex-wrap gap-2 border-b border-line/80 pb-4">
+          <div className="mb-6 p-5 rounded-3xl bg-nav/50 border border-line/80 shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <h2 className="text-xl font-bold text-content flex items-center gap-2">
-                <span>{selectedSection.icon}</span>
-                <span>{selectedSection.title}</span>
-              </h2>
+              <div className="flex items-center gap-2.5">
+                <span className="text-2xl p-2 rounded-2xl bg-canvas border border-line/60 shadow-sm">{selectedSection.icon || '📁'}</span>
+                <div>
+                  <h2 className="text-xl sm:text-2xl font-black text-content flex items-center gap-2">
+                    <span>{selectedSection.title}</span>
+                  </h2>
+                  <div className="flex items-center gap-3 text-xs text-content-muted mt-1">
+                    <span>إجمالي: <strong className="text-gold">{totalArticles.toLocaleString()}</strong> وثيقة</span>
+                    <span>•</span>
+                    <span>صفحة {currentPage} من {totalPages}</span>
+                  </div>
+                </div>
+              </div>
               {selectedSection.description && (
-                <p className="text-sm text-content-muted mt-1">{selectedSection.description}</p>
+                <p className="text-xs sm:text-sm text-content-muted mt-2.5 max-w-2xl leading-relaxed">{selectedSection.description}</p>
               )}
             </div>
-            <div className="text-xs text-content-muted shrink-0">
-              إجمالي: <span className="text-gold font-bold">{totalArticles.toLocaleString()}</span> وثيقة
+
+            {/* In-section live filter input */}
+            <div className="relative w-full md:w-72">
+              <Search className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-content-muted" />
+              <input
+                type="search"
+                value={filterQuery}
+                onChange={(e) => setFilterQuery(e.target.value)}
+                placeholder="تصفية سريعة في العناوين..."
+                aria-label="تصفية في عناوين هذا القسم"
+                className="w-full bg-canvas border border-line rounded-xl pr-10 pl-3 py-2 text-xs text-content placeholder:text-content-muted focus:border-gold focus:outline-none transition-all"
+              />
             </div>
           </div>
         )}
@@ -382,54 +415,83 @@ function SectionBrowserContent() {
               </div>
             ))}
           </div>
-        ) : articles.length === 0 ? (
+        ) : filteredArticles.length === 0 ? (
           <div className="py-20 text-center bg-nav/30 rounded-3xl border border-line/60 p-8">
             <BookOpen className="w-12 h-12 text-content-muted mx-auto mb-4" />
-            <p className="text-content-muted">لا توجد وثائق في هذا القسم حالياً</p>
-            <button onClick={() => setIsSearchOpen(true)} className="mt-4 px-4 py-2 rounded-xl bg-gold text-brand-on text-xs font-bold">ابحث في كل الموسوعة</button>
+            <p className="text-content-muted">{filterQuery ? 'لا توجد نتائج مطابقة لبحثك في هذا القسم' : 'لا توجد وثائق في هذا القسم حالياً'}</p>
+            {filterQuery ? (
+              <button onClick={() => setFilterQuery('')} className="mt-4 px-4 py-2 rounded-xl bg-canvas border border-line text-xs font-bold text-gold hover:border-gold">مسح التصفية</button>
+            ) : (
+              <button onClick={() => setIsSearchOpen(true)} className="mt-4 px-4 py-2 rounded-xl bg-gold text-brand-on text-xs font-bold">ابحث في كل الموسوعة</button>
+            )}
           </div>
         ) : viewMode === 'grid' ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {articles.map((art) => (
+            {filteredArticles.map((art) => (
               <button
                 key={art.id}
                 onClick={() => router.push(`/bible/reader/${art.id}`)}
-                className="p-5 rounded-2xl bg-nav/40 hover:bg-nav/80 border border-line/80 hover:border-gold/40 text-right transition-all group flex flex-col justify-between h-40"
+                className="bible-section-card group relative p-5 rounded-2xl bg-nav/50 hover:bg-nav/95 border border-line/80 hover:border-gold/60 shadow-md hover:shadow-xl text-right transition-all flex flex-col justify-between min-h-[155px] hover:-translate-y-1"
               >
                 <div>
-                  <div className="flex items-center gap-2 text-xs text-content-muted mb-2">
-                    <FileText className="w-3.5 h-3.5 text-gold" />
-                    <span>مقال #{art.id}</span>
+                  <div className="flex items-center justify-between gap-2 text-xs text-content-muted mb-2.5">
+                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-canvas border border-line/60 font-mono text-[10px] text-gold font-bold">
+                      <FileText className="w-3 h-3" />
+                      #{art.id}
+                    </span>
+                    {art.book && (
+                      <span className="text-[11px] text-content-secondary truncate max-w-[120px]">
+                        {art.book}
+                      </span>
+                    )}
                   </div>
-                  <h3 className="text-sm font-bold text-content group-hover:text-gold transition-colors line-clamp-2 leading-relaxed">
+                  <h3
+                    className="font-bold text-content group-hover:text-gold transition-colors line-clamp-3 leading-relaxed"
+                    style={{
+                      fontSize: 'calc(var(--bible-font-size, 20px) * 0.85)',
+                      lineHeight: '1.5',
+                      fontFamily: 'var(--bible-font-family)'
+                    }}
+                  >
                     {art.title}
                   </h3>
                 </div>
-                {art.book && (
-                  <div className="text-xs text-content-muted mt-2 flex items-center justify-between border-t border-line/40 pt-2">
-                    <span className="truncate">{art.book}</span>
-                    {art.ch && art.ch > 0 ? (
-                      <span className="text-gold shrink-0 font-medium">إصحاح {art.ch}</span>
-                    ) : null}
-                  </div>
-                )}
+                <div className="flex items-center justify-between gap-2 border-t border-line/50 pt-2.5 mt-3 text-xs">
+                  {art.ch && art.ch > 0 ? (
+                    <span className="px-2 py-0.5 rounded-md bg-gold/10 text-gold text-[10px] font-bold">
+                      إصحاح {art.ch}
+                    </span>
+                  ) : (
+                    <span className="text-[10px] text-content-muted">وثيقة معتمدة</span>
+                  )}
+                  <span className="inline-flex items-center gap-1 text-[11px] font-bold text-gold group-hover:translate-x-[-2px] transition-transform">
+                    <span>قراءة</span>
+                    <ChevronLeft className="w-3.5 h-3.5" />
+                  </span>
+                </div>
               </button>
             ))}
           </div>
         ) : (
-          <div className="space-y-2">
-            {articles.map((art) => (
+          <div className="space-y-2.5">
+            {filteredArticles.map((art) => (
               <button
                 key={art.id}
                 onClick={() => router.push(`/bible/reader/${art.id}`)}
-                className="w-full p-4 rounded-xl bg-nav/40 hover:bg-nav/60 border border-line/60 hover:border-gold/40 text-right transition-all group flex items-center justify-between gap-4"
+                className="w-full p-4 rounded-2xl bg-nav/50 hover:bg-nav/95 border border-line/70 hover:border-gold/50 text-right transition-all group flex items-center justify-between gap-4 shadow-sm hover:shadow-md"
               >
-                <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <div className="p-2 rounded-lg bg-nav/60 text-gold shrink-0">
-                    <FileText className="w-4 h-4" />
-                  </div>
-                  <div className="min-w-0">
-                    <h3 className="text-sm font-bold text-content group-hover:text-gold transition-colors truncate">
+                <div className="flex items-center gap-3.5 flex-1 min-w-0">
+                  <span className="inline-flex items-center justify-center px-2.5 py-1 rounded-xl bg-canvas border border-line font-mono text-xs text-gold font-bold shrink-0">
+                    #{art.id}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <h3
+                      className="font-bold text-content group-hover:text-gold transition-colors truncate"
+                      style={{
+                        fontSize: 'calc(var(--bible-font-size, 20px) * 0.85)',
+                        fontFamily: 'var(--bible-font-family)'
+                      }}
+                    >
                       {art.title}
                     </h3>
                     {art.book && (
@@ -439,7 +501,12 @@ function SectionBrowserContent() {
                     )}
                   </div>
                 </div>
-                <ChevronLeft className="w-4 h-4 text-content-muted group-hover:text-gold transition-colors shrink-0" />
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="hidden sm:inline-block px-3 py-1 rounded-xl bg-gold/15 text-gold text-xs font-bold">
+                    قراءة الوثيقة
+                  </span>
+                  <ChevronLeft className="w-4 h-4 text-gold group-hover:translate-x-[-2px] transition-transform" />
+                </div>
               </button>
             ))}
           </div>
